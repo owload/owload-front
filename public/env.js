@@ -1,0 +1,6 @@
+window.APP_MAIN_BACKEND_URL="https://owload.com/api"
+window.APP_KEYCLOAK_URL="https://auth.supt.nisse.ru"
+// window.APP_MAIN_BACKEND_URL="http://localhost:8089"
+// window.APP_KEYCLOAK_URL="http://localhost:8081/"
+window.APP_KEYCLOAK_REALM="owload"
+window.APP_KEYCLOAK_CLIENT_ID="front"

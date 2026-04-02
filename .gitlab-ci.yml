@@ -1,0 +1,56 @@
+stages:
+  - build
+  - push
+
+variables:
+  IMAGE_NAME: $CI_REGISTRY/$CI_PROJECT_PATH/$CI_COMMIT_BRANCH
+  DOCKER_HOST: unix:///var/run/docker.sock
+  DOCKER_DRIVER: overlay2
+
+build:
+  stage: build
+  image: node:22
+  script:
+    - npm ci
+    - npm run build
+    - node -p "require('./package.json').version" > version.txt
+  artifacts:
+    paths:
+      - dist/*
+      - version.txt
+    expire_in: 24 h
+  only:
+    - main
+    - test
+    - dev
+
+push_to_registry:
+  stage: push
+  image: jdrouet/docker-with-buildx:stable
+  services:
+    - docker:dind
+  before_script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+  script:
+    - export IMAGE_TAG=$(cat version.txt)
+    - INSTANCE_NAME="buildx_${CI_PROJECT_PATH}_${CI_COMMIT_BRANCH}_${IMAGE_TAG}"
+    - INSTANCE_NAME=${INSTANCE_NAME//\//_}
+    - >-
+      docker buildx create
+      --name $INSTANCE_NAME
+      --use
+      --driver-opt network=host
+      --buildkitd-flags '--allow-insecure-entitlement network.host'
+    - >-
+      docker buildx build
+      --push
+      --platform linux/amd64,linux/arm64
+      -t $IMAGE_NAME:$IMAGE_TAG
+      -t $IMAGE_NAME:latest .
+    - >-
+      docker buildx rm $INSTANCE_NAME
+  only:
+    - main
+    - test
+    - dev
+
