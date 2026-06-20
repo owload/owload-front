@@ -10,8 +10,19 @@ import { useUploadFile } from "@/hooks/use-upload-file";
 import { cn } from "@/lib/utils";
 import { useFilesStore } from "@/stores/files-store";
 import { ArrowLeft, ClipboardPaste, CloudDownload, CloudUpload, Files, FolderPlus, Info, SquareDashedMousePointer, SquarePen, SquareScissors, Trash, Undo, X } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { UploadStateButton } from "./upload-state-button";
+
+function useWindowWidth() {
+    const [width, setWidth] = useState(() => window.innerWidth || document.documentElement.clientWidth);
+    useEffect(() => {
+        const update = () => setWidth(window.innerWidth || document.documentElement.clientWidth);
+        update();
+        window.addEventListener('resize', update);
+        return () => window.removeEventListener('resize', update);
+    }, []);
+    return width;
+}
 
 export function ToolboxBottom(props: { className?: string }) {
     const openCreateFolderDialog = useCreateFolderDialog();
@@ -43,6 +54,7 @@ export function ToolboxBottom(props: { className?: string }) {
     const showUploadStateButton = uploadQueue.length > 0;
 
     const handleBackClick = () => {
+        console.log('[toolbar] back clicked');
         // pathItems.length is >= 1 because otherwise the button is disabled
         if (pathItems.length === 1) {
             navigateDir(ROOT_NODE_ID);
@@ -64,6 +76,7 @@ export function ToolboxBottom(props: { className?: string }) {
     };
 
     const handleCreateFolderClick = () => {
+        console.log('[toolbar] create folder clicked');
         deactivateMobileSelectMode();
         openCreateFolderDialog({});
     };
@@ -137,12 +150,13 @@ export function ToolboxBottom(props: { className?: string }) {
     }
 
 
+    const windowWidth = useWindowWidth();
     const padding = breakpoint === "2xs" || breakpoint === "xs" ? 2 : 4;
-    const widthCapacity = window.innerWidth - padding * 4; // 4 is px size of tailwind '1' spacing unit
+    const widthCapacity = windowWidth - padding * 4; // 4 is px size of tailwind '1' spacing unit
     const gap = 1 * 4;
-    const pxButtonWidth = Math.min(
+    const pxButtonWidth = Math.max(Math.min(
         Math.floor((widthCapacity - gap * (buttonsCount - 1)) / buttonsCount),
-        44);
+        44), 44);
     const picSize = 20;
     const stdClassname = "p-2.5 rounded-full bg-primary text-primary-foreground shadow-sm hover:bg-primary/80 flex items-center justify-center cursor-pointer disabled:opacity-50 disabled:cursor-default disabled:hover:bg-primary";
 
@@ -226,6 +240,7 @@ export function ToolboxBottom(props: { className?: string }) {
                 type="button"
                 onClick={() => { }}
                 onMouseDown={(e) => e.stopPropagation()}
+                onPointerDown={(e) => e.stopPropagation()}
                 title="Info"
                 className={stdClassname}
                 style={{ width: pxButtonWidth, height: pxButtonWidth }}
@@ -248,6 +263,7 @@ export function ToolboxBottom(props: { className?: string }) {
                 type="button"
                 onClick={handleCreateFolderClick}
                 onMouseDown={(e) => e.stopPropagation()}
+                onPointerDown={(e) => e.stopPropagation()}
                 title="Create new folder"
                 className={stdClassname}
                 style={{ width: pxButtonWidth, height: pxButtonWidth }}
@@ -259,6 +275,7 @@ export function ToolboxBottom(props: { className?: string }) {
                 type="button"
                 onClick={handleUploadClick}
                 onMouseDown={(e) => e.stopPropagation()}
+                onPointerDown={(e) => e.stopPropagation()}
                 title="Upload files"
                 className={stdClassname}
                 style={{ width: pxButtonWidth, height: pxButtonWidth }}
@@ -270,6 +287,7 @@ export function ToolboxBottom(props: { className?: string }) {
                 type="button"
                 onClick={activateMobileSelectMode}
                 onMouseDown={(e) => e.stopPropagation()}
+                onPointerDown={(e) => e.stopPropagation()}
                 title="Select files"
                 className={stdClassname}
                 style={{ width: pxButtonWidth, height: pxButtonWidth }}
@@ -281,6 +299,7 @@ export function ToolboxBottom(props: { className?: string }) {
                 type="button"
                 onClick={handleBackClick}
                 onMouseDown={(e) => e.stopPropagation()}
+                onPointerDown={(e) => e.stopPropagation()}
                 title="Back"
                 className={stdClassname}
                 disabled={isRootDir && !mobileFileSelectModeOn}
@@ -293,6 +312,7 @@ export function ToolboxBottom(props: { className?: string }) {
                 type="button"
                 onClick={handleCancelClick}
                 onMouseDown={(e) => e.stopPropagation()}
+                onPointerDown={(e) => e.stopPropagation()}
                 title="Cancel"
                 className={stdClassname}
                 disabled={isRootDir && !mobileFileSelectModeOn}
