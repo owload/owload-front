@@ -1,7 +1,7 @@
 import { Breadcrumb, BreadcrumbEllipsis, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "../ui/breadcrumb";
 import { ROOT_NODE_ID } from "@/engine";
 import { Fragment } from "react/jsx-runtime";
-import { useGetNavigateDirUrl, useNavigateDir } from "@/hooks/use-navigate-dir";
+import { useNavigateDir } from "@/hooks/use-navigate-dir";
 import { useFilesStoreOps } from "@/hooks/use-files-store-ops";
 import { useFilesStore } from "@/stores/files-store";
 import { cn, truncate } from "@/lib/utils";
@@ -19,7 +19,7 @@ const nameTruncateLen = 20;
 
 export function PathBreadcrumbs() {
     const navigateDir = useNavigateDir();
-    const getNavigateDirUrl = useGetNavigateDirUrl();
+
     const { pwdWithId } = useFilesStoreOps();
     const pathItems = pwdWithId();
     const mediaBreakpoint = useMediaBreakpoint();
@@ -33,11 +33,11 @@ export function PathBreadcrumbs() {
             return acc + Math.min(l, nameTruncateLen);
         }, 0);
     const totalSymbolLength = symbolsLength + pathComponetnsLenght * 6;
-    const hideBreadcrumbs = (!mediaBreakpoint || totalSymbolLength > maxSymbolsCapacity[mediaBreakpoint]);
+    const hideBreadcrumbs = (mediaBreakpoint !== undefined && totalSymbolLength > maxSymbolsCapacity[mediaBreakpoint]);
 
     return (
         <>
-            <span className='text-sm text-gray-500 cursor-pointer' onClick={(e) => { e.preventDefault(); e.stopPropagation(); navigateDir(ROOT_NODE_ID); }}>
+            <span className='text-sm text-gray-500 cursor-pointer' onPointerDown={(e) => e.stopPropagation()} onClick={(e) => { e.stopPropagation(); navigateDir(ROOT_NODE_ID); }}>
                 {truncate(useFilesStore.getState().driveClient?.getDescription() || "", nameTruncateLen)}
             </span>
             <Breadcrumb>
@@ -51,8 +51,9 @@ export function PathBreadcrumbs() {
                                     "block": !hideBreadcrumbs
                                 })}>
                                     <BreadcrumbLink
-                                        href={getNavigateDirUrl(pi.dirId)}
-                                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); navigateDir(pi.dirId); }}
+                                        style={{ cursor: 'pointer' }}
+                                        onPointerDown={(e) => e.stopPropagation()}
+                                        onClick={(e) => { e.stopPropagation(); navigateDir(pi.dirId); }}
                                     >
                                         {truncate(pi.pathComponent, nameTruncateLen)}
                                     </BreadcrumbLink>

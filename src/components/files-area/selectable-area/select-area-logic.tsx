@@ -1,4 +1,4 @@
-import { Children, PointerEventHandler, ReactElement, useRef, useState } from "react";
+import { Children, PointerEventHandler, ReactElement, useCallback, useEffect, useRef, useState } from "react";
 import SelectRectangle from "./select-rectangle";
 import { useSelectableItemRefs } from "./select-area-context";
 import React from "react";
@@ -18,37 +18,24 @@ export function SelectAreaLogic({ children, deselectAll, selectIds }: SelectArea
     const [showSelectArea, setShowSelectArea] = useState(false);
     const [initialPos, setInitialPos] = useState({ x: 0, y: 0 });
     const [finalPos, setFinalPos] = useState({ x: 0, y: 0 });
+    const initialPosRef = useRef({ x: 0, y: 0 });
 
+    const stopSelection = useCallback(() => {
+        setShowSelectArea(false);
+    }, []);
 
-    const handlePointerDown: PointerEventHandler<HTMLElement> = (e) => {
-        if(e.button !== 0 || isMobile) {
-            return;
-        }
-        deselectAll();
-        const bounds = filesAreaDivRef.current!.getBoundingClientRect();
-        const x = e.clientX - bounds.left;
-        const y = e.clientY - bounds.top;
-        const target = e.target as HTMLElement;
-        target.setPointerCapture(e.pointerId);
-        setInitialPos({ x, y });
-        setFinalPos({ x, y });
-        setShowSelectArea(true);
-    }
-
-    const handlePointerMove: PointerEventHandler<HTMLElement> = (e) => {
-        if (!showSelectArea) {
-            return;
-        }
-        const bounds = filesAreaDivRef.current!.getBoundingClientRect();
-        const x = e.clientX - bounds.left;
-        const y = e.clientY - bounds.top;
+    const updateSelection = useCallback((clientX: number, clientY: number) => {
+        const bounds = filesAreaDivRef.current?.getBoundingClientRect();
+        if (!bounds) return;
+        const x = clientX - bounds.left;
+        const y = clientY - bounds.top;
         setFinalPos({ x, y });
 
         const selectAreaRect = new DOMRect(
-            Math.min(initialPos.x, finalPos.x),
-            Math.min(initialPos.y, finalPos.y),
-            Math.abs(finalPos.x - initialPos.x),
-            Math.abs(finalPos.y - initialPos.y)
+            Math.min(initialPosRef.current.x, x),
+            Math.min(initialPosRef.current.y, y),
+            Math.abs(x - initialPosRef.current.x),
+            Math.abs(y - initialPosRef.current.y)
         );
 
         const intersectedIds: string[] = [];
@@ -61,10 +48,42 @@ export function SelectAreaLogic({ children, deselectAll, selectIds }: SelectArea
             }
         }
         selectIds(intersectedIds);
+    }, [selectIds, selectableItemRefs]);
+
+    // Global listeners active only during selection — no setPointerCapture needed
+    useEffect(() => {
+        if (!showSelectArea) return;
+        const onMove = (e: PointerEvent) => updateSelection(e.clientX, e.clientY);
+        const onUp = () => stopSelection();
+        document.addEventListener('pointermove', onMove);
+        document.addEventListener('pointerup', onUp);
+        return () => {
+            document.removeEventListener('pointermove', onMove);
+            document.removeEventListener('pointerup', onUp);
+        };
+    }, [showSelectArea, updateSelection, stopSelection]);
+
+    const handlePointerDown: PointerEventHandler<HTMLElement> = (e) => {
+        if (e.button !== 0 || isMobile) {
+            return;
+        }
+        deselectAll();
+        const bounds = filesAreaDivRef.current!.getBoundingClientRect();
+        const x = e.clientX - bounds.left;
+        const y = e.clientY - bounds.top;
+        initialPosRef.current = { x, y };
+        setInitialPos({ x, y });
+        setFinalPos({ x, y });
+        setShowSelectArea(true);
+    }
+
+    const handlePointerMove: PointerEventHandler<HTMLElement> = (e) => {
+        if (!showSelectArea) return;
+        updateSelection(e.clientX, e.clientY);
     }
 
     const handlePointerUp: PointerEventHandler<HTMLElement> = () => {
-        setShowSelectArea(false);
+        stopSelection();
     }
 
     function modifyChild(child: ReactElement<any>) {

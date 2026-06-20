@@ -34,15 +34,27 @@ export async function generateVideoPreviews(file: File, size: number, quality = 
     let fileContents = await readFile(file);
     let blob = new Blob([fileContents], { type: file.type });
     let url = URL.createObjectURL(blob);
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
         const elemVideo = document.createElement('video');
         elemVideo.muted = true;
+        elemVideo.preload = 'auto';
         const elemCanvas = document.createElement('canvas');
-        elemVideo.style.transform = 'translateZ(0)';
-        elemVideo.src = url;
-        let w: number, h: number;
-        elemVideo.onloadedmetadata = async () => {
+
+        // Attach to DOM so WKWebView decodes frames (off-screen elements may not)
+        elemVideo.style.position = 'fixed';
+        elemVideo.style.opacity = '0';
+        elemVideo.style.pointerEvents = 'none';
+        document.body.appendChild(elemVideo);
+
+        function cleanup() {
+            URL.revokeObjectURL(url);
+            document.body.removeChild(elemVideo);
+        }
+
+        elemVideo.onloadedmetadata = () => {
+            const dur = isFinite(elemVideo.duration) ? elemVideo.duration : 0;
             const ratio = elemVideo.videoWidth / elemVideo.videoHeight;
+            let w: number, h: number;
             if (ratio < 1) {
                 w = Math.min(elemVideo.videoWidth, size);
                 h = Math.floor(w / ratio);
@@ -52,35 +64,42 @@ export async function generateVideoPreviews(file: File, size: number, quality = 
             }
             elemCanvas.width = w;
             elemCanvas.height = h;
-        };
-        elemVideo.ontimeupdate = async () => {
-            const context = elemCanvas.getContext('2d');
-            if (!context) {
-                throw new Error("Can't create canavas context");
-            }
-            elemVideo.pause();
-            context.drawImage(elemVideo, 0, 0, w, h);
-            // elemVideo.src = '';
-            elemCanvas.toBlob((blob) => {
-                if (!blob) {
-                    throw new Error("Can't read canvas data to blob");
-                }
-                const result = {} as { [key: number]: Blob };
-                result[size] = blob;
-                resolve(result);
-            }, 'image/jpeg', quality);
+            elemVideo.currentTime = dur > 0 ? dur / 3 : 0;
         };
 
-        elemVideo.addEventListener('loadedmetadata', function () {
-            console.log('Duration:', elemVideo.duration);
-            elemVideo.currentTime = Math.floor(elemVideo.duration / 3);
-            elemVideo.play();
-        });
+        elemVideo.onseeked = () => {
+            // WKWebView needs a couple of animation frames after seeked
+            // before the frame is available for canvas capture
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    const context = elemCanvas.getContext('2d');
+                    if (!context) {
+                        cleanup();
+                        reject(new Error("Can't create canvas context"));
+                        return;
+                    }
+                    context.drawImage(elemVideo, 0, 0, elemCanvas.width, elemCanvas.height);
+                    elemCanvas.toBlob((blob) => {
+                        cleanup();
+                        if (!blob) {
+                            reject(new Error("Can't read canvas data to blob"));
+                            return;
+                        }
+                        const result = {} as { [key: number]: Blob };
+                        result[size] = blob;
+                        resolve(result);
+                    }, 'image/jpeg', quality);
+                });
+            });
+        };
 
+        elemVideo.onerror = () => {
+            cleanup();
+            reject(new Error('Video load error'));
+        };
 
-
-    })
-
+        elemVideo.src = url;
+    });
 }
 
 async function generatePreview(elemImg: HTMLImageElement, elemCanvas: HTMLCanvasElement, maxThumbnailSize: number, quality: number): Promise<Blob> {
