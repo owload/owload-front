@@ -26,10 +26,7 @@ export function LoginForm() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-primary">
       <div className="w-full max-w-sm px-6">
-        <div className="flex flex-col items-center mb-10">
-          <img src="/logo-full.svg" alt="Owload" className="h-10 mb-6" />
-          <h1 className="text-2xl font-bold font-montserrat">Sign in</h1>
-        </div>
+        <img src="/logo-full.svg" alt="Owload" className="h-11 mx-auto block mb-10" />
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <Input
@@ -39,6 +36,7 @@ export function LoginForm() {
             onChange={e => setUsername(e.target.value)}
             autoComplete="username"
             required
+            className="bg-transparent border-black/25 placeholder:text-black/40 text-gray-900 h-10"
           />
           <Input
             type="password"
@@ -47,13 +45,14 @@ export function LoginForm() {
             onChange={e => setPassword(e.target.value)}
             autoComplete="current-password"
             required
+            className="bg-transparent border-black/25 placeholder:text-black/40 text-gray-900 h-10"
           />
 
           {error && (
-            <p className="text-sm text-red-600 text-center">{error}</p>
+            <p className="text-sm text-red-700 text-center">{error}</p>
           )}
 
-          <Button type="submit" variant="black" size="lg" disabled={loading} className="mt-2">
+          <Button type="submit" variant="black" disabled={loading} className="mt-1 w-full h-10">
             {loading ? "Signing in…" : "Sign in"}
           </Button>
         </form>
