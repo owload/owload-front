@@ -18,19 +18,17 @@ export function FilesArea() {
         return false;
     }
     return (
-        <FilesAreaContextMenu>
-            <DebouncedSkeleton
-                contentInitialized={!!filesInitialized}
-                initializedComponent={<>
-                    {
-                        !driveStats?.description ? <WrongPasswordFilesArea />
-                            : filteredFileObjects.length > 0 ? <PopulatedFilesArea />
-                                : <EmptyFilesArea />
-                    }
-                </>}
-                skeletonComponent={<FilesAreaLoading />}
-            />
-
-        </FilesAreaContextMenu>
+        <DebouncedSkeleton
+            contentInitialized={!!filesInitialized}
+            initializedComponent={<>
+                {!driveStats?.description
+                    ? <WrongPasswordFilesArea />
+                    : <FilesAreaContextMenu>
+                        {filteredFileObjects.length > 0 ? <PopulatedFilesArea /> : <EmptyFilesArea />}
+                    </FilesAreaContextMenu>
+                }
+            </>}
+            skeletonComponent={<FilesAreaLoading />}
+        />
     );
 }

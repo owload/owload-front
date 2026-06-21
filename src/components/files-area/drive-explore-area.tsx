@@ -27,33 +27,38 @@ export function DriveExplorerArea() {
     const mobileFileSelectModeOn = useIsMobileSelectModeOn();
     const isReadyForActions = filesInitialized && driveStats?.description;
 
+    const mainContent = (
+        <main className='group absolute inset-0 select-none'>
+            <div className="hidden group-[.dragged]:block absolute z-50 inset-0 bg-gray-300/20 pointer-events-none"></div>
+            <div className="sticky bg-white z-10 flex 2xs:flex-col sm:flex-row sm:items-center px-4 h-10 sm:h-15">
+                <div className='sm:flex-1 flex items-center gap-2 h-full order-1 overflow-hidden'>
+                    {!mobileFileSelectModeOn && <PathBreadcrumbs />}
+                </div>
+                {isReadyForActions && <Toolbox className="order-2" />}
+            </div>
+            <FilesArea />
+            {!mediaPreviewOpen && isReadyForActions && <ToolboxBottom className="fixed bottom-4 right-2 sm:right-4" />}
+        </main>
+    );
+
     return (<>
         <div className='absolute top-14 bottom-0 inset-x-0'>
-            <DragAndDropArea>
-                <SelectArea
-                    deselectAll={deselectAll}
-                    selectIds={selectIds}
-                    addSelected={addSelected}
-                    addSelectedWithShift={addSelectedWithShift}
-                    removeSelected={removeSelected}
-                    removeSelectedWithShift={removeSelectedWithShift}
-                    isSelected={isSelected}
-                >
-                    <main className='group absolute inset-0 select-none'>
-                        <div className="hidden group-[.dragged]:block absolute z-50 inset-0 bg-gray-300/20 pointer-events-none"></div>
-                        <div className="sticky bg-white z-10 flex 2xs:flex-col sm:flex-row sm:items-center px-4 h-10 sm:h-15">
-                            <div className='sm:flex-1 flex items-center gap-2 h-full order-1 overflow-hidden'>
-                                {!mobileFileSelectModeOn && <PathBreadcrumbs />}
-                            </div>
-                            {isReadyForActions && <Toolbox className="order-2" />}
-                        </div>
-                        <FilesArea />
-                        {!mediaPreviewOpen && isReadyForActions && <ToolboxBottom className="fixed bottom-4 right-2 sm:right-4" />}
-                    </main>
-
-                </SelectArea>
-            </DragAndDropArea>
-        </div >
+            {isReadyForActions ? (
+                <DragAndDropArea>
+                    <SelectArea
+                        deselectAll={deselectAll}
+                        selectIds={selectIds}
+                        addSelected={addSelected}
+                        addSelectedWithShift={addSelectedWithShift}
+                        removeSelected={removeSelected}
+                        removeSelectedWithShift={removeSelectedWithShift}
+                        isSelected={isSelected}
+                    >
+                        {mainContent}
+                    </SelectArea>
+                </DragAndDropArea>
+            ) : mainContent}
+        </div>
         {mediaPreviewOpen && <MediaPreview />}
     </>);
 }
