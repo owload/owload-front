@@ -1,6 +1,7 @@
 import { uint8ArrayToBase64 } from "../core/stream-utils";
 
 const OP_HASH_ALG: 'SHA-256' | 'SHA-384' | 'SHA-512' = 'SHA-256';
+const OP_HASH_BYTES = 9; // 72-bit truncated hash → 12 base64 chars, sufficient for tamper-evident log
 
 export enum FsOperationType {
   MK_DIR,
@@ -119,8 +120,8 @@ export abstract class FsOperation {
   private async allFieldsHashCode(): Promise<string> {
     const s = this.serialize();
     const data = new TextEncoder().encode(s);
-    const hashBytes = await crypto.subtle.digest(OP_HASH_ALG, data);
-    return uint8ArrayToBase64(new Uint8Array(hashBytes));
+    const fullHash = new Uint8Array(await crypto.subtle.digest(OP_HASH_ALG, data));
+    return uint8ArrayToBase64(fullHash.slice(0, OP_HASH_BYTES));
   }
 
   public equals(op: FsOperation) {
