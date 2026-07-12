@@ -16,6 +16,7 @@ export function DriveExplorerPage() {
   const drivesInitialized = useFilesStore((state) => state.drivesInitialized);
 
   const { driveId, dirId } = useParams();
+  const driveKey = useFilesStore((state) => driveId ? state.driveKeys[driveId] : undefined);
 
 
   const { initialize, cdByDirId, cd, sync } = useFilesStoreOps();
@@ -83,6 +84,12 @@ export function DriveExplorerPage() {
       clearFiles();
     };
   }, [driveId]);
+
+  useEffect(() => {
+    if (filesInitialized && !driveKey) {
+      navigate('/');
+    }
+  }, [driveKey, filesInitialized]);
 
 
   return (

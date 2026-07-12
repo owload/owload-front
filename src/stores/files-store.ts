@@ -29,6 +29,14 @@ export const useFilesStore = create<KeysSlice & DrivesSlice & FilesSlice & Uploa
     }
   ));
 
+// Sync drive keys/stats across browser tabs: when another tab closes a drive,
+// rehydrate so this tab's in-memory state matches localStorage.
+window.addEventListener('storage', (event) => {
+  if (event.key === 'owload_fstorage') {
+    useFilesStore.persist.rehydrate();
+  }
+});
+
 
 
 
