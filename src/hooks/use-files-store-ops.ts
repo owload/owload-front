@@ -146,7 +146,7 @@ export function useFilesStoreOps() {
         }
     }
 
-    const initialize = async (userId: UserId, driveId: DriveId, userPrivateKey: CryptoKey, password: string | undefined, initialPath: string, abortContext: AbortContext) => {
+    const initialize = async (userId: UserId, driveId: DriveId, password: string | undefined, initialPath: string, abortContext: AbortContext) => {
         const driveInfo = useFilesStore.getState().drives.find(d => d.id === driveId);
         if (!driveInfo) {
             throw new Error("Drive not found in local store: " + driveId);
@@ -172,7 +172,6 @@ export function useFilesStoreOps() {
         const factoryReturnValue = await DriveClientFactory.createDriveClient(userId,
             driveId,
             driveInfo.title,
-            userPrivateKey,
             storedKeyEncoded,
             driveInfo.keyNonce,
             driveInfo.counterNonce,

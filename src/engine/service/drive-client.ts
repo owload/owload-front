@@ -78,6 +78,7 @@ export class DriveClient {
     console.log(`Loaded FS state cache at pos ${cachedPos}`);
     const newOps = await this.operationService.getOperations(cachedPos, lastValidOpHash);
     for (let opWrapper of newOps) {
+      console.log(opWrapper)
       if (abortContext?.aborted) {
         return;
       }

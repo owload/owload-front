@@ -27,7 +27,7 @@ export function CreateDrivePage() {
     const driveInfo = await driveBackend.createDrive(title);
     const driveId = driveInfo.id;
     await updateDrives();
-    await initialize(userInfo.id, driveId, userInfo.privateKey!, password, "/", {aborted: false});
+    await initialize(userInfo.id, driveId, password, "/", {aborted: false});
     await setDriveDescription(description);
     await navigate(`/drive/${driveId}`);
   }

@@ -34,7 +34,6 @@ export interface UploadQueueItem {
 export interface UserInfo {
   id: string;
   name: string;
-  privateKey: CryptoKey | undefined
 }
 
 export type FsOpsDialogType = "RENAME" | "CREATE_FOLDER" | "REQUEST_PASSWORD" | "REQUEST_DRIVE_DESCRIPTION" | "REQUEST_MV_OPERATION_MODE"

@@ -169,31 +169,23 @@ test('Operation constructors fill in required fields', () => {
   expect(op1.randomStr.length).toBeGreaterThan(0);
   expect(op1.path).toBe(path);
   expect(op1.timestamp).toBe(null);
-  expect(op1.timestampSig).toBe(null);
-  expect(op1.createdBySig).toBe(null);
 
   const op2 = new RmFsOperation(createdBy, path, ['file1.doc', 'file2.xml']);
   expect(op2.randomStr.length).toBeGreaterThan(0);
   expect(op2.basePath).toBe(path);
   expect(op2.timestamp).toBe(null);
-  expect(op2.timestampSig).toBe(null);
-  expect(op2.createdBySig).toBe(null);
 
   const op3 = new RenameFsOperation(createdBy, path, path2);
   expect(op3.randomStr.length).toBeGreaterThan(0);
   expect(op3.pathSrc).toBe(path);
   expect(op3.pathDest).toBe(path2);
   expect(op3.timestamp).toBe(null);
-  expect(op3.timestampSig).toBe(null);
-  expect(op3.createdBySig).toBe(null);
 
   const op4 = new CpFsOperation(createdBy, path, ['path'], path2, 'FIXED', ['path3']);
   expect(op4.randomStr.length).toBeGreaterThan(0);
   expect(op4.pathSrc).toBe(path);
   expect(op4.pathDest).toBe(path2);
   expect(op4.timestamp).toBe(null);
-  expect(op4.timestampSig).toBe(null);
-  expect(op4.createdBySig).toBe(null);
 });
 
 test('Hash is generated as a non-empty string', async () => {

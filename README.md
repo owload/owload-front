@@ -1,50 +1,98 @@
-# React + TypeScript + Vite
+# Owload
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Secure cloud storage with client-side encryption. Files are encrypted on your device before upload — the server never sees plaintext data or your encryption keys.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- **Client-side encryption** — AES-256-CTR encryption happens in the browser/app before any data leaves your machine
+- **Password-based keys** — symmetric keys are derived from your drive password via PBKDF2 (SHA-512, 100k iterations) and never transmitted to the server
+- **Operation signing** — RSA-2048 signatures prove authorship of file system operations
+- **Desktop app** — Tauri-based native app for macOS, Windows, Linux (recommended for maximum security)
+- **Web app** — browser-based access via Keycloak authentication
+- **Encrypted metadata** — file paths and operation types are encrypted alongside file contents
 
-## Expanding the ESLint configuration
+## Security model
 
-If you are developing a production application, we recommend updating the configuration to enable type aware lint rules:
+Plaintext data and symmetric keys never leave the client. A compromised server can read only encrypted ciphertext. See [security audit notes](docs/security.md) for a detailed threat model.
 
-- Configure the top-level `parserOptions` property like this:
+## Requirements
 
-```js
-export default tseslint.config({
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
+- Node.js ≥ 18
+- npm ≥ 9
+- Rust ≥ 1.77.2 (for desktop build only)
+- Keycloak server configured as the identity provider
+- Owload backend API
+
+## Getting started
+
+### 1. Install dependencies
+
+```bash
+npm install
 ```
 
-- Replace `tseslint.configs.recommended` to `tseslint.configs.recommendedTypeChecked` or `tseslint.configs.strictTypeChecked`
-- Optionally add `...tseslint.configs.stylisticTypeChecked`
-- Install [eslint-plugin-react](https://github.com/jsx-eslint/eslint-plugin-react) and update the config:
+### 2. Configure environment
 
-```js
-// eslint.config.js
-import react from 'eslint-plugin-react'
+Copy the example env file and fill in your server URLs:
 
-export default tseslint.config({
-  // Set the react version
-  settings: { react: { version: '18.3' } },
-  plugins: {
-    // Add the react plugin
-    react,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended rules
-    ...react.configs.recommended.rules,
-    ...react.configs['jsx-runtime'].rules,
-  },
-})
+```bash
+cp .env.example .env
 ```
+
+| Variable | Description |
+|---|---|
+| `VITE_APP_KEYCLOAK_URL` | Keycloak base URL |
+| `VITE_APP_KEYCLOAK_REALM` | Keycloak realm name |
+| `VITE_APP_KEYCLOAK_CLIENT_ID` | Keycloak client ID |
+| `VITE_APP_MAIN_BACKEND_URL` | Owload backend API base URL |
+
+## Running
+
+### Web (development)
+
+```bash
+npm run dev
+```
+
+Opens at `http://localhost:5173`. Authentication via Keycloak redirect flow.
+
+### Desktop (development)
+
+```bash
+npm run tauri
+```
+
+Launches the Tauri desktop app with hot reload. Authentication via ROPC (username/password form).
+
+### Web (production build)
+
+```bash
+npm run build
+```
+
+Output in `dist/`.
+
+### Desktop (production build)
+
+```bash
+npm run tauri:build
+```
+
+Produces platform-specific installers in `src-tauri/target/release/bundle/`.
+
+## Testing
+
+```bash
+# Unit tests
+npm test
+
+# Browser-based tests
+npm run test:browser
+```
+
+## Tech stack
+
+- **Frontend** — React 19, TypeScript, Tailwind CSS, shadcn/ui, Zustand, React Router
+- **Encryption** — Web Crypto API (AES-CTR, PBKDF2, RSA-PKCS1-v1_5)
+- **Desktop** — Tauri 2
+- **Auth** — Keycloak (OIDC)

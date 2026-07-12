@@ -18,10 +18,7 @@ export abstract class FsOperation {
   previousOperationHash: string | null = null;
   operationType: FsOperationType;
   createdBy: string;
-  tsaId: string | null = null;
   timestamp: number | null = null;
-  timestampSig: string | null = null;
-  createdBySig: string | null = null;
 
   protected constructor(operationType: FsOperationType, createdBy: string, randomStr?: string) {
     this.operationType = operationType;
@@ -43,15 +40,9 @@ export abstract class FsOperation {
       ',' +
       this.operationType +
       ',' +
-      (this.tsaId != null ? '"' + this.tsaId + '"' : 'null') +
-      ',' +
       (this.timestamp != null ? this.timestamp : 'null') +
       ',' +
-      (this.timestampSig != null ? '"' + this.timestampSig + '"' : 'null') +
-      ',' +
       (this.createdBy != null ? '"' + this.createdBy + '"' : 'null') +
-      ',' +
-      (this.createdBySig != null ? '"' + this.createdBySig + '"' : 'null') +
       ',' +
       this.serializeAttributes()
     );
@@ -64,19 +55,13 @@ export abstract class FsOperation {
       randomStr,
       previousOperationHash,
       opType,
-      tsaId,
       timestamp,
-      timestampSig,
       createdBy,
-      createdBySig,
       opAttributes,
     ] = JSON.parse('[' + persistentString + ']');
     const fsOperation = this.createOperation(opType, createdBy, opAttributes, randomStr);
     fsOperation.previousOperationHash = previousOperationHash;
-    fsOperation.tsaId = tsaId;
     fsOperation.timestamp = timestamp;
-    fsOperation.timestampSig = timestampSig;
-    fsOperation.createdBySig = createdBySig;
     return fsOperation;
   }
 
@@ -144,10 +129,7 @@ export abstract class FsOperation {
       this.previousOperationHash === op.previousOperationHash &&
       this.operationType === op.operationType &&
       this.createdBy === op.createdBy &&
-      this.tsaId === op.tsaId &&
-      this.timestamp === op.timestamp &&
-      this.timestampSig === op.timestampSig &&
-      this.createdBySig === op.createdBySig
+      this.timestamp === op.timestamp
     );
   }
 }

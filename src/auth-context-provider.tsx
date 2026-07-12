@@ -1,7 +1,6 @@
 import { createContext, ReactNode, useContext, useEffect, useRef, useState } from "react";
 import axios from "axios";
 import { globalOptions } from "@/global-options";
-import { generateRsaKeys, importPrivateKey, PkiService, RestPkiBackend, RestUserBackend } from "@/engine";
 import { UserInfo } from "./types/types";
 import Keycloak from "keycloak-js";
 
@@ -17,7 +16,7 @@ interface AuthActions {
   register: () => void;
 }
 
-const emptyUserInfo: UserInfo = { id: "", name: "", privateKey: undefined };
+const emptyUserInfo: UserInfo = { id: "", name: "" };
 const UserInfoContext = createContext<UserInfo>(emptyUserInfo);
 const AuthActionsContext = createContext<AuthActions>({ login: async () => {}, logout: () => {}, register: () => {} });
 
@@ -34,20 +33,6 @@ function setAxiosInterceptor(getToken: () => string) {
     config.headers["x-access-token"] = getToken();
     return config;
   });
-}
-
-async function getPrivateKeys() {
-  const pkiBackend = new RestPkiBackend();
-  const userBackend = new RestUserBackend();
-  const pkiService = new PkiService(pkiBackend);
-  let userKeys = await pkiService.getUserRsaKeys();
-  if (userKeys.length === 0) {
-    const { privateKeyBase64, publicKeyBase64 } = await generateRsaKeys();
-    await pkiService.registerUserRsaKeys(publicKeyBase64, privateKeyBase64);
-    await userBackend.saveUserBasicInfo({ name: "" });
-    userKeys = await pkiService.getUserRsaKeys();
-  }
-  return importPrivateKey(userKeys[0].privateKeyBase64);
 }
 
 // --- Tauri: ROPC auth provider ---
@@ -92,8 +77,7 @@ function TauriAuthProvider({ authenticatedChild, anonymousChild }: ProviderProps
     localStorage.setItem(REFRESH_TOKEN_STORAGE_KEY, refreshToken);
     setAxiosInterceptor(() => accessTokenRef.current);
     const parsed = parseJwt(accessToken);
-    const privateKey = await getPrivateKeys();
-    setUserInfo({ id: parsed.sub, name: parsed.preferred_username, privateKey });
+    setUserInfo({ id: parsed.sub, name: parsed.preferred_username });
     setAuthStatus("AUTHENTICATED");
   }
 
@@ -157,35 +141,57 @@ const keycloak = new Keycloak({
   clientId: globalOptions.APP_KEYCLOAK_CLIENT_ID,
 });
 
+const KC_TOKEN_KEY = "owload_kc_token";
+const KC_REFRESH_TOKEN_KEY = "owload_kc_refresh_token";
+
+function saveKcTokens() {
+  if (keycloak.token) localStorage.setItem(KC_TOKEN_KEY, keycloak.token);
+  if (keycloak.refreshToken) localStorage.setItem(KC_REFRESH_TOKEN_KEY, keycloak.refreshToken);
+}
+
+function clearKcTokens() {
+  localStorage.removeItem(KC_TOKEN_KEY);
+  localStorage.removeItem(KC_REFRESH_TOKEN_KEY);
+}
+
 function WebAuthProvider({ authenticatedChild, anonymousChild }: ProviderProps) {
   const [authStatus, setAuthStatus] = useState<AuthStatus>("PENDING");
   const [userInfo, setUserInfo] = useState<UserInfo>(emptyUserInfo);
 
   useEffect(() => {
+    const storedToken = localStorage.getItem(KC_TOKEN_KEY) ?? undefined;
+    const storedRefreshToken = localStorage.getItem(KC_REFRESH_TOKEN_KEY) ?? undefined;
+
     keycloak
-      .init({ checkLoginIframe: false })
+      .init({ checkLoginIframe: false, token: storedToken, refreshToken: storedRefreshToken })
       .then(async (authenticated) => {
         if (authenticated) {
+          saveKcTokens();
           setAxiosInterceptor(() => keycloak.token ?? "");
           const parsed = keycloak.tokenParsed as { sub: string; preferred_username: string };
-          const privateKey = await getPrivateKeys();
-          setUserInfo({ id: parsed.sub, name: parsed.preferred_username, privateKey });
+          setUserInfo({ id: parsed.sub, name: parsed.preferred_username });
           setAuthStatus("AUTHENTICATED");
         } else {
+          clearKcTokens();
           setAuthStatus("ANONYMOUS");
         }
       })
-      .catch(() => setAuthStatus("ANONYMOUS"));
+      .catch(() => { clearKcTokens(); setAuthStatus("ANONYMOUS"); });
 
     keycloak.onTokenExpired = () => {
-      keycloak.updateToken(60).catch(() => {
-        setUserInfo(emptyUserInfo);
-        setAuthStatus("ANONYMOUS");
-      });
+      keycloak.updateToken(60)
+        .then(() => saveKcTokens())
+        .catch(() => {
+          clearKcTokens();
+          setUserInfo(emptyUserInfo);
+          setAuthStatus("ANONYMOUS");
+        });
     };
+
+    keycloak.onAuthRefreshSuccess = () => saveKcTokens();
   }, []);
 
-  function logout() { keycloak.logout(); }
+  function logout() { clearKcTokens(); keycloak.logout(); }
   function register() { keycloak.register(); }
 
   return (

@@ -33,7 +33,7 @@ export function DriveExplorerPage() {
 
     const abortContext: AbortContext = { aborted: false };
     const initialPath = "";
-    initialize(userInfo.id, driveId!, userInfo.privateKey!, undefined, initialPath, abortContext)
+    initialize(userInfo.id, driveId!, undefined, initialPath, abortContext)
       .then(() => {
         if (abortContext.aborted) {
           return;
