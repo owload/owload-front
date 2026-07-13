@@ -28,7 +28,6 @@ export function DriveLogs() {
           <div><strong>Len:</strong>{op.byteLength}</div>
           <div><strong>Valid:</strong>{op.valid ? "valid" : "error"}</div>
           <div><strong>Valid:</strong>{op.rejectionReason}</div>
-          <div>{op.op?.createdBy}, {op.op?.timestamp}</div>
           {op.op?.operationType}
           {op.op?.operationType === FsOperationType.DESCRIPTION &&
             <div>

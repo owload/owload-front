@@ -1,4 +1,3 @@
-import { useUserInfo } from "@/auth-context-provider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { RestDriveBackend } from "@/engine";
@@ -8,7 +7,6 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 export function CreateDrivePage() {
-  const userInfo = useUserInfo();
   const { initialize, setDriveDescription } = useFilesStoreOps();
   const updateDrives = useFilesStore((state) => state.updateDrives);
   const navigate = useNavigate();
@@ -27,7 +25,7 @@ export function CreateDrivePage() {
     const driveInfo = await driveBackend.createDrive(title);
     const driveId = driveInfo.id;
     await updateDrives();
-    await initialize(userInfo.id, driveId, password, "/", {aborted: false});
+    await initialize(driveId, password, "/", {aborted: false});
     await setDriveDescription(description);
     await navigate(`/drive/${driveId}`);
   }

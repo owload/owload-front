@@ -11,8 +11,6 @@ export enum FsObjectType {
 export const MAX_DESCRIPTION_LENGTH = 1024;
 
 interface FsObjectProperties {
-  createdBy: UserId;
-  createdTimestamp: number;
   modifiedBy?: UserId;
   modifiedTimestamp?: number;
   createdOpHash: string;
@@ -137,8 +135,6 @@ export class FsState {
     this.validateCreation(parentNode, lastPathComponent);
     const createdOpHash = await op.hashCode();
     const properties: FsDirectoryProperties = {
-      createdBy: op.createdBy,
-      createdTimestamp: op.timestamp!,
       createdOpHash
     };
     const newNode = new FsTreeNode(createdOpHash, parentNode, FsObjectType.DIR, lastPathComponent, properties);
@@ -190,8 +186,6 @@ export class FsState {
     }
     if (performOpMode === PerformOpMode.DO_PERFORM) {
       nodeToRename!.name = lastPathComponent;
-      nodeToRename!.properties!.modifiedBy = op.createdBy;
-      nodeToRename!.properties!.modifiedTimestamp = op.timestamp!;
       nodeToRename!.detach();
       parentNode!.attachChildNode(nodeToRename as FsTreeNode<FsObjectType>);
       return [nodeToRename!.id];
@@ -304,8 +298,6 @@ export class FsState {
     }
     const createdOpHash = await op.hashCode();
     const properties: FsFileProperties = {
-      createdBy: op.createdBy,
-      createdTimestamp: op.timestamp!,
       createdOpHash,
       byteOffset: op.byteOffset,
       byteLength: op.byteLength,

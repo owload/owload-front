@@ -1,5 +1,4 @@
 
-import { useUserInfo } from '@/auth-context-provider';
 import { useFilesStore } from '@/stores/files-store';
 import { useEffect } from 'react';
 import { Outlet, useNavigate, useParams } from 'react-router-dom';
@@ -24,8 +23,6 @@ export function DriveExplorerPage() {
   const setFilesInitialized = useFilesStore((state) => state.setFilesInitialized);
   const clearFiles = useFilesStore((state) => state.clearFiles);
 
-  const userInfo = useUserInfo();
-
   useEffect(() => {
     if (!drivesInitialized) {
       return;
@@ -34,7 +31,7 @@ export function DriveExplorerPage() {
 
     const abortContext: AbortContext = { aborted: false };
     const initialPath = "";
-    initialize(userInfo.id, driveId!, undefined, initialPath, abortContext)
+    initialize(driveId!, undefined, initialPath, abortContext)
       .then(() => {
         if (abortContext.aborted) {
           return;

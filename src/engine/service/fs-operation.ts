@@ -18,12 +18,9 @@ export abstract class FsOperation {
   randomStr: string;
   previousOperationHash: string | null = null;
   operationType: FsOperationType;
-  createdBy: string;
-  timestamp: number | null = null;
 
-  protected constructor(operationType: FsOperationType, createdBy: string, randomStr?: string) {
+  protected constructor(operationType: FsOperationType, randomStr?: string) {
     this.operationType = operationType;
-    this.createdBy = createdBy;
     this.randomStr = randomStr ? randomStr : this.getRandomStr();
   }
 
@@ -41,10 +38,6 @@ export abstract class FsOperation {
       ',' +
       this.operationType +
       ',' +
-      (this.timestamp != null ? this.timestamp : 'null') +
-      ',' +
-      (this.createdBy != null ? '"' + this.createdBy + '"' : 'null') +
-      ',' +
       this.serializeAttributes()
     );
   }
@@ -56,39 +49,35 @@ export abstract class FsOperation {
       randomStr,
       previousOperationHash,
       opType,
-      timestamp,
-      createdBy,
       opAttributes,
     ] = JSON.parse('[' + persistentString + ']');
-    const fsOperation = this.createOperation(opType, createdBy, opAttributes, randomStr);
+    const fsOperation = this.createOperation(opType, opAttributes, randomStr);
     fsOperation.previousOperationHash = previousOperationHash;
-    fsOperation.timestamp = timestamp;
     return fsOperation;
   }
 
   private static createOperation(
     opType: FsOperationType,
-    createdBy: string,
     opAttributes: Array<any>,
     randomStr?: string
   ): FsOperation {
     switch (opType) {
       case FsOperationType.MK_DIR:
-        return new MkDirFsOperation(createdBy, opAttributes[0], randomStr);
+        return new MkDirFsOperation(opAttributes[0], randomStr);
       case FsOperationType.RM:
-        return new RmFsOperation(createdBy, opAttributes[0], opAttributes[1] as string[], randomStr);
+        return new RmFsOperation(opAttributes[0], opAttributes[1] as string[], randomStr);
       case FsOperationType.RENAME:
-        return new RenameFsOperation(createdBy, opAttributes[0], opAttributes[1], randomStr);
+        return new RenameFsOperation(opAttributes[0], opAttributes[1], randomStr);
       case FsOperationType.MV:
-        return new MvFsOperation(createdBy, opAttributes[0], opAttributes[1], opAttributes[2], opAttributes[3], opAttributes[4], randomStr);
+        return new MvFsOperation(opAttributes[0], opAttributes[1], opAttributes[2], opAttributes[3], opAttributes[4], randomStr);
       case FsOperationType.CP:
-        return new CpFsOperation(createdBy, opAttributes[0], opAttributes[1], opAttributes[2], opAttributes[3], opAttributes[4], randomStr);
+        return new CpFsOperation(opAttributes[0], opAttributes[1], opAttributes[2], opAttributes[3], opAttributes[4], randomStr);
       case FsOperationType.START_UPLOAD:
-        return new UploadStartFsOperation(createdBy, opAttributes[0], opAttributes[1], opAttributes[2], opAttributes[3], randomStr);
+        return new UploadStartFsOperation(opAttributes[0], opAttributes[1], opAttributes[2], opAttributes[3], randomStr);
       case FsOperationType.FINISH_UPLOAD:
-        return new UploadFinishFsOperation(createdBy, opAttributes[0], opAttributes[1], randomStr);
+        return new UploadFinishFsOperation(opAttributes[0], opAttributes[1], randomStr);
       case FsOperationType.DESCRIPTION:
-        return new DescriptionFsOperation(createdBy, opAttributes[0], randomStr);
+        return new DescriptionFsOperation(opAttributes[0], randomStr);
       default:
         throw new Error('Unsupported operation type: ' + opType);
     }
@@ -128,9 +117,7 @@ export abstract class FsOperation {
     return (
       this.randomStr === op.randomStr &&
       this.previousOperationHash === op.previousOperationHash &&
-      this.operationType === op.operationType &&
-      this.createdBy === op.createdBy &&
-      this.timestamp === op.timestamp
+      this.operationType === op.operationType
     );
   }
 }
@@ -138,8 +125,8 @@ export abstract class FsOperation {
 export class MkDirFsOperation extends FsOperation {
   path: string;
 
-  constructor(createdBy: string, path: string, randomStr?: string) {
-    super(FsOperationType.MK_DIR, createdBy, randomStr);
+  constructor(path: string, randomStr?: string) {
+    super(FsOperationType.MK_DIR, randomStr);
     this.path = path;
   }
 
@@ -152,8 +139,8 @@ export class RmFsOperation extends FsOperation {
   basePath: string;
   fileNames: string[];
 
-  constructor(createdBy: string, basePath: string, fileNames: string[], randomStr?: string) {
-    super(FsOperationType.RM, createdBy, randomStr);
+  constructor(basePath: string, fileNames: string[], randomStr?: string) {
+    super(FsOperationType.RM, randomStr);
     this.basePath = basePath;
     this.fileNames = fileNames;
   }
@@ -167,8 +154,8 @@ export class RenameFsOperation extends FsOperation {
   pathSrc: string;
   pathDest: string;
 
-  constructor(createdBy: string, pathSrc: string, pathDest: string, randomStr?: string) {
-    super(FsOperationType.RENAME, createdBy, randomStr);
+  constructor(pathSrc: string, pathDest: string, randomStr?: string) {
+    super(FsOperationType.RENAME, randomStr);
     this.pathSrc = pathSrc;
     this.pathDest = pathDest;
   }
@@ -187,8 +174,8 @@ export class MvFsOperation extends FsOperation {
   mode: FsOperationNameConflictMode;
   destFileNames: string[] | null;
 
-  constructor(createdBy: string, pathSrc: string, fileNames: string[], pathDest: string, mode: FsOperationNameConflictMode, destFileNames: string[] | null, randomStr?: string) {
-    super(FsOperationType.MV, createdBy, randomStr);
+  constructor(pathSrc: string, fileNames: string[], pathDest: string, mode: FsOperationNameConflictMode, destFileNames: string[] | null, randomStr?: string) {
+    super(FsOperationType.MV, randomStr);
     this.pathSrc = pathSrc;
     this.fileNames = fileNames;
     this.pathDest = pathDest;
@@ -208,8 +195,8 @@ export class CpFsOperation extends FsOperation {
   mode: FsOperationNameConflictMode;
   destFileNames: string[] | null;
 
-  constructor(createdBy: string, pathSrc: string, fileNames: string[], pathDest: string, mode: FsOperationNameConflictMode, destFileNames: string[] | null, randomStr?: string) {
-    super(FsOperationType.CP, createdBy, randomStr);
+  constructor(pathSrc: string, fileNames: string[], pathDest: string, mode: FsOperationNameConflictMode, destFileNames: string[] | null, randomStr?: string) {
+    super(FsOperationType.CP, randomStr);
     this.pathSrc = pathSrc;
     this.fileNames = fileNames;
     this.pathDest = pathDest;
@@ -228,8 +215,8 @@ export class UploadStartFsOperation extends FsOperation {
   byteLength: number;
   mode: FsOperationNameConflictMode;
 
-  constructor(createdBy: string, path: string, byteOffset: number, byteLength: number, mode: FsOperationNameConflictMode, randomStr?: string) {
-    super(FsOperationType.START_UPLOAD, createdBy, randomStr);
+  constructor(path: string, byteOffset: number, byteLength: number, mode: FsOperationNameConflictMode, randomStr?: string) {
+    super(FsOperationType.START_UPLOAD, randomStr);
     this.path = path;
     this.byteOffset = byteOffset;
     this.byteLength = byteLength;
@@ -245,8 +232,8 @@ export class UploadFinishFsOperation extends FsOperation {
   uploadStartOperationHash: string;
   fileContentHash: string;
 
-  constructor(createdBy: string, uploadStartOperationHash: string, fileContentHash: string, randomStr?: string) {
-    super(FsOperationType.FINISH_UPLOAD, createdBy, randomStr);
+  constructor(uploadStartOperationHash: string, fileContentHash: string, randomStr?: string) {
+    super(FsOperationType.FINISH_UPLOAD, randomStr);
     this.uploadStartOperationHash = uploadStartOperationHash;
     this.fileContentHash = fileContentHash;
   }
@@ -259,8 +246,8 @@ export class UploadFinishFsOperation extends FsOperation {
 export class DescriptionFsOperation extends FsOperation {
   description: string;
 
-  constructor(createdBy: string, description: string, randomStr?: string) {
-    super(FsOperationType.DESCRIPTION, createdBy, randomStr);
+  constructor(description: string, randomStr?: string) {
+    super(FsOperationType.DESCRIPTION, randomStr);
     this.description = description;
   }
 

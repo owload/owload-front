@@ -1,6 +1,6 @@
 import { useFilesStore } from "@/stores/files-store";
 import { useNavigateDir } from "./use-navigate-dir";
-import { base64ToUint8Array, DriveClientFactory, FsObjectType, FsTreeNode, ProgressCallback, uint8ArrayToBase64, UserId, DriveId, RestFilesystemBackend, PreloadingFilesystemBackend, CachingFilesystemBackend, OperationCancelledError } from "@/engine";
+import { base64ToUint8Array, DriveClientFactory, FsObjectType, FsTreeNode, ProgressCallback, uint8ArrayToBase64, DriveId, RestFilesystemBackend, PreloadingFilesystemBackend, CachingFilesystemBackend, OperationCancelledError } from "@/engine";
 
 import { AbortContext, FileProperties } from "@/types/types";
 import { saveFileToDisk } from "@/lib/utils";
@@ -146,7 +146,7 @@ export function useFilesStoreOps() {
         }
     }
 
-    const initialize = async (userId: UserId, driveId: DriveId, password: string | undefined, initialPath: string, abortContext: AbortContext) => {
+    const initialize = async (driveId: DriveId, password: string | undefined, initialPath: string, abortContext: AbortContext) => {
         const driveInfo = useFilesStore.getState().drives.find(d => d.id === driveId);
         if (!driveInfo) {
             throw new Error("Drive not found in local store: " + driveId);
@@ -169,7 +169,7 @@ export function useFilesStoreOps() {
             }
         }
 
-        const factoryReturnValue = await DriveClientFactory.createDriveClient(userId,
+        const factoryReturnValue = await DriveClientFactory.createDriveClient(
             driveId,
             driveInfo.title,
             storedKeyEncoded,

@@ -7,11 +7,11 @@ import { MkDirFsOperation, RmFsOperation, FsOperation } from "../fs-operation";
 import { RejectionReason } from "../ops-repository";
 import { getSerializingOpsRepository, getParallelSerializingOpsRepositories } from "./implementations/serializing-ops-repository-test-impl";
 
-const testMkOp1 = new MkDirFsOperation('4f4d7b10-a600-471d-835d-627f26b3327c', '/');
-const testMkOp2 = new MkDirFsOperation('4f4d7b10-a600-471d-835d-627f26b3327c', '/dir/subdir');
-const testMkOp3 = new MkDirFsOperation('4f4d7b10-a600-471d-835d-627f26b3327c', '/dir/subdir');
-const testRmOp1 = new RmFsOperation('4f4d7b10-a600-471d-835d-627f26b3327c', '/dir/', ['subdir']);
-const testRmOp2 = new RmFsOperation('', '/dir/dir/dir/DirectoryNew/', ['Files.Json.Docs.XML']);
+const testMkOp1 = new MkDirFsOperation('/');
+const testMkOp2 = new MkDirFsOperation('/dir/subdir');
+const testMkOp3 = new MkDirFsOperation('/dir/subdir');
+const testRmOp1 = new RmFsOperation('/dir/', ['subdir']);
+const testRmOp2 = new RmFsOperation('/dir/dir/dir/DirectoryNew/', ['Files.Json.Docs.XML']);
 
 function opByteLength(op: FsOperation) {
     return new TextEncoder().encode(op.serialize()).length;

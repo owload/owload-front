@@ -7,18 +7,18 @@ import { getHashValidatingOpsRepository, getParallelHashValidatingOpsRepositorie
 
 test('saveOperation succeeds', async () => {
     const { hashValidatingOpsRepository } = await getHashValidatingOpsRepository();
-    const op = new MkDirFsOperation('1234-1234-1234', '/fsPath');
+    const op = new MkDirFsOperation('/fsPath');
     await hashValidatingOpsRepository.saveOperation(op);
     await hashValidatingOpsRepository.saveOperation(op);
-    const op2 = new RmFsOperation('1234-1234-1234', '/', ['fsPath']);
+    const op2 = new RmFsOperation('/', ['fsPath']);
     await hashValidatingOpsRepository.saveOperation(op2);
 });
 
 test('Save multiple operations then get them', async () => {
     const { hashValidatingOpsRepository } = await getHashValidatingOpsRepository();
-    const op1 = new MkDirFsOperation('1234-1234-1234', '/fsPath');
+    const op1 = new MkDirFsOperation('/fsPath');
     await hashValidatingOpsRepository.saveOperation(op1);
-    const op2 = new RmFsOperation('1234-1234-1234', '/', ['fsPath']);
+    const op2 = new RmFsOperation('/', ['fsPath']);
     await hashValidatingOpsRepository.saveOperation(op2);
     const opsArray = await hashValidatingOpsRepository.getOperations();
     opsArray.forEach(e => e.opStr = "");
@@ -30,11 +30,11 @@ test('Save multiple operations then get them', async () => {
 
 test('Saved ops have correct hashes', async () => {
     const { hashValidatingOpsRepository } = await getHashValidatingOpsRepository();
-    const op1 = new MkDirFsOperation('1234-1234-1234', '/fsPath');
+    const op1 = new MkDirFsOperation('/fsPath');
     await hashValidatingOpsRepository.saveOperation(op1);
-    const op2 = new RmFsOperation('1234-1234-a;do43o43', '/', ['fsPath2']);
+    const op2 = new RmFsOperation('/', ['fsPath2']);
     await hashValidatingOpsRepository.saveOperation(op2);
-    const op3 = new MkDirFsOperation('1234', '/root/newDocment.pdf');
+    const op3 = new MkDirFsOperation('/root/newDocment.pdf');
     await hashValidatingOpsRepository.saveOperation(op3);
     await hashValidatingOpsRepository.getOperations();
     expect(op1.previousOperationHash).equals('');
@@ -44,7 +44,7 @@ test('Saved ops have correct hashes', async () => {
 
 test('Save-get-save-get produces correct operations', async () => {
     const { hashValidatingOpsRepository } = await getHashValidatingOpsRepository();
-    const op1 = new MkDirFsOperation('1234-1234-1234', '/fsPath');
+    const op1 = new MkDirFsOperation('/fsPath');
     await hashValidatingOpsRepository.saveOperation(op1);
     let opsArray = await hashValidatingOpsRepository.getOperations();
     opsArray.forEach(e => e.opStr = "");
@@ -52,8 +52,8 @@ test('Save-get-save-get produces correct operations', async () => {
         { opStr: "", op: op1, valid: true }
     ]);
     expect(op1.previousOperationHash).equals('');
-    const op2 = new MkDirFsOperation('1234-1234', '/fsPath2');
-    const op3 = new RmFsOperation('1234-1234', '/', ['fsPath']);
+    const op2 = new MkDirFsOperation('/fsPath2');
+    const op3 = new RmFsOperation('/', ['fsPath']);
     await hashValidatingOpsRepository.saveOperation(op2);
     await hashValidatingOpsRepository.saveOperation(op3);
     opsArray = await hashValidatingOpsRepository.getOperations();
@@ -64,7 +64,7 @@ test('Save-get-save-get produces correct operations', async () => {
     ]);
     expect(op2.previousOperationHash).equals(await op1.hashCode());
     expect(op3.previousOperationHash).equals(await op2.hashCode());
-    const op4 = new RmFsOperation('1234-542=34oooo4', '/', ['fsPath']);
+    const op4 = new RmFsOperation('/', ['fsPath']);
     await hashValidatingOpsRepository.saveOperation(op4);
     opsArray = await hashValidatingOpsRepository.getOperations();
     opsArray.forEach(e => e.opStr = "");
@@ -100,7 +100,7 @@ async function saveWithWrongHash(
 
 test('Operations with wrong hash skipped', async () => {
     const { hashValidatingOpsRepository } = await getHashValidatingOpsRepository();
-    const op1 = new MkDirFsOperation('1234-1234-1234', '/fsPath');
+    const op1 = new MkDirFsOperation('/fsPath');
     await saveWithWrongHash(hashValidatingOpsRepository, op1);
     let opsArray = await hashValidatingOpsRepository.getOperations();
     opsArray.forEach(e => e.opStr = "");
@@ -113,8 +113,8 @@ test('Operations with wrong hash skipped', async () => {
     expect(opsArray).toMatchObject([
         { opStr: "", op: op1, valid: true },
     ]);
-    const op2 = new RmFsOperation('1234-542=34oooo4', '/', ['fsPath']);
-    const op3 = new MkDirFsOperation('1234-542=34oooo4', '/fsPath/mao');
+    const op2 = new RmFsOperation('/', ['fsPath']);
+    const op3 = new MkDirFsOperation('/fsPath/mao');
     await saveWithWrongHash(hashValidatingOpsRepository, op1);
     await saveWithWrongHash(hashValidatingOpsRepository, op2);
     await saveWithWrongHash(hashValidatingOpsRepository, op3);
@@ -158,8 +158,8 @@ test('If getOperations-saveOperations atomic, then no corruption happens with pa
     const hashValidatingOpsRepository2 = e2.hashValidatingOpsRepository;
     let opsArray = await hashValidatingOpsRepository1.getOperations();
     expect(opsArray).toStrictEqual([]);
-    const op1 = new MkDirFsOperation('1', '/A');
-    const op2 = new MkDirFsOperation('1', '/B');
+    const op1 = new MkDirFsOperation('/A');
+    const op2 = new MkDirFsOperation('/B');
     await hashValidatingOpsRepository1.saveOperation(op1);
     await hashValidatingOpsRepository1.saveOperation(op2);
 
@@ -170,7 +170,7 @@ test('If getOperations-saveOperations atomic, then no corruption happens with pa
         { opStr: "", op: op2, valid: true }
     ]);
 
-    const op3 = new MkDirFsOperation('2', '/A/1');
+    const op3 = new MkDirFsOperation('/A/1');
     await hashValidatingOpsRepository2.saveOperation(op3);
     opsArray = await hashValidatingOpsRepository1.getOperations();
     opsArray.forEach(e => e.opStr = "");
@@ -180,7 +180,7 @@ test('If getOperations-saveOperations atomic, then no corruption happens with pa
         { opStr: "", op: op3, valid: true }
     ]);
 
-    const op4 = new RmFsOperation('1', '/', ['A']);
+    const op4 = new RmFsOperation('/', ['A']);
     await hashValidatingOpsRepository1.saveOperation(op4);
     opsArray = await hashValidatingOpsRepository1.getOperations();
     opsArray.forEach(e => e.opStr = "");
@@ -195,7 +195,7 @@ test('If getOperations-saveOperations atomic, then no corruption happens with pa
         { opStr: "", op: op4, valid: true }
     ]);
 
-    const op5 = new RmFsOperation('2', '/', ['B']);
+    const op5 = new RmFsOperation('/', ['B']);
     await hashValidatingOpsRepository2.saveOperation(op5);
     opsArray = await hashValidatingOpsRepository1.getOperations();
     opsArray.forEach(e => e.opStr = "");
@@ -236,12 +236,12 @@ test('Corrupted block does not affect next ones', async () => {
     const hashValidatingOpsRepository2 = e2.hashValidatingOpsRepository;
     let opsArray = await hashValidatingOpsRepository1.getOperations();
     expect(opsArray).toStrictEqual([]);
-    const op1 = new MkDirFsOperation('1', '/A');
-    const op2 = new MkDirFsOperation('1', '/B');
+    const op1 = new MkDirFsOperation('/A');
+    const op2 = new MkDirFsOperation('/B');
     await hashValidatingOpsRepository1.saveOperation(op1);
     await hashValidatingOpsRepository1.saveOperation(op2);
 
-    const op3 = new MkDirFsOperation('2', '/A/1');
+    const op3 = new MkDirFsOperation('/A/1');
     await hashValidatingOpsRepository2.saveOperation(op3);
 
     opsArray = await hashValidatingOpsRepository1.getOperations();
@@ -252,7 +252,7 @@ test('Corrupted block does not affect next ones', async () => {
         { opStr: "", valid: false, rejectionReason: RejectionReason.DESERIALIZATION_ERROR },
     ]);
 
-    const op4 = new RmFsOperation('1', '/', ['A']);
+    const op4 = new RmFsOperation('/', ['A']);
     await hashValidatingOpsRepository1.saveOperation(op4);
     opsArray = await hashValidatingOpsRepository1.getOperations();
     opsArray.forEach(e => e.opStr = "");
@@ -260,7 +260,7 @@ test('Corrupted block does not affect next ones', async () => {
         { opStr: "", op: op4, valid: true }
     ]);
 
-    const op5 = new RmFsOperation('2', '/', ['B']);
+    const op5 = new RmFsOperation('/', ['B']);
     await hashValidatingOpsRepository2.saveOperation(op3);
     await hashValidatingOpsRepository2.saveOperation(op5);
     await hashValidatingOpsRepository2.saveOperation(op5);

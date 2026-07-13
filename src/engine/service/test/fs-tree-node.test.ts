@@ -8,15 +8,11 @@ describe("FsTreeNode", () => {
 
   beforeEach(() => {
     const rootProperties: FsDirectoryProperties = {
-      createdBy: "user1",
-      createdTimestamp: Date.now(),
       createdOpHash: "rootHash",
     };
     rootNode = new FsTreeNode("root", null, FsObjectType.DIR, "root", rootProperties);
 
     const fileProperties: FsFileProperties = {
-      createdBy: "user2",
-      createdTimestamp: Date.now(),
       createdOpHash: "fileHash",
       byteOffset: 0,
       byteLength: 100,

@@ -2,7 +2,6 @@ import { AbortContext } from "@/types/types";
 import { getCachedUint8Value, setCachedValue } from "../backend/caches";
 import { DriveId } from "../backend/drive-backend";
 import { FilesystemBackend, SessionId } from "../backend/filesystem-backend";
-import { UserId } from "../backend/user-backend";
 import { createEncryptingStream, encrypt } from "../core/enc";
 import { readBlobAsStream, readToUint8Array, uint8ArrayToBase64 } from "../core/stream-utils";
 import { MkDirFsOperation, RmFsOperation, RenameFsOperation, CpFsOperation, UploadStartFsOperation, UploadFinishFsOperation, FsOperation, DescriptionFsOperation, MvFsOperation, FsOperationNameConflictMode } from "./fs-operation";
@@ -40,7 +39,6 @@ type SaveProgressCallback = (n: number) => void; // parameter represents number 
 
 export class DriveClient {
   private fsState = new FsState();
-  private readonly userId: UserId;
   private readonly driveId: DriveId;
   private readonly driveName: string;
   private readonly operationService: OperationService;
@@ -50,7 +48,7 @@ export class DriveClient {
   private readonly operationLog: FsOperationWrapper[] = [];
   private path = '/';
 
-  constructor(userId: UserId,
+  constructor(
     driveId: DriveId,
     driveName: string,
     operationService: OperationService,
@@ -59,7 +57,6 @@ export class DriveClient {
     nonce: Uint8Array) {
     this.driveId = driveId;
     this.driveName = driveName;
-    this.userId = userId;
     this.operationService = operationService;
     this.filesystemBackend = filesystemBackend;
     this.privateKey = privateKey;
@@ -110,7 +107,7 @@ export class DriveClient {
   }
 
   public async setDescription(description: string) {
-    await this.performOp(new DescriptionFsOperation(this.userId, description));
+    await this.performOp(new DescriptionFsOperation(description));
   }
 
   public getDescription() {
@@ -179,7 +176,7 @@ export class DriveClient {
 
   public async mkdir(path: string): Promise<FsTreeNodeId> {
     path = this.getAbsolutePath(path);
-    const opRes = await this.performOp(new MkDirFsOperation(this.userId, path));
+    const opRes = await this.performOp(new MkDirFsOperation(path));
     if (opRes.length !== 1) {
       throw new Error("Failed to create directory: unexpected number of changed nodes: " + opRes.length);
     }
@@ -188,7 +185,7 @@ export class DriveClient {
 
   public async rm(fileNames: string[], basePath = ""): Promise<FsTreeNodeId[]> {
     basePath = this.getAbsolutePath(basePath);
-    return this.performOp(new RmFsOperation(this.userId, basePath, [...fileNames].map(
+    return this.performOp(new RmFsOperation(basePath, [...fileNames].map(
       e => e.replace(/^\/+|\/+$/g, "") // Trim leading and trailing slashes
     )));
   }
@@ -196,7 +193,7 @@ export class DriveClient {
   public async rename(pathSrc: string, pathDest: string): Promise<FsTreeNodeId> {
     pathSrc = this.getAbsolutePath(pathSrc);
     pathDest = this.getAbsolutePath(pathDest);
-    const opRes = await this.performOp(new RenameFsOperation(this.userId, pathSrc, pathDest));
+    const opRes = await this.performOp(new RenameFsOperation(pathSrc, pathDest));
     if (opRes.length !== 1) {
       throw new Error("Failed to rename object: unexpected number of changed nodes: " + opRes.length);
     }
@@ -206,13 +203,13 @@ export class DriveClient {
   public async mv(pathSrc: string, fileNames: string[], pathDest: string, mode: FsOperationNameConflictMode, destFileNames?: string[]): Promise<FsTreeNodeId[]> {
     pathSrc = this.getAbsolutePath(pathSrc);
     pathDest = this.getAbsolutePath(pathDest);
-    return this.performOp(new MvFsOperation(this.userId, pathSrc, fileNames, pathDest, mode, destFileNames ? destFileNames : null));
+    return this.performOp(new MvFsOperation(pathSrc, fileNames, pathDest, mode, destFileNames ? destFileNames : null));
   }
 
   public async cp(pathSrc: string, fileNames: string[], pathDest: string, mode: FsOperationNameConflictMode, destFileNames?: string[]): Promise<FsTreeNodeId[]> {
     pathSrc = this.getAbsolutePath(pathSrc);
     pathDest = this.getAbsolutePath(pathDest);
-    return this.performOp(new CpFsOperation(this.userId, pathSrc, fileNames, pathDest, mode, destFileNames ? destFileNames : null));
+    return this.performOp(new CpFsOperation(pathSrc, fileNames, pathDest, mode, destFileNames ? destFileNames : null));
   }
 
   public async uploadFile(file: File, directoryPath: string, mode: FsOperationNameConflictMode, uploadStartedCallback?: () => void, progressCallback?: ProgressCallback, abortSignal?: AbortSignal): Promise<FsTreeNodeId> {
@@ -220,7 +217,7 @@ export class DriveClient {
     if (abortSignal?.aborted) throw new OperationCancelledError();
     const sessionInfo = await this.filesystemBackend.startUploadSession(this.driveId, file.size);
     if (abortSignal?.aborted) throw new OperationCancelledError();
-    const uploadStartOperation = new UploadStartFsOperation(this.userId, fullPath, sessionInfo.byteOffset, sessionInfo.byteLength, mode);
+    const uploadStartOperation = new UploadStartFsOperation(fullPath, sessionInfo.byteOffset, sessionInfo.byteLength, mode);
     const opRes = await this.performOp(uploadStartOperation);
     if (opRes.length !== 1) {
       throw new Error("Failed to upload file: unexpected number of changed nodes: " + opRes.length);
@@ -327,11 +324,10 @@ export class DriveClient {
     abortSignal?: AbortSignal
   ): WritableStream<Uint8Array> {
     let contentHash = "";
-    const userId = this.userId;
     const saveDataBlockFunc = this.filesystemBackend.saveDataBlock.bind(this.filesystemBackend, sessionId);
     let uploadedBytesLength = 0;
     const finalizeOperationFunc = async (contentHash: string) => {
-      await this.performOp(new UploadFinishFsOperation(userId, uploadStartOperationHash, contentHash));
+      await this.performOp(new UploadFinishFsOperation(uploadStartOperationHash, contentHash));
     };
     return new WritableStream({
       async write(chunk: Uint8Array) {

@@ -7,14 +7,12 @@ import { SplittingOpsRepository } from "./splitting-ops-repository";
 import { FilesystemBackend } from "../backend/filesystem-backend";
 import { AesEncryptor, generateKey } from "../core/enc";
 import { EncryptingOpsRepository } from "./encrypting-ops-repository";
-import { UserId } from "../backend/user-backend";
 import { base64ToUint8Array } from "../core/stream-utils";
 
 const EncryptorImpl = AesEncryptor;
 
 export class DriveClientFactory {
   public static async createDriveClient(
-    userId: UserId,
     driveId: DriveId,
     driveName: string,
     keyEncoded: CryptoKey | undefined,
@@ -38,7 +36,7 @@ export class DriveClientFactory {
     const hashValidatingOpsRepository = new HashValidatingOpsRepository(serializingOpsRepository);
     const operationService = new OperationService(hashValidatingOpsRepository);
     return {
-      driveClient: new DriveClient(userId, driveId, driveName, operationService, filesystemBackend, keyEncoded, opsCounterNonce),
+      driveClient: new DriveClient(driveId, driveName, operationService, filesystemBackend, keyEncoded, opsCounterNonce),
       keyEncoded
     };
   }
