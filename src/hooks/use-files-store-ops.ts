@@ -9,7 +9,7 @@ import { FsOperationNameConflictMode } from "@/engine/service/fs-operation";
 import { useDeactivateMobileSelectMode } from "./use-mobile-select-mode";
 
 let swMessageEventListener: ((event: MessageEvent) => void) | undefined;
-const swRequestReaders = new Map<string, { stream: ReadableStream, reader: ReadableStreamDefaultReader<Uint8Array> }>();
+const swRequestReaders = new Map<string, ReadableStreamDefaultReader<Uint8Array>>();
 
 function getExtension(name: string) {
     const split = name.split('.');
@@ -190,35 +190,32 @@ export function useFilesStoreOps() {
         swMessageEventListener = (event: MessageEvent) => {
             if (event.data.type === "startClientFetch") {
                 const { byteOffset, byteLength } = event.data.data;
-                ccl.getFileDataStream(byteOffset, byteLength, "").then(stream => {
-                    swRequestReaders.set(event.data.requestId, { stream, reader: stream.getReader() });
-                });
-            } else if (event.data.type === "pullClientFetchData") {
-                const rd = swRequestReaders.get(event.data.requestId);
-                if (rd) {
-                    const reader = rd.reader;
-                    reader.read().then(({ done, value }) => {
-                        if (done) {
-                            event.source?.postMessage({
-                                type: "responseFinish",
-                                requestId: event.data.requestId,
-                                data: null
-                            });
-                            swRequestReaders.delete(event.data.requestId);
-                            return;
+                const requestId = event.data.requestId;
+                const sw = event.source;
+                ccl.getFileDataStream(byteOffset, byteLength, "", true).then(async stream => {
+                    const reader = stream.getReader();
+                    swRequestReaders.set(requestId, reader);
+                    try {
+                        while (true) {
+                            const { done, value } = await reader.read();
+                            if (swRequestReaders.get(requestId) !== reader) break; // cancelled
+                            if (done) {
+                                sw?.postMessage({ type: "responseFinish", requestId });
+                                break;
+                            }
+                            // Transfer ArrayBuffer ownership (zero-copy across threads)
+                            sw?.postMessage({ type: "responseData", requestId, data: value }, [value.buffer]);
                         }
-                        event.source?.postMessage({
-                            type: "responseData",
-                            requestId: event.data.requestId,
-                            data: value
-                        });
-                    });
-                }
-
+                    } catch {
+                        sw?.postMessage({ type: "responseFinish", requestId });
+                    } finally {
+                        swRequestReaders.delete(requestId);
+                    }
+                });
             } else if (event.data.type === "cancelClientFetch") {
-                const rd = swRequestReaders.get(event.data.requestId);
-                if (rd) {
-                    rd.reader.cancel();
+                const reader = swRequestReaders.get(event.data.requestId);
+                if (reader) {
+                    reader.cancel();
                     swRequestReaders.delete(event.data.requestId);
                 }
             }

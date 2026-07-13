@@ -1,4 +1,15 @@
 import { useFilesStoreOps, getPreviewFileName, PREVIEW_SIZES } from "@/hooks/use-files-store-ops";
+
+const MIME_TYPES: Record<string, string> = {
+    mp4: 'video/mp4',
+    mov: 'video/quicktime',
+    webm: 'video/webm',
+};
+
+function getMimeType(fileName: string): string {
+    const ext = fileName.split('.').pop()?.toLowerCase() ?? '';
+    return MIME_TYPES[ext] ?? 'video/mp4';
+}
 import { useFilesStore } from "@/stores/files-store"
 import { FileProperties } from "@/types/types";
 import { ReactEventHandler, useEffect, useState } from "react";
@@ -68,6 +79,6 @@ export function VideoPreview({ fileToPreview, onLoadedCallback }: VideoPreviewPr
                 display: ready ? "block" : "block"
             }}
             preload="auto"
-            controls src={`/videorequest/data/${start}/${len}`} />
+            controls src={`/videorequest/${encodeURIComponent(getMimeType(fileToPreview.name))}/${start}/${len}`} />
     </>
 }
