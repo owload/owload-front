@@ -13,8 +13,8 @@ test('Empty filesystem backend returns zero-length result', async () => {
 
 test('getOperations with non-existing driveId causes to throw an error', async () => {
   const { filesystemBackend } = await getFilesystemBackend();
-  const nonExistingContainerId = '8383923-2940-2';
-  await expect(async () => filesystemBackend.getOperations(nonExistingContainerId, 0)).rejects.toThrowError();
+  const nonExistingDriveId = '8383923-2940-2';
+  await expect(async () => filesystemBackend.getOperations(nonExistingDriveId, 0)).rejects.toThrowError();
 });
 
 test('Save one operation then get it', async () => {
@@ -25,10 +25,10 @@ test('Save one operation then get it', async () => {
   expect(checkEqual(opsU8array, op1Data)).toBe(true);
 });
 
-test('saveOperation with non-existing containerId throws an error', async () => {
+test('saveOperation with non-existing driveId throws an error', async () => {
   const { filesystemBackend } = await getFilesystemBackend();
-  const nonExistingContainerId = '8383923-2940-32';
-  await expect(async () => filesystemBackend.saveOperation(nonExistingContainerId, new Uint8Array(1))).rejects.toThrowError();
+  const nonExistingDriveId = '8383923-2940-32';
+  await expect(async () => filesystemBackend.saveOperation(nonExistingDriveId, new Uint8Array(1))).rejects.toThrowError();
 });
 
 test('getOperations with negative pos throws an error', async () => {

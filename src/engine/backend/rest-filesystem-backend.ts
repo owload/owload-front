@@ -12,7 +12,7 @@ export class RestFilesystemBackend implements FilesystemBackend {
     }
 
     async startUploadSession(driveId: DriveId, byteLength: number): Promise<SessionInfo> {
-        return postApiCall(`/sessions?containerId=${driveId}&byteLength=${byteLength}`);
+        return postApiCall(`/sessions?driveId=${driveId}&byteLength=${byteLength}`);
     }
 
     async finishUploadSession(sessionId: SessionId): Promise<void> {
@@ -27,7 +27,7 @@ export class RestFilesystemBackend implements FilesystemBackend {
         if (byteLength <= 0) {
             throw new Error("byteLength is zero or negative: " + byteLength)
         }
-        const url = `/data?containerId=${driveId}&start=${byteOffset}&end=${byteOffset + byteLength}`;
+        const url = `/data?driveId=${driveId}&start=${byteOffset}&end=${byteOffset + byteLength}`;
         let buf;
         buf = await getApiCall<Uint8Array>(url, "arraybuffer", undefined, 1000);
 

@@ -30,14 +30,14 @@ export class RestDriveBackend implements DriveBackend {
   createDrive(title: string): Promise<DriveInfo> {
     const keyNonce = uint8ArrayToBase64(getRandomNonce());
     const counterNonce = uint8ArrayToBase64(getRandomNonce());
-    return postApiCall(`/containers`, { title, keyNonce, counterNonce });
+    return postApiCall(`/drives`, { title, keyNonce, counterNonce });
   }
 
   getAccessibleDrives(): Promise<DriveInfo[]> {
-    return getApiCall(`/containers`);
+    return getApiCall(`/drives`);
   }
 
   getDriveInfo(driveId: DriveId): Promise<DriveInfo> {
-    return getApiCall(`/containers/${driveId}`);
+    return getApiCall(`/drives/${driveId}`);
   }
 }

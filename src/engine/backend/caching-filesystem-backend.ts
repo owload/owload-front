@@ -57,7 +57,7 @@ export class CachingFilesystemBackend implements FilesystemBackend {
     if (byteLength <= 0) {
       throw new Error("byteLength is zero or negative: " + byteLength)
     }
-    const url = `/data?containerId=${driveId}&start=${byteOffset}&end=${byteOffset + byteLength}`;
+    const url = `/data?driveId=${driveId}&start=${byteOffset}&end=${byteOffset + byteLength}`;
     let buf;
     if (cache) {
       buf = await getCachedUint8Value(this.DATA_CACHE, url);

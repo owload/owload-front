@@ -30,7 +30,6 @@ export class DriveClientFactory {
     if (!keyEncoded) {
       keyEncoded = await generateKey(password!, base64ToUint8Array(driveKeyNonce), true);
     }
-    console.log(password, keyEncoded)
     const opsCounterNonce = base64ToUint8Array(driveCounterNonce);
     const encryptor = new EncryptorImpl<Uint8Array>(keyEncoded, opsCounterNonce);
     const encryptingOpsRepository = new EncryptingOpsRepository(driveId, filesystemBackend, encryptor);

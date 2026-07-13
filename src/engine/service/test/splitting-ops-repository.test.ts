@@ -2,7 +2,7 @@ import { expect, test } from 'vitest';
 import { getParallelSplittingOpsRepositories, getSplittingOpsRepository } from './implementations/splitting-ops-repository-test-impl';
 
 
-test('Empty container returns empty result', async () => {
+test('Empty drive returns empty result', async () => {
   const { splittingOpsRepository } = await getSplittingOpsRepository();
   const opsStrArray = await splittingOpsRepository.getOperations();
   expect(opsStrArray).toStrictEqual([]);
