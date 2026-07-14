@@ -11,8 +11,9 @@ import { OperationService } from "./operation-service";
 import { FsOperationWrapper, RejectionReason } from "./ops-repository";
 
 const FS_SNAPSHOT_CACHE = "FS_SNAPSHOT_CACHE_1";
-const UPLOAD_CHUNK_LENGTH = 1 * 1024 * 1024;// ENCRYPTION_BLOCK_BYTE_LENGTH * 256 * 32;
-const DOWNLOAD_CHUNK_LENGTH = UPLOAD_CHUNK_LENGTH;
+import { BLOCK_SIZE } from "../core/constants";
+const UPLOAD_CHUNK_LENGTH = BLOCK_SIZE;
+const DOWNLOAD_CHUNK_LENGTH = BLOCK_SIZE;
 
 export type ProgressInfo = {
   encrypted: number,
@@ -120,6 +121,14 @@ export class DriveClient {
 
   public getDriveName() {
     return this.driveName;
+  }
+
+  public getEffectiveSize(): number {
+    return this.fsState.getTotalFileSize();
+  }
+
+  public getEffectiveRanges(): Array<{ byteOffset: number; byteLength: number }> {
+    return this.fsState.getAllFileRanges();
   }
 
   public cd(path: string) {

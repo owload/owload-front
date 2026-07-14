@@ -38,6 +38,29 @@ export class FsState {
     return this.description;
   }
 
+  public getTotalFileSize(): number {
+    return this.sumFileSizes(this.rootNode);
+  }
+
+  public getAllFileRanges(): Array<{ byteOffset: number; byteLength: number }> {
+    return this.collectRanges(this.rootNode);
+  }
+
+  private sumFileSizes(node: FsTreeNode<FsObjectType>): number {
+    if (node.type === FsObjectType.FILE) {
+      return (node.properties as FsFileProperties).byteLength ?? 0;
+    }
+    return node.childNodes.reduce((sum, child) => sum + this.sumFileSizes(child), 0);
+  }
+
+  private collectRanges(node: FsTreeNode<FsObjectType>): Array<{ byteOffset: number; byteLength: number }> {
+    if (node.type === FsObjectType.FILE) {
+      const props = node.properties as FsFileProperties;
+      return [{ byteOffset: props.byteOffset, byteLength: props.byteLength }];
+    }
+    return node.childNodes.flatMap(child => this.collectRanges(child));
+  }
+
   /**
    * Perform multiple operations on the file system state.
    *
