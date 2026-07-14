@@ -24,12 +24,13 @@ const AuthActionsContext = createContext<AuthActions>({ login: async () => {}, l
 
 let axiosInterceptorId: number | null = null;
 
-function setAxiosInterceptor(getToken: () => string) {
+function setAxiosInterceptor(getToken: () => string, refreshFn?: () => Promise<void>) {
   axios.defaults.baseURL = globalOptions.APP_MAIN_BACKEND_URL;
   if (axiosInterceptorId !== null) {
     axios.interceptors.request.eject(axiosInterceptorId);
   }
-  axiosInterceptorId = axios.interceptors.request.use(config => {
+  axiosInterceptorId = axios.interceptors.request.use(async config => {
+    if (refreshFn) await refreshFn();
     config.headers["x-access-token"] = getToken();
     return config;
   });
@@ -37,9 +38,17 @@ function setAxiosInterceptor(getToken: () => string) {
 
 // --- Tauri: ROPC auth provider ---
 
-function parseJwt(token: string): { sub: string; preferred_username: string } {
+function parseJwt(token: string): { sub: string; preferred_username: string; exp: number } {
   const base64 = token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
   return JSON.parse(atob(base64));
+}
+
+function isTokenExpiringSoon(token: string, thresholdSec = 30): boolean {
+  try {
+    return parseJwt(token).exp * 1000 - Date.now() < thresholdSec * 1000;
+  } catch {
+    return true;
+  }
 }
 
 async function keycloakTokenRequest(params: Record<string, string>): Promise<{ access_token: string; refresh_token: string }> {
@@ -71,11 +80,21 @@ function TauriAuthProvider({ authenticatedChild, anonymousChild }: ProviderProps
   const accessTokenRef = useRef<string>("");
   const refreshTokenRef = useRef<string>("");
 
+  async function doRefresh() {
+    const data = await keycloakTokenRequest({ grant_type: "refresh_token", refresh_token: refreshTokenRef.current });
+    accessTokenRef.current = data.access_token;
+    refreshTokenRef.current = data.refresh_token;
+    localStorage.setItem(REFRESH_TOKEN_STORAGE_KEY, data.refresh_token);
+  }
+
   async function applyTokens(accessToken: string, refreshToken: string) {
     accessTokenRef.current = accessToken;
     refreshTokenRef.current = refreshToken;
     localStorage.setItem(REFRESH_TOKEN_STORAGE_KEY, refreshToken);
-    setAxiosInterceptor(() => accessTokenRef.current);
+    setAxiosInterceptor(
+      () => accessTokenRef.current,
+      async () => { if (isTokenExpiringSoon(accessTokenRef.current)) await doRefresh(); }
+    );
     const parsed = parseJwt(accessToken);
     setUserInfo({ id: parsed.sub, name: parsed.preferred_username });
     setAuthStatus("AUTHENTICATED");
@@ -98,15 +117,15 @@ function TauriAuthProvider({ authenticatedChild, anonymousChild }: ProviderProps
   useEffect(() => {
     if (authStatus !== "AUTHENTICATED") return;
     const id = setInterval(() => {
-      keycloakTokenRequest({ grant_type: "refresh_token", refresh_token: refreshTokenRef.current })
-        .then(data => {
-          accessTokenRef.current = data.access_token;
-          refreshTokenRef.current = data.refresh_token;
-          localStorage.setItem(REFRESH_TOKEN_STORAGE_KEY, data.refresh_token);
-        })
-        .catch(() => logout());
+      doRefresh().catch(() => logout());
     }, TOKEN_REFRESH_INTERVAL_MS);
-    return () => clearInterval(id);
+    const onVisible = () => {
+      if (document.visibilityState === "visible" && isTokenExpiringSoon(accessTokenRef.current, 60)) {
+        doRefresh().catch(() => logout());
+      }
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => { clearInterval(id); document.removeEventListener("visibilitychange", onVisible); };
   }, [authStatus]);
 
   async function login(username?: string, password?: string) {
@@ -167,7 +186,19 @@ function WebAuthProvider({ authenticatedChild, anonymousChild }: ProviderProps) 
       .then(async (authenticated) => {
         if (authenticated) {
           saveKcTokens();
-          setAxiosInterceptor(() => keycloak.token ?? "");
+          setAxiosInterceptor(
+            () => keycloak.token ?? "",
+            async () => {
+              try {
+                await keycloak.updateToken(30);
+                saveKcTokens();
+              } catch {
+                clearKcTokens();
+                setUserInfo(emptyUserInfo);
+                setAuthStatus("ANONYMOUS");
+              }
+            }
+          );
           const parsed = keycloak.tokenParsed as { sub: string; preferred_username: string };
           setUserInfo({ id: parsed.sub, name: parsed.preferred_username });
           setAuthStatus("AUTHENTICATED");
@@ -181,14 +212,17 @@ function WebAuthProvider({ authenticatedChild, anonymousChild }: ProviderProps) 
     keycloak.onTokenExpired = () => {
       keycloak.updateToken(60)
         .then(() => saveKcTokens())
-        .catch(() => {
-          clearKcTokens();
-          setUserInfo(emptyUserInfo);
-          setAuthStatus("ANONYMOUS");
-        });
+        .catch(() => { clearKcTokens(); setUserInfo(emptyUserInfo); setAuthStatus("ANONYMOUS"); });
     };
-
     keycloak.onAuthRefreshSuccess = () => saveKcTokens();
+
+    const onVisible = () => {
+      if (document.visibilityState === "visible") {
+        keycloak.updateToken(60).then(() => saveKcTokens()).catch(() => {});
+      }
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
   }, []);
 
   function logout() { clearKcTokens(); keycloak.logout(); }
