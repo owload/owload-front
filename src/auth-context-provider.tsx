@@ -24,15 +24,30 @@ const AuthActionsContext = createContext<AuthActions>({ login: async () => {}, l
 
 let axiosInterceptorId: number | null = null;
 
+let axiosResponseInterceptorId: number | null = null;
+
 function setAxiosInterceptor(getToken: () => string, refreshFn?: () => Promise<void>) {
   axios.defaults.baseURL = globalOptions.APP_MAIN_BACKEND_URL;
   if (axiosInterceptorId !== null) {
     axios.interceptors.request.eject(axiosInterceptorId);
   }
+  if (axiosResponseInterceptorId !== null) {
+    axios.interceptors.response.eject(axiosResponseInterceptorId);
+  }
   axiosInterceptorId = axios.interceptors.request.use(async config => {
     if (refreshFn) await refreshFn();
     config.headers["x-access-token"] = getToken();
     return config;
+  });
+  // Retry once on 401: refresh token then replay the original request
+  axiosResponseInterceptorId = axios.interceptors.response.use(undefined, async error => {
+    if (error?.response?.status === 401 && refreshFn && !error.config?._retried) {
+      error.config._retried = true;
+      await refreshFn();
+      error.config.headers["x-access-token"] = getToken();
+      return axios(error.config);
+    }
+    return Promise.reject(error);
   });
 }
 
@@ -93,7 +108,7 @@ function TauriAuthProvider({ authenticatedChild, anonymousChild }: ProviderProps
     localStorage.setItem(REFRESH_TOKEN_STORAGE_KEY, refreshToken);
     setAxiosInterceptor(
       () => accessTokenRef.current,
-      async () => { if (isTokenExpiringSoon(accessTokenRef.current)) await doRefresh(); }
+      async () => { if (isTokenExpiringSoon(accessTokenRef.current, 120)) await doRefresh(); }
     );
     const parsed = parseJwt(accessToken);
     setUserInfo({ id: parsed.sub, name: parsed.preferred_username });
@@ -190,7 +205,7 @@ function WebAuthProvider({ authenticatedChild, anonymousChild }: ProviderProps) 
             () => keycloak.token ?? "",
             async () => {
               try {
-                await keycloak.updateToken(30);
+                await keycloak.updateToken(120);
                 saveKcTokens();
               } catch {
                 clearKcTokens();
