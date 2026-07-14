@@ -5,7 +5,7 @@ import { FilesystemBackend, SessionId } from "../backend/filesystem-backend";
 import { createEncryptingStream, encrypt } from "../core/enc";
 import { readBlobAsStream, readToUint8Array, uint8ArrayToBase64 } from "../core/stream-utils";
 import { MkDirFsOperation, RmFsOperation, RenameFsOperation, CpFsOperation, UploadStartFsOperation, UploadFinishFsOperation, FsOperation, DescriptionFsOperation, MvFsOperation, FsOperationNameConflictMode } from "./fs-operation";
-import { FsState, PerformOpMode, NameAlreadyUsed, TargetDoesNotExistError, FsObjectType, FsError } from "./fs-state";
+import { FsState, PerformOpMode, NameAlreadyUsed, TargetDoesNotExistError, FsObjectType, FsError, FsFileProperties } from "./fs-state";
 import { FsTreeNode, FsTreeNodeId } from "./fs-tree-node";
 import { OperationService } from "./operation-service";
 import { FsOperationWrapper, RejectionReason } from "./ops-repository";
@@ -185,9 +185,31 @@ export class DriveClient {
 
   public async rm(fileNames: string[], basePath = ""): Promise<FsTreeNodeId[]> {
     basePath = this.getAbsolutePath(basePath);
-    return this.performOp(new RmFsOperation(basePath, [...fileNames].map(
-      e => e.replace(/^\/+|\/+$/g, "") // Trim leading and trailing slashes
-    )));
+    const cleanedNames = [...fileNames].map(e => e.replace(/^\/+|\/+$/g, ""));
+
+    const fileRanges: Array<{ byteOffset: number; byteLength: number }> = [];
+    for (const name of cleanedNames) {
+      const node = this.getNode(this.joinPath(basePath, name));
+      if (node) fileRanges.push(...this.collectFileRanges(node));
+    }
+
+    const result = await this.performOp(new RmFsOperation(basePath, cleanedNames));
+
+    for (const { byteOffset, byteLength } of fileRanges) {
+      if (byteLength > 0) {
+        this.filesystemBackend.deleteDataRange(this.driveId, byteOffset, byteOffset + byteLength).catch(console.error);
+      }
+    }
+
+    return result;
+  }
+
+  private collectFileRanges(node: FsTreeNode<FsObjectType>): Array<{ byteOffset: number; byteLength: number }> {
+    if (node.type === FsObjectType.FILE) {
+      const props = node.properties as unknown as FsFileProperties;
+      return [{ byteOffset: props.byteOffset, byteLength: props.byteLength }];
+    }
+    return node.childNodes.flatMap(child => this.collectFileRanges(child));
   }
 
   public async rename(pathSrc: string, pathDest: string): Promise<FsTreeNodeId> {

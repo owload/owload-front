@@ -46,6 +46,10 @@ export class PreloadingFilesystemBackend implements FilesystemBackend {
         return this.underlyingFilesystemBackend.getDataBlock(driveId, byteOffset, byteLength, cache);
     }
 
+    async deleteDataRange(driveId: DriveId, start: number, end: number): Promise<void> {
+        return this.underlyingFilesystemBackend.deleteDataRange(driveId, start, end);
+    }
+
     private generatePreloadOpsPromiseMapKey(driveId: DriveId, startBytePos: number): string {
         return `${driveId}-${startBytePos}`;
     }

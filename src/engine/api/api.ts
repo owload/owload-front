@@ -20,6 +20,10 @@ export async function postApiCall<T, D>(url: string, data?: D, responseType: "js
     return apiCall(url, "POST", responseType, retryCount, timeout, delay, data, signal);
 }
 
+export async function deleteApiCall(url: string, signal?: AbortSignal): Promise<void> {
+    return apiCall(url, "DELETE", "json", 0, 10000, 1000, undefined, signal);
+}
+
 const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
 
 function waitForOnline() {
@@ -29,7 +33,7 @@ function waitForOnline() {
     });
 }
 
-async function apiCall<T, D>(url: string, method: "GET" | "POST", responseType: "json" | "arraybuffer" | "text" = "json", retryCount: number, timeout: number, delay: number, data?: D, signal?: AbortSignal): Promise<T> {
+async function apiCall<T, D>(url: string, method: "GET" | "POST" | "DELETE", responseType: "json" | "arraybuffer" | "text" = "json", retryCount: number, timeout: number, delay: number, data?: D, signal?: AbortSignal): Promise<T> {
     let res: AxiosResponse<T>;
     let attempt = 0;
     while (attempt <= retryCount) {
@@ -49,12 +53,14 @@ async function apiCall<T, D>(url: string, method: "GET" | "POST", responseType: 
     throw new Error(`API call failed after ${attempt-1} retries: ${method} ${url}`);
 }
 
-async function makeProperAxiosApiCall<T, D>(url: string, method: "GET" | "POST", responseType: "json" | "arraybuffer" | "text" = "json", timeout: number, data?: D, signal?: AbortSignal): Promise<AxiosResponse<T>> {
+async function makeProperAxiosApiCall<T, D>(url: string, method: "GET" | "POST" | "DELETE", responseType: "json" | "arraybuffer" | "text" = "json", timeout: number, data?: D, signal?: AbortSignal): Promise<AxiosResponse<T>> {
     switch (method) {
         case "GET":
             return axios.get(url, { responseType, signal, timeout });
         case "POST":
             return axios.post(url, data, { responseType, signal, timeout });
+        case "DELETE":
+            return axios.delete(url, { responseType, signal, timeout });
     }
 
 }

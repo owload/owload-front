@@ -1,4 +1,4 @@
-import { getApiCall, postApiCall } from "../api/api";
+import { deleteApiCall, getApiCall, postApiCall } from "../api/api";
 import { DriveId } from "./drive-backend";
 import { FilesystemBackend, SessionId, SessionInfo } from "./filesystem-backend";
 
@@ -35,5 +35,9 @@ export class RestFilesystemBackend implements FilesystemBackend {
             throw new Error(`Server responded with wrong data length. Requested: ${byteLength}, returned: ${buf.byteLength}`)
         }
         return new Uint8Array(buf);
+    }
+
+    async deleteDataRange(driveId: DriveId, start: number, end: number): Promise<void> {
+        return deleteApiCall(`/data?driveId=${driveId}&start=${start}&end=${end}`);
     }
 }

@@ -25,4 +25,5 @@ export abstract class FilesystemBackend {
   public abstract finishUploadSession(sessionId: SessionId): Promise<void>;
   public abstract saveDataBlock(sessionId: SessionId, bytes: Uint8Array, blockByteOffset: number, signal?: AbortSignal): Promise<void>;
   public abstract getDataBlock(driveId: DriveId, byteOffset: number, byteLength: number, cache?: boolean): Promise<Uint8Array>;
+  public abstract deleteDataRange(driveId: DriveId, start: number, end: number): Promise<void>;
 }
