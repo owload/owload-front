@@ -142,6 +142,14 @@ export function DriveLogs() {
 
   async function handleCleanup() {
     if (!driveClient || wastedRanges.length === 0) return;
+    const confirmed = window.confirm(
+      "Внимание! Операция физически удалит данные с сервера и необратима.\n\n" +
+      "После выполнения будет невозможно:\n" +
+      "• восстановить удалённые файлы\n" +
+      "• восстановить предыдущие версии файлов\n\n" +
+      "Продолжить очистку?"
+    );
+    if (!confirmed) return;
     setCleaning(true);
     const driveId = driveClient.getDriveId();
     try {
