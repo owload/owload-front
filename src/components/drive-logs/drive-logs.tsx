@@ -4,6 +4,7 @@ import { DescriptionFsOperation, FsOperationType, MkDirFsOperation, RmFsOperatio
 import { OPS_SEPARATOR_BYTE_LENGTH } from "@/engine/service/splitting-ops-repository";
 import { FsOperationWrapper } from "@/engine/service/ops-repository";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { DriveActionLogEntry } from "@/engine/service/drive-action-log";
 import { useFilesStore } from "@/stores/files-store";
 import { AbortContext } from "@/types/types";
@@ -253,67 +254,81 @@ export function DriveLogs() {
         </DialogContent>
       </Dialog>
 
-      <div className="mb-2 mt-4 text-xs font-semibold text-gray-500 uppercase tracking-wide">Action log</div>
-      {actionLog.length === 0 && (
-        <div className="text-xs text-gray-400 mb-4">No entries</div>
-      )}
-      {actionLog.map((entry) => (
-        <div key={entry.id} className="p-2 border-b border-gray-200 text-sm">
-          <div className="flex gap-4 text-xs text-gray-500 mb-0.5">
-            <span>{new Date(entry.timestamp).toLocaleString()}</span>
-            <span>{entry.userId}</span>
-          </div>
-          <div className="font-mono">
-            {entry.action}
-            {Object.keys(entry.attributes).length > 0 && (
-              <span className="text-gray-500 ml-2 text-xs">
-                {Object.entries(entry.attributes).map(([k, v]) => `${k}=${v}`).join(' ')}
-              </span>
-            )}
-          </div>
-        </div>
-      ))}
+      <Tabs defaultValue="fs-ops" className="mt-4">
+        <TabsList>
+          <TabsTrigger value="action-log">
+            Action log {actionLog.length > 0 && `(${actionLog.length})`}
+          </TabsTrigger>
+          <TabsTrigger value="fs-ops">
+            FS operations {enrichedOps.length > 0 && `(${enrichedOps.length})`}
+          </TabsTrigger>
+        </TabsList>
 
-      <div className="mb-2 mt-4 text-xs font-semibold text-gray-500 uppercase tracking-wide">FS operations</div>
-      {enrichedOps.map((op) => {
-        const unverified = logLoaded && !op.logEntry;
-        return (
-          <div
-            key={op.startBytePos}
-            className={`p-2 border-b text-sm ${unverified ? "bg-red-50 border-red-300" : "border-gray-300"}`}
-          >
-            <div className="flex flex-wrap gap-4 text-xs mb-1">
-              <span className="text-gray-500">pos: {op.startBytePos}</span>
-              <span className="text-gray-500">len: {op.byteLength}</span>
-              <span className={op.valid ? "text-gray-500" : "text-red-500"}>
-                {op.valid ? "valid" : `invalid: ${op.rejectionReason}`}
-              </span>
-              {op.logEntry ? (
-                <>
-                  <span className="text-gray-400">{new Date(op.logEntry.timestamp).toLocaleString()}</span>
-                  <span className="text-gray-400">{op.logEntry.userId}</span>
-                </>
-              ) : logLoaded && (
-                <span className="text-red-500 font-medium">unverified</span>
-              )}
-            </div>
-            {op.op?.operationType === FsOperationType.DESCRIPTION &&
-              <div>Set description: "{(op.op as DescriptionFsOperation).description}"</div>}
-            {op.op?.operationType === FsOperationType.MK_DIR &&
-              <div>mkdir {(op.op as MkDirFsOperation).path}</div>}
-            {op.op?.operationType === FsOperationType.RM &&
-              <div>rm [{(op.op as RmFsOperation).fileNames.join(", ")}] in {(op.op as RmFsOperation).basePath}</div>}
-            {op.op?.operationType === FsOperationType.RENAME &&
-              <div>rename {(op.op as RenameFsOperation).pathSrc} → {(op.op as RenameFsOperation).pathDest}</div>}
-            {op.op?.operationType === FsOperationType.START_UPLOAD &&
-              <div>upload start {(op.op as UploadStartFsOperation).path} ({formatBytes((op.op as UploadStartFsOperation).byteLength)}) @ {(op.op as UploadStartFsOperation).byteOffset}</div>}
-            {op.op?.operationType === FsOperationType.FINISH_UPLOAD &&
-              <div>upload finish → {(op.op as UploadFinishFsOperation).uploadStartOperationHash}</div>}
-            {op.op?.operationType === FsOperationType.MV && <div>mv (op)</div>}
-            {op.op?.operationType === FsOperationType.CP && <div>cp (op)</div>}
-          </div>
-        );
-      })}
+        <TabsContent value="action-log">
+          {actionLog.length === 0 ? (
+            <div className="text-xs text-gray-400 py-4">No entries</div>
+          ) : (
+            actionLog.map((entry) => (
+              <div key={entry.id} className="p-2 border-b border-gray-200 text-sm">
+                <div className="flex gap-4 text-xs text-gray-500 mb-0.5">
+                  <span>{new Date(entry.timestamp).toLocaleString()}</span>
+                  <span>{entry.userId}</span>
+                </div>
+                <div className="font-mono">
+                  {entry.action}
+                  {Object.keys(entry.attributes).length > 0 && (
+                    <span className="text-gray-500 ml-2 text-xs">
+                      {Object.entries(entry.attributes).map(([k, v]) => `${k}=${v}`).join(' ')}
+                    </span>
+                  )}
+                </div>
+              </div>
+            ))
+          )}
+        </TabsContent>
+
+        <TabsContent value="fs-ops">
+          {[...enrichedOps].reverse().map((op) => {
+            const unverified = logLoaded && !op.logEntry;
+            return (
+              <div
+                key={op.startBytePos}
+                className={`p-2 border-b text-sm ${unverified ? "bg-red-50 border-red-300" : "border-gray-300"}`}
+              >
+                <div className="flex flex-wrap gap-4 text-xs mb-1">
+                  <span className="text-gray-500">pos: {op.startBytePos}</span>
+                  <span className="text-gray-500">len: {op.byteLength}</span>
+                  <span className={op.valid ? "text-gray-500" : "text-red-500"}>
+                    {op.valid ? "valid" : `invalid: ${op.rejectionReason}`}
+                  </span>
+                  {op.logEntry ? (
+                    <>
+                      <span className="text-gray-400">{new Date(op.logEntry.timestamp).toLocaleString()}</span>
+                      <span className="text-gray-400">{op.logEntry.userId}</span>
+                    </>
+                  ) : logLoaded && (
+                    <span className="text-red-500 font-medium">unverified</span>
+                  )}
+                </div>
+                {op.op?.operationType === FsOperationType.DESCRIPTION &&
+                  <div>Set description: "{(op.op as DescriptionFsOperation).description}"</div>}
+                {op.op?.operationType === FsOperationType.MK_DIR &&
+                  <div>mkdir {(op.op as MkDirFsOperation).path}</div>}
+                {op.op?.operationType === FsOperationType.RM &&
+                  <div>rm [{(op.op as RmFsOperation).fileNames.join(", ")}] in {(op.op as RmFsOperation).basePath}</div>}
+                {op.op?.operationType === FsOperationType.RENAME &&
+                  <div>rename {(op.op as RenameFsOperation).pathSrc} → {(op.op as RenameFsOperation).pathDest}</div>}
+                {op.op?.operationType === FsOperationType.START_UPLOAD &&
+                  <div>upload start {(op.op as UploadStartFsOperation).path} ({formatBytes((op.op as UploadStartFsOperation).byteLength)}) @ {(op.op as UploadStartFsOperation).byteOffset}</div>}
+                {op.op?.operationType === FsOperationType.FINISH_UPLOAD &&
+                  <div>upload finish → {(op.op as UploadFinishFsOperation).uploadStartOperationHash}</div>}
+                {op.op?.operationType === FsOperationType.MV && <div>mv (op)</div>}
+                {op.op?.operationType === FsOperationType.CP && <div>cp (op)</div>}
+              </div>
+            );
+          })}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
