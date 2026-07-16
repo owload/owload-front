@@ -1,9 +1,12 @@
 import { concatArrays } from "../core/stream-utils";
 import { EncryptingOpsRepository } from "./encrypting-ops-repository";
 
+export const OPS_SEPARATOR = new Uint8Array([195, 184, 234]);
+export const OPS_SEPARATOR_BYTE_LENGTH = OPS_SEPARATOR.length;
+
 export class SplittingOpsRepository {
-  public readonly OPS_SEPARATOR = new Uint8Array([195, 184, 234]);
-  public readonly OPS_SEPARATOR_BYTE_LENGTH = this.OPS_SEPARATOR.length;
+  public readonly OPS_SEPARATOR = OPS_SEPARATOR;
+  public readonly OPS_SEPARATOR_BYTE_LENGTH = OPS_SEPARATOR_BYTE_LENGTH;
   private operationsRequested = false;
   private readonly encryptingOperationsRepository: EncryptingOpsRepository;
 

@@ -1,4 +1,5 @@
 import type { DriveId } from './drive-backend';
+import type { DriveActionLogEntry } from '../service/drive-action-log';
 
 export type SessionId = string;
 
@@ -26,4 +27,5 @@ export abstract class FilesystemBackend {
   public abstract saveDataBlock(sessionId: SessionId, bytes: Uint8Array, blockByteOffset: number, signal?: AbortSignal): Promise<void>;
   public abstract getDataBlock(driveId: DriveId, byteOffset: number, byteLength: number, cache?: boolean): Promise<Uint8Array>;
   public abstract deleteDataRange(driveId: DriveId, start: number, end: number): Promise<void>;
+  public abstract getActionLog(driveId: DriveId, limit: number, offset: number): Promise<DriveActionLogEntry[]>;
 }

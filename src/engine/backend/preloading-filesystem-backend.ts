@@ -1,5 +1,6 @@
 import { DriveId } from "./drive-backend";
 import { FilesystemBackend, SessionId, SessionInfo } from "./filesystem-backend";
+import { DriveActionLogEntry } from "../service/drive-action-log";
 
 export class PreloadingFilesystemBackend implements FilesystemBackend {
     private readonly underlyingFilesystemBackend: FilesystemBackend;
@@ -48,6 +49,10 @@ export class PreloadingFilesystemBackend implements FilesystemBackend {
 
     async deleteDataRange(driveId: DriveId, start: number, end: number): Promise<void> {
         return this.underlyingFilesystemBackend.deleteDataRange(driveId, start, end);
+    }
+
+    async getActionLog(driveId: DriveId, limit: number, offset: number): Promise<DriveActionLogEntry[]> {
+        return this.underlyingFilesystemBackend.getActionLog(driveId, limit, offset);
     }
 
     private generatePreloadOpsPromiseMapKey(driveId: DriveId, startBytePos: number): string {

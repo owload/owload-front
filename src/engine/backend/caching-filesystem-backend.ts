@@ -2,6 +2,7 @@ import { concatArrays } from "../core/stream-utils";
 import { getCachedUint8Value, setCachedValue } from "./caches";
 import { DriveId } from "./drive-backend";
 import { FilesystemBackend, SessionId, SessionInfo } from "./filesystem-backend";
+import { DriveActionLogEntry } from "../service/drive-action-log";
 
 export class CachingFilesystemBackend implements FilesystemBackend {
   private readonly OPS_CACHE_ENABLED = false;
@@ -72,6 +73,14 @@ export class CachingFilesystemBackend implements FilesystemBackend {
       throw new Error(`Server responded with wrong data length. Requested: ${byteLength}, returned: ${buf.byteLength}`)
     }
     return new Uint8Array(buf);
+  }
+
+  async deleteDataRange(driveId: DriveId, start: number, end: number): Promise<void> {
+    return this.underlyingFilesystemBackend.deleteDataRange(driveId, start, end);
+  }
+
+  async getActionLog(driveId: DriveId, limit: number, offset: number): Promise<DriveActionLogEntry[]> {
+    return this.underlyingFilesystemBackend.getActionLog(driveId, limit, offset);
   }
 
   async clearCache(driveId: DriveId) {

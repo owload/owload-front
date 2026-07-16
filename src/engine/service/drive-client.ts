@@ -5,12 +5,14 @@ import { FilesystemBackend, SessionId } from "../backend/filesystem-backend";
 import { createEncryptingStream, encrypt } from "../core/enc";
 import { readBlobAsStream, readToUint8Array, uint8ArrayToBase64 } from "../core/stream-utils";
 import { MkDirFsOperation, RmFsOperation, RenameFsOperation, CpFsOperation, UploadStartFsOperation, UploadFinishFsOperation, FsOperation, DescriptionFsOperation, MvFsOperation, FsOperationNameConflictMode } from "./fs-operation";
-import { FsState, PerformOpMode, NameAlreadyUsed, TargetDoesNotExistError, FsObjectType, FsError, FsFileProperties } from "./fs-state";
+import { FsState, PerformOpMode, NameAlreadyUsed, TargetDoesNotExistError, FsObjectType, FsError } from "./fs-state";
 import { FsTreeNode, FsTreeNodeId } from "./fs-tree-node";
 import { OperationService } from "./operation-service";
 import { FsOperationWrapper, RejectionReason } from "./ops-repository";
+import { DriveActionLogEntry } from "./drive-action-log";
 
 const FS_SNAPSHOT_CACHE = "FS_SNAPSHOT_CACHE_1";
+const ACTION_LOG_CACHE = "ACTION_LOG_CACHE_1";
 import { BLOCK_SIZE } from "../core/constants";
 const UPLOAD_CHUNK_LENGTH = BLOCK_SIZE;
 const DOWNLOAD_CHUNK_LENGTH = BLOCK_SIZE;
@@ -40,6 +42,7 @@ type SaveProgressCallback = (n: number) => void; // parameter represents number 
 
 export class DriveClient {
   private fsState = new FsState();
+  private actionLog: DriveActionLogEntry[] = [];
   private readonly driveId: DriveId;
   private readonly driveName: string;
   private readonly operationService: OperationService;
@@ -74,6 +77,9 @@ export class DriveClient {
       lastValidOpHash = cachedFsState.lastOperationHash;
     }
     console.log(`Loaded FS state cache at pos ${cachedPos}`);
+
+    const actionLogPromise = this.refreshActionLog().catch(console.error);
+
     const newOps = await this.operationService.getOperations(cachedPos, lastValidOpHash);
     for (let opWrapper of newOps) {
       console.log(opWrapper)
@@ -101,10 +107,48 @@ export class DriveClient {
       const lastOp = newOps[newOps.length - 1];
       await this.saveFsStateCache(lastOp.startBytePos + lastOp.byteLength, lastValidOpHash);
     }
+
+    await actionLogPromise;
   }
 
   public async getAllOperations(): Promise<FsOperationWrapper[]> {
     return this.operationService.getOperations(0);
+  }
+
+  public getActionLog(): DriveActionLogEntry[] {
+    return this.actionLog;
+  }
+
+  public async refreshActionLog(): Promise<DriveActionLogEntry[]> {
+    const cached = await this.loadActionLogCache();
+    const existing = cached ?? [];
+    if (existing.length > 0) this.actionLog = existing;
+
+    const knownIds = new Set(existing.map((e) => e.id));
+    const BATCH_SIZE = 200;
+    let offset = 0;
+    const newEntries: DriveActionLogEntry[] = [];
+
+    while (true) {
+      const batch = await this.filesystemBackend.getActionLog(this.driveId, BATCH_SIZE, offset);
+      let reachedKnown = false;
+      for (const entry of batch) {
+        if (knownIds.has(entry.id)) {
+          reachedKnown = true;
+          break;
+        }
+        newEntries.push(entry);
+      }
+      if (reachedKnown || batch.length < BATCH_SIZE) break;
+      offset += batch.length;
+    }
+
+    if (newEntries.length === 0) return existing;
+
+    const allEntries = [...newEntries, ...existing];
+    this.actionLog = allEntries;
+    this.saveActionLogCache(allEntries).catch(console.error);
+    return allEntries;
   }
 
   public async setDescription(description: string) {
@@ -194,31 +238,9 @@ export class DriveClient {
 
   public async rm(fileNames: string[], basePath = ""): Promise<FsTreeNodeId[]> {
     basePath = this.getAbsolutePath(basePath);
-    const cleanedNames = [...fileNames].map(e => e.replace(/^\/+|\/+$/g, ""));
-
-    const fileRanges: Array<{ byteOffset: number; byteLength: number }> = [];
-    for (const name of cleanedNames) {
-      const node = this.getNode(this.joinPath(basePath, name));
-      if (node) fileRanges.push(...this.collectFileRanges(node));
-    }
-
-    const result = await this.performOp(new RmFsOperation(basePath, cleanedNames));
-
-    for (const { byteOffset, byteLength } of fileRanges) {
-      if (byteLength > 0) {
-        this.filesystemBackend.deleteDataRange(this.driveId, byteOffset, byteOffset + byteLength).catch(console.error);
-      }
-    }
-
-    return result;
-  }
-
-  private collectFileRanges(node: FsTreeNode<FsObjectType>): Array<{ byteOffset: number; byteLength: number }> {
-    if (node.type === FsObjectType.FILE) {
-      const props = node.properties as unknown as FsFileProperties;
-      return [{ byteOffset: props.byteOffset, byteLength: props.byteLength }];
-    }
-    return node.childNodes.flatMap(child => this.collectFileRanges(child));
+    return this.performOp(new RmFsOperation(basePath, [...fileNames].map(
+      e => e.replace(/^\/+|\/+$/g, "")
+    )));
   }
 
   public async rename(pathSrc: string, pathDest: string): Promise<FsTreeNodeId> {
@@ -287,6 +309,29 @@ export class DriveClient {
       parsed.fsState = FsState.deserialize(parsed.fsState);
       return parsed;
     }
+  }
+
+  private async saveActionLogCache(entries: DriveActionLogEntry[]): Promise<void> {
+    const cacheKey = await this.getActionLogCacheKey();
+    const encrypted = await encrypt(JSON.stringify(entries), this.privateKey, this.nonce);
+    await setCachedValue<Uint8Array>(ACTION_LOG_CACHE, cacheKey, encrypted);
+  }
+
+  private async loadActionLogCache(): Promise<DriveActionLogEntry[] | null> {
+    const cacheKey = await this.getActionLogCacheKey();
+    const cached = await getCachedUint8Value(ACTION_LOG_CACHE, cacheKey);
+    if (!cached) return null;
+    try {
+      const decrypted = await encrypt(cached, this.privateKey, this.nonce);
+      return JSON.parse(new TextDecoder().decode(decrypted));
+    } catch {
+      return null;
+    }
+  }
+
+  private async getActionLogCacheKey(): Promise<string> {
+    const encrypted = await encrypt(this.driveId + '_actions', this.privateKey, this.nonce);
+    return uint8ArrayToBase64(encrypted);
   }
 
   private async getFsStateCacheKey(): Promise<string> {

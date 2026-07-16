@@ -1,6 +1,7 @@
 import { deleteApiCall, getApiCall, postApiCall } from "../api/api";
 import { DriveId } from "./drive-backend";
 import { FilesystemBackend, SessionId, SessionInfo } from "./filesystem-backend";
+import { DriveActionLogEntry } from "../service/drive-action-log";
 
 export class RestFilesystemBackend implements FilesystemBackend {
     async getOperations(driveId: DriveId, startBytePos: number): Promise<Uint8Array> {
@@ -39,5 +40,9 @@ export class RestFilesystemBackend implements FilesystemBackend {
 
     async deleteDataRange(driveId: DriveId, start: number, end: number): Promise<void> {
         return deleteApiCall(`/data?driveId=${driveId}&start=${start}&end=${end}`);
+    }
+
+    async getActionLog(driveId: DriveId, limit: number, offset: number): Promise<DriveActionLogEntry[]> {
+        return getApiCall<DriveActionLogEntry[]>(`/drives/${driveId}/actions?limit=${limit}&offset=${offset}`);
     }
 }
