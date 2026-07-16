@@ -167,6 +167,11 @@ export class DriveClient {
     return this.driveName;
   }
 
+  public getFilePathById(nodeId: string): string | undefined {
+    const node = this.fsState.getNodeById(nodeId);
+    return node ? this.fsState.getNodeAbsolutePath(node) : undefined;
+  }
+
   public getEffectiveSize(): number {
     return this.fsState.getTotalFileSize();
   }

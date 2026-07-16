@@ -6,9 +6,59 @@ import { FsOperationWrapper } from "@/engine/service/ops-repository";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { DriveActionLogEntry } from "@/engine/service/drive-action-log";
+import { PATH_SYMBOL_REAPLACEMENT, SYSTEM_PREFIX } from "@/hooks/use-files-store-ops";
 import { useFilesStore } from "@/stores/files-store";
 import { AbortContext } from "@/types/types";
 import { useEffect, useMemo, useState } from "react";
+
+type EnrichedOp = FsOperationWrapper & { logEntry?: DriveActionLogEntry };
+
+type UploadGroup = {
+  type: 'upload';
+  path: string;
+  byteLength: number;
+  thumbnailInfo: { size: number; fileId: string } | null;
+  startOp: EnrichedOp;
+  finishOp?: EnrichedOp;
+  sortKey: number;
+};
+
+type OtherGroup = {
+  type: 'other';
+  op: EnrichedOp;
+  sortKey: number;
+};
+
+type OpGroup = UploadGroup | OtherGroup;
+
+function parseThumbnailInfo(path: string): { size: number; fileId: string } | null {
+  const name = path.split('/').pop() ?? '';
+  if (!name.startsWith(SYSTEM_PREFIX)) return null;
+  const withoutPrefix = name.slice(SYSTEM_PREFIX.length); // "thumb_360_<uuid>"
+  const parts = withoutPrefix.split('_');
+  if (parts[0] !== 'thumb' || parts.length < 3) return null;
+  return { size: parseInt(parts[1]), fileId: parts.slice(2).join('_') };
+}
+
+function UploadMeta({ startOp, finishOp, logLoaded }: { startOp: EnrichedOp; finishOp?: EnrichedOp; logLoaded: boolean }) {
+  const userId = startOp.logEntry?.userId;
+  const startedAt = startOp.logEntry?.timestamp;
+  const finishedAt = finishOp?.logEntry?.timestamp;
+  const unverified = logLoaded && (!startOp.logEntry || (finishOp && !finishOp.logEntry));
+
+  return (
+    <div className="flex flex-wrap gap-3 text-xs text-gray-400 mt-0.5">
+      {userId && <span>{userId}</span>}
+      {startedAt && <span>started {new Date(startedAt).toLocaleString()}</span>}
+      {finishOp
+        ? finishedAt
+          ? <span>finished {new Date(finishedAt).toLocaleString()}</span>
+          : logLoaded && <span className="text-red-500">finish unverified</span>
+        : <span className="text-amber-500">not finished</span>}
+      {unverified && !userId && <span className="text-red-500">unverified</span>}
+    </div>
+  );
+}
 
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -165,6 +215,75 @@ export function DriveLogs() {
     });
   }, [ops, actionLog]);
 
+  // hash → startBytePos for all START_UPLOAD ops (computed async)
+  const [uploadStartHashMap, setUploadStartHashMap] = useState<Map<string, number>>(new Map());
+
+  useEffect(() => {
+    let cancelled = false;
+    async function computeHashes() {
+      const map = new Map<string, number>();
+      for (const op of enrichedOps) {
+        if (op.op?.operationType === FsOperationType.START_UPLOAD) {
+          const hash = await op.op.hashCode();
+          if (cancelled) return;
+          map.set(hash, op.startBytePos);
+        }
+      }
+      if (!cancelled) setUploadStartHashMap(map);
+    }
+    computeHashes();
+    return () => { cancelled = true; };
+  }, [enrichedOps]);
+
+  const groupedOps = useMemo((): OpGroup[] => {
+    const opByPos = new Map(enrichedOps.map((op) => [op.startBytePos, op]));
+    const groupedStartPositions = new Set<number>();
+    const groups: OpGroup[] = [];
+
+    for (const op of enrichedOps) {
+      if (op.op?.operationType === FsOperationType.FINISH_UPLOAD) {
+        const hash = (op.op as UploadFinishFsOperation).uploadStartOperationHash;
+        const startPos = uploadStartHashMap.get(hash);
+        const startOpWrapper = startPos !== undefined ? opByPos.get(startPos) : undefined;
+        if (startOpWrapper?.op?.operationType === FsOperationType.START_UPLOAD) {
+          groupedStartPositions.add(startOpWrapper.startBytePos);
+          const startOp = startOpWrapper.op as UploadStartFsOperation;
+          groups.push({
+            type: 'upload',
+            path: startOp.path,
+            byteLength: startOp.byteLength,
+            thumbnailInfo: parseThumbnailInfo(startOp.path),
+            startOp: startOpWrapper,
+            finishOp: op,
+            sortKey: op.startBytePos,
+          });
+        } else {
+          groups.push({ type: 'other', op, sortKey: op.startBytePos });
+        }
+      } else if (op.op?.operationType !== FsOperationType.START_UPLOAD) {
+        groups.push({ type: 'other', op, sortKey: op.startBytePos });
+      }
+    }
+
+    // START_UPLOAD ops without a matching finish
+    for (const op of enrichedOps) {
+      if (op.op?.operationType === FsOperationType.START_UPLOAD && !groupedStartPositions.has(op.startBytePos)) {
+        const startOp = op.op as UploadStartFsOperation;
+        groups.push({
+          type: 'upload',
+          path: startOp.path,
+          byteLength: startOp.byteLength,
+          thumbnailInfo: parseThumbnailInfo(startOp.path),
+          startOp: op,
+          sortKey: op.startBytePos,
+        });
+      }
+    }
+
+    groups.sort((a, b) => a.sortKey - b.sortKey);
+    return groups;
+  }, [enrichedOps, uploadStartHashMap]);
+
   async function runCleanup() {
     if (!driveClient || redundantRanges.length === 0) return;
     setConfirmOpen(false);
@@ -288,16 +407,35 @@ export function DriveLogs() {
         </TabsContent>
 
         <TabsContent value="fs-ops">
-          {[...enrichedOps].reverse().map((op) => {
+          {[...groupedOps].reverse().map((group) => {
+            if (group.type === 'upload') {
+              const { thumbnailInfo, path, byteLength, startOp, finishOp } = group;
+              let title: string;
+              if (thumbnailInfo) {
+                const nodeId = thumbnailInfo.fileId.replaceAll(PATH_SYMBOL_REAPLACEMENT, '/');
+                const filePath = driveClient?.getFilePathById(nodeId) ?? nodeId;
+                title = `Upload thumbnail ${thumbnailInfo.size}px for ${filePath}`;
+              } else {
+                title = `Upload ${path}`;
+              }
+              const unverified = logLoaded && (!startOp.logEntry || (finishOp && !finishOp.logEntry));
+              return (
+                <div key={group.sortKey} className={`p-2 border-b text-sm ${unverified ? "bg-red-50 border-red-300" : "border-gray-300"}`}>
+                  <div>
+                    {title}
+                    <span className="text-gray-400 text-xs ml-2">{formatBytes(byteLength)}</span>
+                  </div>
+                  <UploadMeta startOp={startOp} finishOp={finishOp} logLoaded={logLoaded} />
+                </div>
+              );
+            }
+
+            const { op } = group;
             const unverified = logLoaded && !op.logEntry;
             return (
-              <div
-                key={op.startBytePos}
-                className={`p-2 border-b text-sm ${unverified ? "bg-red-50 border-red-300" : "border-gray-300"}`}
-              >
+              <div key={op.startBytePos} className={`p-2 border-b text-sm ${unverified ? "bg-red-50 border-red-300" : "border-gray-300"}`}>
                 <div className="flex flex-wrap gap-4 text-xs mb-1">
                   <span className="text-gray-500">pos: {op.startBytePos}</span>
-                  <span className="text-gray-500">len: {op.byteLength}</span>
                   <span className={op.valid ? "text-gray-500" : "text-red-500"}>
                     {op.valid ? "valid" : `invalid: ${op.rejectionReason}`}
                   </span>
@@ -311,19 +449,15 @@ export function DriveLogs() {
                   )}
                 </div>
                 {op.op?.operationType === FsOperationType.DESCRIPTION &&
-                  <div>Set description: "{(op.op as DescriptionFsOperation).description}"</div>}
+                  <div>Set drive description: &ldquo;{(op.op as DescriptionFsOperation).description}&rdquo;</div>}
                 {op.op?.operationType === FsOperationType.MK_DIR &&
-                  <div>mkdir {(op.op as MkDirFsOperation).path}</div>}
+                  <div>Create directory {(op.op as MkDirFsOperation).path}</div>}
                 {op.op?.operationType === FsOperationType.RM &&
                   <div>rm [{(op.op as RmFsOperation).fileNames.join(", ")}] in {(op.op as RmFsOperation).basePath}</div>}
                 {op.op?.operationType === FsOperationType.RENAME &&
                   <div>rename {(op.op as RenameFsOperation).pathSrc} → {(op.op as RenameFsOperation).pathDest}</div>}
-                {op.op?.operationType === FsOperationType.START_UPLOAD &&
-                  <div>upload start {(op.op as UploadStartFsOperation).path} ({formatBytes((op.op as UploadStartFsOperation).byteLength)}) @ {(op.op as UploadStartFsOperation).byteOffset}</div>}
-                {op.op?.operationType === FsOperationType.FINISH_UPLOAD &&
-                  <div>upload finish → {(op.op as UploadFinishFsOperation).uploadStartOperationHash}</div>}
-                {op.op?.operationType === FsOperationType.MV && <div>mv (op)</div>}
-                {op.op?.operationType === FsOperationType.CP && <div>cp (op)</div>}
+                {op.op?.operationType === FsOperationType.MV && <div>mv</div>}
+                {op.op?.operationType === FsOperationType.CP && <div>cp</div>}
               </div>
             );
           })}
