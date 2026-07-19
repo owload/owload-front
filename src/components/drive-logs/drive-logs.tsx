@@ -1,6 +1,6 @@
 import { deleteApiCall, getApiCall } from "@/engine/api/api";
 import { BLOCK_SIZE } from "@/engine/core/constants";
-import { DescriptionFsOperation, FsOperationType, MkDirFsOperation, RmFsOperation, RenameFsOperation, UploadFinishFsOperation, UploadStartFsOperation } from "@/engine/service/fs-operation";
+import { CpFsOperation, DescriptionFsOperation, FsOperationType, MkDirFsOperation, MvFsOperation, RmFsOperation, RenameFsOperation, UploadFinishFsOperation, UploadStartFsOperation } from "@/engine/service/fs-operation";
 import { OPS_SEPARATOR_BYTE_LENGTH } from "@/engine/service/splitting-ops-repository";
 import { FsOperationWrapper } from "@/engine/service/ops-repository";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -16,6 +16,7 @@ type EnrichedOp = FsOperationWrapper & { logEntry?: DriveActionLogEntry };
 type UploadGroup = {
   type: 'upload';
   path: string;
+  byteOffset: number;
   byteLength: number;
   thumbnailInfo: { size: number; fileId: string } | null;
   startOp: EnrichedOp;
@@ -38,6 +39,24 @@ function parseThumbnailInfo(path: string): { size: number; fileId: string } | nu
   const parts = withoutPrefix.split('_');
   if (parts[0] !== 'thumb' || parts.length < 3) return null;
   return { size: parseInt(parts[1]), fileId: parts.slice(2).join('_') };
+}
+
+function formatFileName(name: string, resolveFileId: (id: string) => string | undefined): string {
+  const info = parseThumbnailInfo(name);
+  if (!info) return name;
+  const nodeId = info.fileId.replaceAll(PATH_SYMBOL_REAPLACEMENT, '/');
+  return `thumbnail ${info.size}px for ${resolveFileId(nodeId) ?? nodeId}`;
+}
+
+function isRangeAllocated(byteOffset: number, byteLength: number, allocatedRanges: { start: number; end: number }[]): boolean {
+  const end = byteOffset + byteLength;
+  let covered = 0;
+  for (const r of allocatedRanges) {
+    const s = Math.max(byteOffset, r.start);
+    const e = Math.min(end, r.end);
+    if (e > s) covered += e - s;
+  }
+  return covered >= byteLength;
 }
 
 function UploadMeta({ startOp, finishOp, logLoaded }: { startOp: EnrichedOp; finishOp?: EnrichedOp; logLoaded: boolean }) {
@@ -251,6 +270,7 @@ export function DriveLogs() {
           groups.push({
             type: 'upload',
             path: startOp.path,
+            byteOffset: startOp.byteOffset,
             byteLength: startOp.byteLength,
             thumbnailInfo: parseThumbnailInfo(startOp.path),
             startOp: startOpWrapper,
@@ -272,6 +292,7 @@ export function DriveLogs() {
         groups.push({
           type: 'upload',
           path: startOp.path,
+          byteOffset: startOp.byteOffset,
           byteLength: startOp.byteLength,
           thumbnailInfo: parseThumbnailInfo(startOp.path),
           startOp: op,
@@ -282,6 +303,22 @@ export function DriveLogs() {
 
     groups.sort((a, b) => a.sortKey - b.sortKey);
     return groups;
+  }, [enrichedOps, uploadStartHashMap]);
+
+  // nodeId (= upload op hash) → original file path, for resolving thumbnails of deleted files
+  const nodeIdToPath = useMemo(() => {
+    const opByPos = new Map(enrichedOps.map((op) => [op.startBytePos, op]));
+    const map = new Map<string, string>();
+    for (const [hash, pos] of uploadStartHashMap) {
+      const op = opByPos.get(pos);
+      if (op?.op?.operationType === FsOperationType.START_UPLOAD) {
+        const startOp = op.op as UploadStartFsOperation;
+        if (!parseThumbnailInfo(startOp.path)) {
+          map.set(hash, startOp.path);
+        }
+      }
+    }
+    return map;
   }, [enrichedOps, uploadStartHashMap]);
 
   async function runCleanup() {
@@ -409,21 +446,29 @@ export function DriveLogs() {
         <TabsContent value="fs-ops">
           {[...groupedOps].reverse().map((group) => {
             if (group.type === 'upload') {
-              const { thumbnailInfo, path, byteLength, startOp, finishOp } = group;
+              const { thumbnailInfo, path, byteOffset, byteLength, startOp, finishOp } = group;
               let title: string;
               if (thumbnailInfo) {
                 const nodeId = thumbnailInfo.fileId.replaceAll(PATH_SYMBOL_REAPLACEMENT, '/');
-                const filePath = driveClient?.getFilePathById(nodeId) ?? nodeId;
+                const filePath = driveClient?.getFilePathById(nodeId) ?? nodeIdToPath.get(nodeId) ?? nodeId;
                 title = `Upload thumbnail ${thumbnailInfo.size}px for ${filePath}`;
               } else {
                 title = `Upload ${path}`;
               }
+              const dataPresent = allocatedRanges !== null
+                ? isRangeAllocated(byteOffset, byteLength, allocatedRanges)
+                : null;
               const unverified = logLoaded && (!startOp.logEntry || (finishOp && !finishOp.logEntry));
               return (
                 <div key={group.sortKey} className={`p-2 border-b text-sm ${unverified ? "bg-red-50 border-red-300" : "border-gray-300"}`}>
-                  <div>
-                    {title}
-                    <span className="text-gray-400 text-xs ml-2">{formatBytes(byteLength)}</span>
+                  <div className="flex items-baseline gap-2">
+                    <span>{title}</span>
+                    <span className="text-gray-400 text-xs">{formatBytes(byteLength)}</span>
+                    {dataPresent === null
+                      ? <span className="text-xs text-gray-300">checking…</span>
+                      : dataPresent
+                        ? <span className="text-xs text-green-600">data on S3</span>
+                        : <span className="text-xs text-red-500">data missing</span>}
                   </div>
                   <UploadMeta startOp={startOp} finishOp={finishOp} logLoaded={logLoaded} />
                 </div>
@@ -452,12 +497,36 @@ export function DriveLogs() {
                   <div>Set drive description: &ldquo;{(op.op as DescriptionFsOperation).description}&rdquo;</div>}
                 {op.op?.operationType === FsOperationType.MK_DIR &&
                   <div>Create directory {(op.op as MkDirFsOperation).path}</div>}
-                {op.op?.operationType === FsOperationType.RM &&
-                  <div>rm [{(op.op as RmFsOperation).fileNames.join(", ")}] in {(op.op as RmFsOperation).basePath}</div>}
-                {op.op?.operationType === FsOperationType.RENAME &&
-                  <div>rename {(op.op as RenameFsOperation).pathSrc} → {(op.op as RenameFsOperation).pathDest}</div>}
-                {op.op?.operationType === FsOperationType.MV && <div>mv</div>}
-                {op.op?.operationType === FsOperationType.CP && <div>cp</div>}
+                {op.op?.operationType === FsOperationType.RM && (() => {
+                  const rm = op.op as RmFsOperation;
+                  const resolve = (id: string) => driveClient?.getFilePathById(id) ?? nodeIdToPath.get(id);
+                  const files = rm.fileNames.map((f) => formatFileName(f, resolve)).join(", ");
+                  return <div>Delete {files} in {rm.basePath}</div>;
+                })()}
+                {op.op?.operationType === FsOperationType.RENAME && (() => {
+                  const r = op.op as RenameFsOperation;
+                  return <div>Rename {r.pathSrc} → {r.pathDest}</div>;
+                })()}
+                {op.op?.operationType === FsOperationType.MV && (() => {
+                  const mv = op.op as MvFsOperation;
+                  const resolve = (id: string) => driveClient?.getFilePathById(id) ?? nodeIdToPath.get(id);
+                  const files = mv.fileNames.map((f, i) => {
+                    const src = formatFileName(f, resolve);
+                    const dest = mv.destFileNames ? formatFileName(mv.destFileNames[i], resolve) : null;
+                    return dest && dest !== src ? `${src} → ${dest}` : src;
+                  }).join(", ");
+                  return <div>Move {files} from {mv.pathSrc} to {mv.pathDest}</div>;
+                })()}
+                {op.op?.operationType === FsOperationType.CP && (() => {
+                  const cp = op.op as CpFsOperation;
+                  const resolve = (id: string) => driveClient?.getFilePathById(id) ?? nodeIdToPath.get(id);
+                  const files = cp.fileNames.map((f, i) => {
+                    const src = formatFileName(f, resolve);
+                    const dest = cp.destFileNames ? formatFileName(cp.destFileNames[i], resolve) : null;
+                    return dest && dest !== src ? `${src} → ${dest}` : src;
+                  }).join(", ");
+                  return <div>Copy {files} from {cp.pathSrc} to {cp.pathDest}</div>;
+                })()}
               </div>
             );
           })}
