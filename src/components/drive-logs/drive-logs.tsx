@@ -412,11 +412,11 @@ export function DriveLogs() {
 
       <Tabs defaultValue="fs-ops" className="mt-4">
         <TabsList>
-          <TabsTrigger value="action-log">
-            Action log {actionLog.length > 0 && `(${actionLog.length})`}
-          </TabsTrigger>
           <TabsTrigger value="fs-ops">
             FS operations {enrichedOps.length > 0 && `(${enrichedOps.length})`}
+          </TabsTrigger>
+          <TabsTrigger value="action-log">
+            Action log {actionLog.length > 0 && `(${actionLog.length})`}
           </TabsTrigger>
         </TabsList>
 
