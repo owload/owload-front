@@ -3,6 +3,7 @@ import { BLOCK_SIZE } from "@/engine/core/constants";
 import { CpFsOperation, DescriptionFsOperation, FsOperationType, MkDirFsOperation, MvFsOperation, RmFsOperation, RenameFsOperation, UploadFinishFsOperation, UploadStartFsOperation } from "@/engine/service/fs-operation";
 import { OPS_SEPARATOR_BYTE_LENGTH } from "@/engine/service/splitting-ops-repository";
 import { FsOperationWrapper } from "@/engine/service/ops-repository";
+import { FsState, PerformOpMode } from "@/engine/service/fs-state";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { DriveActionLogEntry } from "@/engine/service/drive-action-log";
@@ -237,6 +238,9 @@ export function DriveLogs() {
   // hash → startBytePos for all START_UPLOAD ops (computed async)
   const [uploadStartHashMap, setUploadStartHashMap] = useState<Map<string, number>>(new Map());
 
+  // startBytePos of ops that actually overwrote an existing file (REPLACE mode + file existed)
+  const [overwriteSet, setOverwriteSet] = useState<Set<number>>(new Set());
+
   useEffect(() => {
     let cancelled = false;
     async function computeHashes() {
@@ -251,6 +255,43 @@ export function DriveLogs() {
       if (!cancelled) setUploadStartHashMap(map);
     }
     computeHashes();
+    return () => { cancelled = true; };
+  }, [enrichedOps]);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function computeOverwrites() {
+      const state = new FsState();
+      const result = new Set<number>();
+      const joinPath = (p1: string, p2: string) =>
+        '/' + [...p1.split('/'), ...p2.split('/')].filter(Boolean).join('/');
+      for (const wrapper of enrichedOps) {
+        if (!wrapper.op) continue;
+        const op = wrapper.op;
+        if (op.operationType === FsOperationType.START_UPLOAD) {
+          const uploadOp = op as UploadStartFsOperation;
+          if (uploadOp.mode === "REPLACE" && state.getNodeByPath(uploadOp.path)) {
+            result.add(wrapper.startBytePos);
+          }
+        } else if (op.operationType === FsOperationType.MV || op.operationType === FsOperationType.CP) {
+          const mvOp = op as MvFsOperation | CpFsOperation;
+          if (mvOp.mode === "REPLACE") {
+            for (const fileName of mvOp.fileNames) {
+              if (state.getNodeByPath(joinPath(mvOp.pathDest, fileName))) {
+                result.add(wrapper.startBytePos);
+                break;
+              }
+            }
+          }
+        }
+        try {
+          await state.performOp(op, PerformOpMode.DO_PERFORM);
+        } catch { /* invalid op — state unchanged, continue */ }
+        if (cancelled) return;
+      }
+      if (!cancelled) setOverwriteSet(result);
+    }
+    computeOverwrites();
     return () => { cancelled = true; };
   }, [enrichedOps]);
 
@@ -459,11 +500,13 @@ export function DriveLogs() {
                 ? isRangeAllocated(byteOffset, byteLength, allocatedRanges)
                 : null;
               const unverified = logLoaded && (!startOp.logEntry || (finishOp && !finishOp.logEntry));
+              const didOverwrite = overwriteSet.has(startOp.startBytePos);
               return (
                 <div key={group.sortKey} className={`p-2 border-b text-sm ${unverified ? "bg-red-50 border-red-300" : "border-gray-300"}`}>
                   <div className="flex items-baseline gap-2">
                     <span>{title}</span>
                     <span className="text-gray-400 text-xs">{formatBytes(byteLength)}</span>
+                    {didOverwrite && <span className="text-xs text-orange-600">overwrites existing</span>}
                     {dataPresent === null
                       ? <span className="text-xs text-gray-300">checking…</span>
                       : dataPresent
@@ -515,7 +558,11 @@ export function DriveLogs() {
                     const dest = mv.destFileNames ? formatFileName(mv.destFileNames[i], resolve) : null;
                     return dest && dest !== src ? `${src} → ${dest}` : src;
                   }).join(", ");
-                  return <div>Move {files} from {mv.pathSrc} to {mv.pathDest}</div>;
+                  const didOverwrite = overwriteSet.has(op.startBytePos);
+                  return <div className="flex items-baseline gap-2">
+                    <span>Move {files} from {mv.pathSrc} to {mv.pathDest}</span>
+                    {didOverwrite && <span className="text-xs text-orange-600">overwrites existing</span>}
+                  </div>;
                 })()}
                 {op.op?.operationType === FsOperationType.CP && (() => {
                   const cp = op.op as CpFsOperation;
@@ -525,7 +572,11 @@ export function DriveLogs() {
                     const dest = cp.destFileNames ? formatFileName(cp.destFileNames[i], resolve) : null;
                     return dest && dest !== src ? `${src} → ${dest}` : src;
                   }).join(", ");
-                  return <div>Copy {files} from {cp.pathSrc} to {cp.pathDest}</div>;
+                  const didOverwrite = overwriteSet.has(op.startBytePos);
+                  return <div className="flex items-baseline gap-2">
+                    <span>Copy {files} from {cp.pathSrc} to {cp.pathDest}</span>
+                    {didOverwrite && <span className="text-xs text-orange-600">overwrites existing</span>}
+                  </div>;
                 })()}
               </div>
             );
