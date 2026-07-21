@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { DriveActionLogEntry } from "@/engine/service/drive-action-log";
 import { PATH_SYMBOL_REAPLACEMENT, SYSTEM_PREFIX } from "@/hooks/use-files-store-ops";
-import { buildByteToLogIndex } from "@/engine/service/ops-log-analysis";
+import { buildByteToLogIndex, isRangeAllocated } from "@/engine/service/ops-log-analysis";
 import { useFilesStore } from "@/stores/files-store";
 import { AbortContext } from "@/types/types";
 import { useEffect, useMemo, useState } from "react";
@@ -49,16 +49,6 @@ function formatFileName(name: string, resolveFileId: (id: string) => string | un
   return `thumbnail ${info.size}px for ${resolveFileId(nodeId) ?? nodeId}`;
 }
 
-function isRangeAllocated(byteOffset: number, byteLength: number, allocatedRanges: { start: number; end: number }[]): boolean {
-  const end = byteOffset + byteLength;
-  let covered = 0;
-  for (const r of allocatedRanges) {
-    const s = Math.max(byteOffset, r.start);
-    const e = Math.min(end, r.end);
-    if (e > s) covered += e - s;
-  }
-  return covered >= byteLength;
-}
 
 function UploadMeta({ startOp, finishOp, logLoaded }: { startOp: EnrichedOp; finishOp?: EnrichedOp; logLoaded: boolean }) {
   const userId = startOp.logEntry?.userId;

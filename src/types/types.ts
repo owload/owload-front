@@ -36,7 +36,7 @@ export interface UserInfo {
   name: string;
 }
 
-export type FsOpsDialogType = "RENAME" | "CREATE_FOLDER" | "REQUEST_PASSWORD" | "REQUEST_DRIVE_DESCRIPTION" | "REQUEST_MV_OPERATION_MODE" | "CONFIRM_DELETE"
+export type FsOpsDialogType = "RENAME" | "CREATE_FOLDER" | "REQUEST_PASSWORD" | "REQUEST_DRIVE_DESCRIPTION" | "REQUEST_MV_OPERATION_MODE" | "CONFIRM_DELETE" | "FILE_PROPERTIES"
 
 export interface RequestPasswordDialogProps {
   driveName: string
@@ -70,6 +70,12 @@ export interface ConfirmDeleteDialogProps {
   overwriteWarning: OverwriteWarningInfo;
 }
 
+export interface FilePropertiesDialogProps {
+  filePath: string;
+  nodeId: string;
+  byteLength: number;
+}
+
 export interface RenameDialogProps {
   pathSrc: string,
   originalName: string
@@ -79,7 +85,7 @@ export interface VoidDialogProps {
 
 }
 
-export type FsOpsDialogPropsType = RequestPasswordDialogProps | RequestDescriptionDialogProps | RequestMvOperationModeDialogProps | RenameDialogProps | VoidDialogProps | ConfirmDeleteDialogProps;
+export type FsOpsDialogPropsType = RequestPasswordDialogProps | RequestDescriptionDialogProps | RequestMvOperationModeDialogProps | RenameDialogProps | VoidDialogProps | ConfirmDeleteDialogProps | FilePropertiesDialogProps;
 
 export interface DialogCallbacks {
   // dialogId is used to identify whether it's the same dialog.

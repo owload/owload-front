@@ -2,12 +2,13 @@ import { PropsWithChildren } from "react";
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuShortcut, ContextMenuTrigger } from "../ui/context-menu";
 import { useFilesStoreOps } from "@/hooks/use-files-store-ops";
 import { useSelectedFileObjects } from "@/hooks/use-selected-file-objects";
-import { useRenameDialog } from "@/hooks/use-dialogs";
+import { useRenameDialog, useOpenFileProperties } from "@/hooks/use-dialogs";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useActivateMobileSelectMode, useIsMobileSelectModeOn } from "@/hooks/use-mobile-select-mode";
 import ContextMenuHandler from "./selectable-area/context-menu-handler";
 import { FileProperties } from "@/types/types";
 import { useFilesStore } from "@/stores/files-store";
+import { FsObjectType } from "@/engine";
 
 
 
@@ -15,6 +16,7 @@ export function FileObjectsContextMenu({ children, fileObject }: PropsWithChildr
     const selectedFileObjects = useSelectedFileObjects();
     const openRenameDialog = useRenameDialog();
     const { pwd, rm, downloadSelectedObject, openSelectedObject, isSelectedObjectOpenAvailable, isSelectedObjectDownloadAvailable, selectFilesToCopy, selectFilesToMove } = useFilesStoreOps();
+    const openFileProperties = useOpenFileProperties();
     const isMobile = useIsMobile();
     const mobileFileSelectModeOn = useIsMobileSelectModeOn();
     const activateMobileSelectMode = useActivateMobileSelectMode();
@@ -47,6 +49,14 @@ export function FileObjectsContextMenu({ children, fileObject }: PropsWithChildr
     function handleRenameClick(e: React.PointerEvent<HTMLDivElement>) {
         e.stopPropagation();
         openRenameDialog({ pathSrc: pwd()!, originalName: selectedFileObjects[0].name });
+    }
+
+    function handlePropertiesClick(e: React.PointerEvent<HTMLDivElement>) {
+        e.stopPropagation();
+        const file = selectedFileObjects[0];
+        const dir = pwd()!;
+        const filePath = (dir + '/' + file.name).replace('//', '/');
+        openFileProperties({ filePath, nodeId: file.id, byteLength: file.byteLength ?? 0 }).catch(() => {});
     }
 
     const contextMenuHandler = new ContextMenuHandler(() => {
@@ -98,6 +108,9 @@ export function FileObjectsContextMenu({ children, fileObject }: PropsWithChildr
                     <ContextMenuShortcut>⌘X</ContextMenuShortcut>
                 </ContextMenuItem>
                 <ContextMenuItem inset onClick={handleDeleteClick}>Delete</ContextMenuItem>
+                {selectedFileObjects.length === 1 && selectedFileObjects[0].type !== FsObjectType.DIR && (
+                    <ContextMenuItem inset onClick={handlePropertiesClick}>Properties</ContextMenuItem>
+                )}
             </ContextMenuContent>
         </ContextMenu>
     );

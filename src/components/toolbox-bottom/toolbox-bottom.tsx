@@ -1,5 +1,5 @@
 import { FsObjectType, ROOT_NODE_ID } from "@/engine";
-import { useCreateFolderDialog, useRenameDialog } from "@/hooks/use-dialogs";
+import { useCreateFolderDialog, useOpenFileProperties, useRenameDialog } from "@/hooks/use-dialogs";
 import { useFilesStoreOps } from "@/hooks/use-files-store-ops";
 import { useMediaBreakpoint } from "@/hooks/use-media-breakpoint";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -40,6 +40,7 @@ export function ToolboxBottom(props: { className?: string }) {
     const [rmButtonClickPending, setRmButtonClickPending] = useState(false);
     const [pasteButtonClickPending, setPasteButtonClickPending] = useState(false);
     const openRenameDialog = useRenameDialog();
+    const openFileProperties = useOpenFileProperties();
     const uploadQueue = useFilesStore((state) => state.uploadQueue);
 
     const pathItems = pwdWithId();
@@ -119,6 +120,14 @@ export function ToolboxBottom(props: { className?: string }) {
         openRenameDialog({ pathSrc: pwd()!, originalName: selectedFileObjects[0].name });
     };
 
+    const handlePropertiesClick = () => {
+        if (selectedFileObjects.length !== 1 || selectedFileObjects[0].type === FsObjectType.DIR) return;
+        const file = selectedFileObjects[0];
+        const dir = pwd() ?? '/';
+        const filePath = (dir + '/' + file.name).replace('//', '/');
+        openFileProperties({ filePath, nodeId: file.id, byteLength: file.byteLength ?? 0 }).catch(() => {});
+    };
+
     const handlePasteClick = () => {
         setPasteButtonClickPending(true);
         commitMoveOrCopy(pwd()!)
@@ -143,7 +152,10 @@ export function ToolboxBottom(props: { className?: string }) {
         buttonsCount += 1; // mobile select mode
     }
     if (isSingleFileSelected) {
-        buttonsCount += 2; // rename and info
+        buttonsCount += 1; // rename
+        if (selectedFileObjects[0]?.type !== FsObjectType.DIR) {
+            buttonsCount += 1; // properties (files only)
+        }
     }
     if (showUploadStateButton) {
         buttonsCount++;
@@ -236,12 +248,12 @@ export function ToolboxBottom(props: { className?: string }) {
                 <Trash size={picSize} />
             </button>}
 
-            {isSingleFileSelected && <button
+            {isSingleFileSelected && selectedFileObjects[0]?.type !== FsObjectType.DIR && <button
                 type="button"
-                onClick={() => { }}
+                onClick={handlePropertiesClick}
                 onMouseDown={(e) => e.stopPropagation()}
                 onPointerDown={(e) => e.stopPropagation()}
-                title="Info"
+                title="Properties"
                 className={stdClassname}
                 style={{ width: pxButtonWidth, height: pxButtonWidth }}
             >

@@ -1,6 +1,6 @@
 import { useFilesStore } from "@/stores/files-store";
 import { useNavigateDir } from "./use-navigate-dir";
-import { base64ToUint8Array, DriveClientFactory, FsObjectType, FsTreeNode, ProgressCallback, uint8ArrayToBase64, DriveId, RestFilesystemBackend, PreloadingFilesystemBackend, CachingFilesystemBackend, OperationCancelledError } from "@/engine";
+import { base64ToUint8Array, DriveClientFactory, FsObjectType, FsTreeNode, ProgressCallback, uint8ArrayToBase64, DriveId, RestFilesystemBackend, PreloadingFilesystemBackend, CachingFilesystemBackend, OperationCancelledError, DriveClient } from "@/engine";
 
 import { AbortContext, FileProperties } from "@/types/types";
 import { saveFileToDisk } from "@/lib/utils";
@@ -39,6 +39,28 @@ export function getPreviewFileName(fileId: string, size: number) {
 }
 
 export const thumbnailFileNamePrefix = SYSTEM_PREFIX + "thumb_" + PREVIEW_SIZES.THUMBNAIL + "_";
+
+export function findThumbnailsFor(
+    driveClient: DriveClient,
+    parentPath: string,
+    nodeId: string
+): Array<{ size: number; byteOffset: number; byteLength: number }> {
+    try {
+        const dirContents = driveClient.ls(parentPath);
+        const result: Array<{ size: number; byteOffset: number; byteLength: number }> = [];
+        for (const size of Object.values(PREVIEW_SIZES)) {
+            const thumbName = getPreviewFileName(nodeId, size);
+            const thumbNode = dirContents.find(n => n.name === thumbName);
+            if (thumbNode && thumbNode.type === FsObjectType.FILE) {
+                const props = thumbNode.properties as FsFileProperties;
+                result.push({ size, byteOffset: props.byteOffset, byteLength: props.byteLength });
+            }
+        }
+        return result;
+    } catch {
+        return [];
+    }
+}
 
 
 export function useFilesStoreOps() {
