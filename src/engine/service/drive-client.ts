@@ -13,6 +13,7 @@ import { DriveActionLogEntry } from "./drive-action-log";
 
 const FS_SNAPSHOT_CACHE = "FS_SNAPSHOT_CACHE_1";
 const ACTION_LOG_CACHE = "ACTION_LOG_CACHE_1";
+const OP_LOG_CACHE = "OP_LOG_CACHE_1";
 import { BLOCK_SIZE } from "../core/constants";
 const UPLOAD_CHUNK_LENGTH = BLOCK_SIZE;
 const DOWNLOAD_CHUNK_LENGTH = BLOCK_SIZE;
@@ -68,6 +69,12 @@ export class DriveClient {
   }
 
   public async refresh(abortContext?: AbortContext) {
+    // Load persisted op log on first call in this session
+    if (this.operationLog.length === 0) {
+      const cachedOps = await this.loadOperationLogCache();
+      if (cachedOps) this.operationLog.push(...cachedOps);
+    }
+
     const cachedFsState = await this.loadFsStateCache();
     let cachedPos = 0;
     let lastValidOpHash = "";
@@ -106,13 +113,23 @@ export class DriveClient {
     if (newOps.length > 0) {
       const lastOp = newOps[newOps.length - 1];
       await this.saveFsStateCache(lastOp.startBytePos + lastOp.byteLength, lastValidOpHash);
+      this.saveOperationLogCache(this.operationLog).catch(console.error);
     }
 
     await actionLogPromise;
   }
 
+  public getOperationLog(): FsOperationWrapper[] {
+    return this.operationLog;
+  }
+
+  /** Force-reload all operations from byte 0, bypassing the incremental cache. */
   public async getAllOperations(): Promise<FsOperationWrapper[]> {
     return this.operationService.getOperations(0);
+  }
+
+  public async deleteDataRange(start: number, end: number): Promise<void> {
+    return this.filesystemBackend.deleteDataRange(this.driveId, start, end);
   }
 
   public getActionLog(): DriveActionLogEntry[] {
@@ -336,6 +353,39 @@ export class DriveClient {
 
   private async getActionLogCacheKey(): Promise<string> {
     const encrypted = await encrypt(this.driveId + '_actions', this.privateKey, this.nonce);
+    return uint8ArrayToBase64(encrypted);
+  }
+
+  private async saveOperationLogCache(ops: FsOperationWrapper[]): Promise<void> {
+    const key = await this.getOpLogCacheKey();
+    const serializable = ops.map(({ opStr, startBytePos, byteLength, valid, rejectionReason }) =>
+      ({ opStr, startBytePos, byteLength, valid, rejectionReason }));
+    const encrypted = await encrypt(JSON.stringify(serializable), this.privateKey, this.nonce);
+    await setCachedValue<Uint8Array>(OP_LOG_CACHE, key, encrypted);
+  }
+
+  private async loadOperationLogCache(): Promise<FsOperationWrapper[] | null> {
+    const key = await this.getOpLogCacheKey();
+    const cached = await getCachedUint8Value(OP_LOG_CACHE, key);
+    if (!cached) return null;
+    try {
+      const decrypted = await encrypt(cached, this.privateKey, this.nonce);
+      const serialized: { opStr: string; startBytePos: number; byteLength: number; valid: boolean; rejectionReason?: RejectionReason }[] =
+        JSON.parse(new TextDecoder().decode(decrypted));
+      return serialized.map(({ opStr, startBytePos, byteLength, valid, rejectionReason }) => {
+        let op: FsOperation | undefined;
+        if (valid) {
+          try { op = FsOperation.deserialize(opStr); } catch { /* ignore */ }
+        }
+        return { opStr, startBytePos, byteLength, valid, rejectionReason, op };
+      });
+    } catch {
+      return null;
+    }
+  }
+
+  private async getOpLogCacheKey(): Promise<string> {
+    const encrypted = await encrypt(this.driveId + '_oplog', this.privateKey, this.nonce);
     return uint8ArrayToBase64(encrypted);
   }
 

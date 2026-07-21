@@ -1,4 +1,4 @@
-import { deleteApiCall, getApiCall } from "@/engine/api/api";
+import { getApiCall } from "@/engine/api/api";
 import { BLOCK_SIZE } from "@/engine/core/constants";
 import { CpFsOperation, DescriptionFsOperation, FsOperationType, MkDirFsOperation, MvFsOperation, RmFsOperation, RenameFsOperation, UploadFinishFsOperation, UploadStartFsOperation } from "@/engine/service/fs-operation";
 import { OPS_SEPARATOR_BYTE_LENGTH } from "@/engine/service/splitting-ops-repository";
@@ -204,6 +204,7 @@ export function DriveLogs() {
       setLogLoaded(true);
     }).catch(console.error);
 
+    // /data/ranges is a diagnostic endpoint not covered by FilesystemBackend — intentionally a direct call
     getApiCall<{ start: number; end: number }[]>(`/data/ranges?driveId=${driveId}`).then((ranges) => {
       if (abortContext.aborted) return;
       setAllocatedRanges(ranges);
@@ -228,6 +229,9 @@ export function DriveLogs() {
   const enrichedOps = useMemo(() => {
     const saveOps = actionLog.filter((e) => e.action === 'SAVE_OP');
     return ops.map((op) => {
+      // Assumes one POST /ops/{driveId} = one FsOperation: attributes.start points to the
+      // leading OPS_SEPARATOR, so startBytePos = attributes.start + OPS_SEPARATOR_BYTE_LENGTH.
+      // If batching is ever introduced this will silently stop matching — see epic 0004, task 0003.
       const logEntry = saveOps.find(
         (e) => Number(e.attributes.start) + OPS_SEPARATOR_BYTE_LENGTH === op.startBytePos
       );
@@ -369,7 +373,7 @@ export function DriveLogs() {
     const driveId = driveClient.getDriveId();
     try {
       for (const range of redundantRanges) {
-        await deleteApiCall(`/data?driveId=${driveId}&start=${range.start}&end=${range.end}`);
+        await driveClient.deleteDataRange(range.start, range.end);
       }
       const ranges = await getApiCall<{ start: number; end: number }[]>(`/data/ranges?driveId=${driveId}`);
       setAllocatedRanges(ranges);
