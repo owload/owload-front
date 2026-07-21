@@ -1,13 +1,13 @@
 import { getApiCall } from "@/engine/api/api";
 import { BLOCK_SIZE } from "@/engine/core/constants";
 import { CpFsOperation, DescriptionFsOperation, FsOperationType, MkDirFsOperation, MvFsOperation, RmFsOperation, RenameFsOperation, UploadFinishFsOperation, UploadStartFsOperation } from "@/engine/service/fs-operation";
-import { OPS_SEPARATOR_BYTE_LENGTH } from "@/engine/service/splitting-ops-repository";
 import { FsOperationWrapper } from "@/engine/service/ops-repository";
 import { FsState, PerformOpMode } from "@/engine/service/fs-state";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { DriveActionLogEntry } from "@/engine/service/drive-action-log";
 import { PATH_SYMBOL_REAPLACEMENT, SYSTEM_PREFIX } from "@/hooks/use-files-store-ops";
+import { buildByteToLogIndex } from "@/engine/service/ops-log-analysis";
 import { useFilesStore } from "@/stores/files-store";
 import { AbortContext } from "@/types/types";
 import { useEffect, useMemo, useState } from "react";
@@ -227,16 +227,11 @@ export function DriveLogs() {
   }, [blocks, allocatedRanges]);
 
   const enrichedOps = useMemo(() => {
-    const saveOps = actionLog.filter((e) => e.action === 'SAVE_OP');
-    return ops.map((op) => {
-      // Assumes one POST /ops/{driveId} = one FsOperation: attributes.start points to the
-      // leading OPS_SEPARATOR, so startBytePos = attributes.start + OPS_SEPARATOR_BYTE_LENGTH.
-      // If batching is ever introduced this will silently stop matching — see epic 0004, task 0003.
-      const logEntry = saveOps.find(
-        (e) => Number(e.attributes.start) + OPS_SEPARATOR_BYTE_LENGTH === op.startBytePos
-      );
-      return { ...op, logEntry };
-    });
+    // Assumes one POST /ops/{driveId} = one FsOperation: attributes.start points to the
+    // leading OPS_SEPARATOR, so startBytePos = attributes.start + OPS_SEPARATOR_BYTE_LENGTH.
+    // If batching is ever introduced this will silently stop matching — see epic 0004, task 0003.
+    const byteToLog = buildByteToLogIndex(actionLog);
+    return ops.map((op) => ({ ...op, logEntry: byteToLog.get(op.startBytePos) }));
   }, [ops, actionLog]);
 
   // hash → startBytePos for all START_UPLOAD ops (computed async)

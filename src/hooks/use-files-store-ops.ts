@@ -4,9 +4,13 @@ import { base64ToUint8Array, DriveClientFactory, FsObjectType, FsTreeNode, Progr
 
 import { AbortContext, FileProperties } from "@/types/types";
 import { saveFileToDisk } from "@/lib/utils";
-import { useRequestMvOperationMode, useRequestPassword } from "./use-dialogs";
+import { useConfirmDelete, useRequestMvOperationMode, useRequestPassword } from "./use-dialogs";
 import { FsOperationNameConflictMode } from "@/engine/service/fs-operation";
+import { FsFileProperties } from "@/engine/service/fs-state";
 import { useDeactivateMobileSelectMode } from "./use-mobile-select-mode";
+import { useUserInfo } from "@/auth-context-provider";
+import { buildWriterIndex, findPendingUploads, getNodePath } from "@/engine/service/ops-log-analysis";
+import { NodeWriterInfo, OverwriteWarningInfo } from "@/types/types";
 
 let swMessageEventListener: ((event: MessageEvent) => void) | undefined;
 const swRequestReaders = new Map<string, ReadableStreamDefaultReader<Uint8Array>>();
@@ -57,6 +61,8 @@ export function useFilesStoreOps() {
     const clearFilesToMoveOrCopy = useFilesStore((state) => state.clearFilesToMoveOrCopy);
 
     const deactivateMobileSelectMode = useDeactivateMobileSelectMode();
+    const confirmDelete = useConfirmDelete();
+    const { id: currentUserId } = useUserInfo();
 
     const assertInitialized = () => {
         if (driveClient == null) {
@@ -72,7 +78,20 @@ export function useFilesStoreOps() {
         if (commonFileNames.length === 0) {
             return "RENAME";
         }
-        return requestMvOperationMode({ commonFileNames });
+        await driveClient!.refreshActionLog();
+        const ops = driveClient!.getOperationLog();
+        const actionLog = driveClient!.getActionLog();
+        const conflictNodes = getFileNodes(pathDest, commonFileNames);
+        const writerIndex = await buildWriterIndex(ops, actionLog);
+        const nodeInfos: NodeWriterInfo[] = conflictNodes.map(n => {
+            const lookupId = n.type === FsObjectType.FILE ? (n.properties as FsFileProperties).createdOpHash : n.id;
+            const writer = writerIndex.get(lookupId);
+            return { name: n.name, path: getNodePath(n), isDir: n.type === FsObjectType.DIR, userId: writer?.userId, timestamp: writer?.timestamp };
+        });
+        const conflictPaths = new Set(conflictNodes.map(n => getNodePath(n)));
+        const pendingMap = await findPendingUploads(ops, actionLog, conflictPaths);
+        const overwriteWarning: OverwriteWarningInfo = { nodeInfos, pendingPaths: [...pendingMap.keys()], truncated: false };
+        return requestMvOperationMode({ commonFileNames, overwriteWarning });
     }
 
     const sync = () => {
@@ -277,9 +296,26 @@ export function useFilesStoreOps() {
     const rm = async (fileNames: string[], basePath?: string) => {
         assertInitialized();
         deactivateMobileSelectMode();
+        const dirPath = basePath || pwd()!;
+        const nodes = getFileNodes(dirPath, fileNames);
+        await driveClient!.refreshActionLog();
+        const ops = driveClient!.getOperationLog();
+        const actionLog = driveClient!.getActionLog();
+        const writerIndex = await buildWriterIndex(ops, actionLog);
+        const nodeInfos: NodeWriterInfo[] = nodes.map(n => {
+            const lookupId = n.type === FsObjectType.FILE ? (n.properties as FsFileProperties).createdOpHash : n.id;
+            const writer = writerIndex.get(lookupId);
+            return { name: n.name, path: getNodePath(n), isDir: n.type === FsObjectType.DIR, userId: writer?.userId, timestamp: writer?.timestamp };
+        });
+        const rootPaths = new Set(nodes.map(n => getNodePath(n)));
+        const pendingMap = await findPendingUploads(ops, actionLog, rootPaths);
+        await confirmDelete({
+            totalCount: nodes.length,
+            overwriteWarning: { nodeInfos, pendingPaths: [...pendingMap.keys()], truncated: false }
+        });
         const allFilesToRemove = [
             ...fileNames,
-            ...fileNames.flatMap(fileName => getRelevantSystemFiles(fileName, basePath || pwd()!))
+            ...fileNames.flatMap(fileName => getRelevantSystemFiles(fileName, dirPath))
         ];
         await driveClient!.rm(allFilesToRemove, basePath);
         sync();

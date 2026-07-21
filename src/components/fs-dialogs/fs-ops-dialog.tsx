@@ -3,10 +3,11 @@ import { Dialog, DialogContent } from "../ui/dialog";
 import { CreateDirDialog } from "./create-dir-dialog";
 import { useFilesStore } from "@/stores/files-store";
 import { RequestPasswordDialog } from "./request-password-dialog";
-import { DialogCallbacks, RenameDialogProps, RequestDescriptionDialogProps, RequestMvOperationModeDialogProps, RequestPasswordDialogProps } from "@/types/types";
+import { ConfirmDeleteDialogProps, DialogCallbacks, RenameDialogProps, RequestDescriptionDialogProps, RequestMvOperationModeDialogProps, RequestPasswordDialogProps } from "@/types/types";
 import { RequestDriveDescriptionDialog } from "./request-drive-description-dialog";
 import { RequestMvOperationMode } from "./request-mv-operation-mode";
 import { RenameDialog } from "./rename-dialog";
+import { ConfirmDeleteDialog } from "./confirm-delete-dialog";
 import { useFsCloseDialogModal, useIsFsDialogModalOpen } from "@/hooks/use-dialogs";
 
 
@@ -29,7 +30,7 @@ export function FsOpsDialog() {
 
     useEffect(() => {
         if (!fsOpsDialogOpen) {
-            if (fsOpsDialogType === "REQUEST_PASSWORD" || fsOpsDialogType === "REQUEST_DRIVE_DESCRIPTION" || fsOpsDialogType === "REQUEST_MV_OPERATION_MODE") {
+            if (fsOpsDialogType === "REQUEST_PASSWORD" || fsOpsDialogType === "REQUEST_DRIVE_DESCRIPTION" || fsOpsDialogType === "REQUEST_MV_OPERATION_MODE" || fsOpsDialogType === "CONFIRM_DELETE") {
                 const { dialogCloseCallback } = fsDialogProps as DialogCallbacks;
                 if (dialogCloseCallback) {
                     dialogCloseCallback();
@@ -45,6 +46,7 @@ export function FsOpsDialog() {
             {fsOpsDialogType === "REQUEST_PASSWORD" && (<RequestPasswordDialog {...(fsDialogProps as RequestPasswordDialogProps & DialogCallbacks)} />)}
             {fsOpsDialogType === "REQUEST_DRIVE_DESCRIPTION" && (<RequestDriveDescriptionDialog {...(fsDialogProps as RequestDescriptionDialogProps & DialogCallbacks)} />)}
             {fsOpsDialogType === "REQUEST_MV_OPERATION_MODE" && (<RequestMvOperationMode {...(fsDialogProps as RequestMvOperationModeDialogProps & DialogCallbacks)} />)}
+            {fsOpsDialogType === "CONFIRM_DELETE" && (<ConfirmDeleteDialog {...(fsDialogProps as ConfirmDeleteDialogProps & DialogCallbacks)} />)}
         </DialogContent>
     </Dialog>
     );

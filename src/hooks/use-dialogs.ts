@@ -1,7 +1,7 @@
 import { FsOperationNameConflictMode } from "@/engine";
 import { useFilesStore } from "@/stores/files-store";
 import { ConcurrentDialogOpen, DialogClosedError } from "@/types/errors";
-import { FsOpsDialogPropsType, FsOpsDialogType, RenameDialogProps, RequestDescriptionDialogProps, RequestMvOperationModeDialogProps, RequestPasswordDialogProps, VoidDialogProps } from "@/types/types";
+import { ConfirmDeleteDialogProps, FsOpsDialogPropsType, FsOpsDialogType, RenameDialogProps, RequestDescriptionDialogProps, RequestMvOperationModeDialogProps, RequestPasswordDialogProps, VoidDialogProps } from "@/types/types";
 import { useLocation, useNavigate } from "react-router-dom";
 
 export function useRequestPassword(): (dialogProps: RequestPasswordDialogProps) => Promise<string> {
@@ -22,6 +22,10 @@ export function useRenameDialog(): (dialogProps: RenameDialogProps) => Promise<v
 
 export function useCreateFolderDialog() {
   return useDialog<VoidDialogProps, void>("CREATE_FOLDER");
+}
+
+export function useConfirmDelete(): (dialogProps: ConfirmDeleteDialogProps) => Promise<void> {
+  return useDialog<ConfirmDeleteDialogProps, void>("CONFIRM_DELETE");
 }
 
 function useDialog<T extends FsOpsDialogPropsType, R>(dialogType: FsOpsDialogType): (dialogProps: T) => Promise<R> {
