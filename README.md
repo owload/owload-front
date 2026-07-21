@@ -6,7 +6,6 @@ Secure cloud storage with client-side encryption. Files are encrypted on your de
 
 - **Client-side encryption** — AES-256-CTR encryption happens in the browser/app before any data leaves your machine
 - **Password-based keys** — symmetric keys are derived from your drive password via PBKDF2 (SHA-512, 100k iterations) and never transmitted to the server
-- **Operation signing** — RSA-2048 signatures prove authorship of file system operations
 - **Desktop app** — Tauri-based native app for macOS, Windows, Linux (recommended for maximum security)
 - **Web app** — browser-based access via Keycloak authentication
 - **Encrypted metadata** — file paths and operation types are encrypted alongside file contents
@@ -93,6 +92,6 @@ npm run test:browser
 ## Tech stack
 
 - **Frontend** — React 19, TypeScript, Tailwind CSS, shadcn/ui, Zustand, React Router
-- **Encryption** — Web Crypto API (AES-CTR, PBKDF2, RSA-PKCS1-v1_5)
+- **Encryption** — Web Crypto API (AES-CTR, PBKDF2)
 - **Desktop** — Tauri 2
 - **Auth** — Keycloak (OIDC)
