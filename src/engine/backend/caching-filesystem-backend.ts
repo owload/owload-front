@@ -79,8 +79,8 @@ export class CachingFilesystemBackend implements FilesystemBackend {
     return this.underlyingFilesystemBackend.deleteDataRange(driveId, start, end);
   }
 
-  async getActionLog(driveId: DriveId, limit: number, offset: number): Promise<DriveActionLogEntry[]> {
-    return this.underlyingFilesystemBackend.getActionLog(driveId, limit, offset);
+  async getActionLog(driveId: DriveId, limit: number, before?: number): Promise<DriveActionLogEntry[]> {
+    return this.underlyingFilesystemBackend.getActionLog(driveId, limit, before);
   }
 
   async clearCache(driveId: DriveId) {

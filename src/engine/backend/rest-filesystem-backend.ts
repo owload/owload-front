@@ -42,7 +42,10 @@ export class RestFilesystemBackend implements FilesystemBackend {
         return deleteApiCall(`/data?driveId=${driveId}&start=${start}&end=${end}`);
     }
 
-    async getActionLog(driveId: DriveId, limit: number, offset: number): Promise<DriveActionLogEntry[]> {
-        return getApiCall<DriveActionLogEntry[]>(`/drives/${driveId}/actions?limit=${limit}&offset=${offset}`);
+    async getActionLog(driveId: DriveId, limit: number, before?: number): Promise<DriveActionLogEntry[]> {
+        const url = before !== undefined
+            ? `/drives/${driveId}/actions?limit=${limit}&before=${before}`
+            : `/drives/${driveId}/actions?limit=${limit}`;
+        return getApiCall<DriveActionLogEntry[]>(url);
     }
 }

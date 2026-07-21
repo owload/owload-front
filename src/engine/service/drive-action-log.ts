@@ -3,13 +3,11 @@ export type DriveActionType =
   | 'START_SESSION'
   | 'FINALIZE_SESSION'
   | 'SAVE_OP'
-  | 'GET_OPS'
-  | 'SAVE_DATA'
-  | 'GET_DATA'
   | 'DELETE_DATA';
 
 export type DriveActionLogEntry = {
   id: string;
+  seq: number;
   driveId: string;
   userId: string;
   action: DriveActionType;

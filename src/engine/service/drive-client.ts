@@ -143,11 +143,11 @@ export class DriveClient {
 
     const knownIds = new Set(existing.map((e) => e.id));
     const BATCH_SIZE = 200;
-    let offset = 0;
+    let before: number | undefined = undefined;
     const newEntries: DriveActionLogEntry[] = [];
 
     while (true) {
-      const batch = await this.filesystemBackend.getActionLog(this.driveId, BATCH_SIZE, offset);
+      const batch = await this.filesystemBackend.getActionLog(this.driveId, BATCH_SIZE, before);
       let reachedKnown = false;
       for (const entry of batch) {
         if (knownIds.has(entry.id)) {
@@ -157,7 +157,7 @@ export class DriveClient {
         newEntries.push(entry);
       }
       if (reachedKnown || batch.length < BATCH_SIZE) break;
-      offset += batch.length;
+      before = batch[batch.length - 1].seq;
     }
 
     if (newEntries.length === 0) return existing;
