@@ -103,19 +103,14 @@ function joinPath(dir: string, name: string): string {
   return '/' + parts.join('/');
 }
 
-function isBoundaryOp(op: FsOperation, currentPath: string): boolean {
-  if (op.operationType === FsOperationType.RENAME) {
-    const r = op as RenameFsOperation;
-    return r.pathDest === currentPath && r.pathSrc !== currentPath;
-  }
-  if (op.operationType === FsOperationType.MV) {
-    const mv = op as MvFsOperation;
-    return mv.fileNames.some((name, i) => {
-      const effectiveDest = mv.destFileNames?.[i] ?? name;
-      return joinPath(mv.pathDest, effectiveDest) === currentPath && joinPath(mv.pathSrc, name) !== currentPath;
-    });
-  }
-  return false;
+// Returns true if candidate matches the auto-rename pattern for origName:
+// "base (N)ext" where N ≥ 1 (e.g. "расчет (1).xlsx" for origName "расчет.xlsx").
+function isAutoRename(origName: string, candidate: string): boolean {
+  const dotIdx = origName.lastIndexOf('.');
+  const ext = dotIdx >= 0 ? origName.slice(dotIdx) : '';
+  const base = origName.slice(0, origName.length - ext.length);
+  const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp(`^${esc(base)} \\(\\d+\\)${esc(ext)}$`).test(candidate);
 }
 
 function opInvolvesCurrentPath(op: FsOperation, currentPath: string): boolean {
@@ -139,7 +134,14 @@ function opInvolvesCurrentPath(op: FsOperation, currentPath: string): boolean {
       const cp = op as CpFsOperation;
       return cp.fileNames.some((name, i) => {
         const effectiveDest = cp.destFileNames?.[i] ?? name;
-        return joinPath(cp.pathSrc, name) === currentPath || joinPath(cp.pathDest, effectiveDest) === currentPath;
+        if (joinPath(cp.pathSrc, name) === currentPath || joinPath(cp.pathDest, effectiveDest) === currentPath) return true;
+        // RENAME-mode CP: destFileNames is null; auto-generated name not stored.
+        if (cp.mode === 'RENAME' && !cp.destFileNames) {
+          const basename = currentPath.slice(currentPath.lastIndexOf('/') + 1);
+          const dir = currentPath.slice(0, currentPath.lastIndexOf('/')) || '/';
+          if (dir === cp.pathDest && isAutoRename(name, basename)) return true;
+        }
+        return false;
       });
     }
     default:
@@ -148,46 +150,168 @@ function opInvolvesCurrentPath(op: FsOperation, currentPath: string): boolean {
 }
 
 // Returns ops and version history for a file at currentPath.
-// Boundary: if currentPath was established via RENAME/MV, history starts there (historyStartsHere=true).
+// A version = an S3 byte range from a START_UPLOAD; MV/CP don't create new versions.
+// nodeId (hash of current START_UPLOAD) is used to locate the original upload path,
+// enabling path-chain tracing through RENAME-mode MV where auto-renamed dest is not stored.
 export async function findFileHistory(
   ops: FsOperationWrapper[],
   actionLog: DriveActionLogEntry[],
-  currentPath: string
+  currentPath: string,
+  nodeId?: string
 ): Promise<{ opsForPath: FsOperationWrapper[]; versions: FileVersionEntry[]; historyStartsHere: boolean }> {
   const byteToLog = buildByteToLogIndex(actionLog);
+  interface PathSegment { path: string; startBytePos: number; endBytePos: number }
 
-  // Find latest boundary: RENAME/MV that established currentPath from a different path
-  let boundaryBytePos = -1;
-  let historyStartsHere = false;
-  for (const opWrapper of ops) {
-    if (opWrapper.op && isBoundaryOp(opWrapper.op, currentPath)) {
-      boundaryBytePos = opWrapper.startBytePos;
-      historyStartsHere = true;
+  // Phase 0: find the original upload path for nodeId so we can detect RENAME-mode MV
+  // where destFileNames is null (auto-generated name not stored in the op).
+  let startPath: string | null = null;
+  if (nodeId) {
+    for (const opWrapper of ops) {
+      if (opWrapper.op?.operationType === FsOperationType.START_UPLOAD) {
+        const hash = await opWrapper.op.hashCode();
+        if (hash === nodeId) {
+          startPath = (opWrapper.op as UploadStartFsOperation).path;
+          break;
+        }
+      }
     }
   }
 
-  // Collect ops from boundary onwards that involve currentPath
+  // Phase 1: backward scan — build path segments following the RENAME/MV chain.
+  // Segments: file was at `path` for ops in [startBytePos, endBytePos).
+  const segments: PathSegment[] = [{ path: currentPath, startBytePos: 0, endBytePos: Infinity }];
+  const boundaryOps = new Set<FsOperationWrapper>(); // ops that transition between segments
+  let tracedPath = currentPath;
+
+  for (let i = ops.length - 1; i >= 0; i--) {
+    const opWrapper = ops[i];
+    const op = opWrapper.op;
+    if (!op) continue;
+
+    let prevPath: string | null = null;
+
+    if (op.operationType === FsOperationType.RENAME) {
+      const r = op as RenameFsOperation;
+      if (r.pathDest === tracedPath) prevPath = r.pathSrc;
+    } else if (op.operationType === FsOperationType.MV) {
+      const mv = op as MvFsOperation;
+      for (let j = 0; j < mv.fileNames.length; j++) {
+        // Normal case: destFileNames stores the actual dest name (FIXED mode or no conflict)
+        const effectiveDest = mv.destFileNames?.[j] ?? mv.fileNames[j];
+        if (joinPath(mv.pathDest, effectiveDest) === tracedPath) {
+          prevPath = joinPath(mv.pathSrc, mv.fileNames[j]);
+          break;
+        }
+        // RENAME-mode MV: destFileNames is null; auto-generated name not stored.
+        // Detect via startPath (nodeId's original upload path): if this MV moved startPath
+        // to somewhere in mv.pathDest and tracedPath is a direct child of mv.pathDest,
+        // this is almost certainly the MV that brought our file to tracedPath.
+        if (mv.mode === 'RENAME' && !mv.destFileNames && startPath) {
+          const srcPath = joinPath(mv.pathSrc, mv.fileNames[j]);
+          if (srcPath === startPath) {
+            const destPrefix = mv.pathDest === '/' ? '' : mv.pathDest;
+            const afterDest = tracedPath.startsWith(destPrefix + '/') ? tracedPath.slice(destPrefix.length + 1) : null;
+            if (afterDest && !afterDest.includes('/')) {
+              prevPath = startPath;
+              break;
+            }
+          }
+        }
+      }
+    }
+
+    if (prevPath !== null) {
+      segments[0] = { ...segments[0], startBytePos: opWrapper.startBytePos };
+      segments.unshift({ path: prevPath, startBytePos: 0, endBytePos: opWrapper.startBytePos });
+      boundaryOps.add(opWrapper);
+      tracedPath = prevPath;
+    }
+  }
+
+  // Phase 2: forward pass — collect ops that fall within their path segment.
   const startHashToWrapper = new Map<string, FsOperationWrapper>();
   const opsForPath: FsOperationWrapper[] = [];
 
   for (const opWrapper of ops) {
-    if (boundaryBytePos >= 0 && opWrapper.startBytePos < boundaryBytePos) continue;
     const op = opWrapper.op;
     if (!op) continue;
 
-    if (op.operationType === FsOperationType.START_UPLOAD) {
-      if ((op as UploadStartFsOperation).path === currentPath) {
-        const hash = await op.hashCode();
-        startHashToWrapper.set(hash, opWrapper);
-        opsForPath.push(opWrapper);
-      }
-    } else if (op.operationType === FsOperationType.FINISH_UPLOAD) {
+    // Boundary ops (RENAME/MV that transition between segments) are always included —
+    // opInvolvesCurrentPath would miss them when destFileNames is null (RENAME-mode MV).
+    if (boundaryOps.has(opWrapper)) {
+      opsForPath.push(opWrapper);
+      continue;
+    }
+
+    // FINISH_UPLOAD has no path — match by its start hash
+    if (op.operationType === FsOperationType.FINISH_UPLOAD) {
       const finOp = op as UploadFinishFsOperation;
       if (startHashToWrapper.has(finOp.uploadStartOperationHash)) {
         opsForPath.push(opWrapper);
       }
-    } else if (opInvolvesCurrentPath(op, currentPath)) {
+      continue;
+    }
+
+    const pos = opWrapper.startBytePos;
+    const seg = segments.find(s => pos >= s.startBytePos && pos < s.endBytePos);
+    if (!seg) continue;
+
+    if (op.operationType === FsOperationType.START_UPLOAD) {
+      if ((op as UploadStartFsOperation).path === seg.path) {
+        const hash = await op.hashCode();
+        startHashToWrapper.set(hash, opWrapper);
+        opsForPath.push(opWrapper);
+      }
+    } else if (opInvolvesCurrentPath(op, seg.path)) {
       opsForPath.push(opWrapper);
+    }
+  }
+
+  // Phase 3: if no START_UPLOAD found (file created by CP, never uploaded directly),
+  // trace through the CP to the source file's latest START_UPLOAD before the copy.
+  if (startHashToWrapper.size === 0) {
+    for (const cpWrapper of opsForPath) {
+      if (cpWrapper.op?.operationType !== FsOperationType.CP) continue;
+      const cp = cpWrapper.op as CpFsOperation;
+      for (let j = 0; j < cp.fileNames.length; j++) {
+        // Verify this CP slot corresponds to currentPath (dest matches, including auto-rename)
+        const effectiveDest = cp.destFileNames?.[j] ?? cp.fileNames[j];
+        const destPath = joinPath(cp.pathDest, effectiveDest);
+        const basename = currentPath.slice(currentPath.lastIndexOf('/') + 1);
+        const dir = currentPath.slice(0, currentPath.lastIndexOf('/')) || '/';
+        const matches = destPath === currentPath ||
+          (cp.mode === 'RENAME' && !cp.destFileNames && dir === cp.pathDest && isAutoRename(cp.fileNames[j], basename));
+        if (!matches) continue;
+
+        // Find the latest START_UPLOAD at the source path before this CP op
+        const sourcePath = joinPath(cp.pathSrc, cp.fileNames[j]);
+        let sourceStartWrapper: FsOperationWrapper | null = null;
+        for (const w of ops) {
+          if (w.startBytePos >= cpWrapper.startBytePos) break;
+          if (w.op?.operationType === FsOperationType.START_UPLOAD &&
+              (w.op as UploadStartFsOperation).path === sourcePath) {
+            sourceStartWrapper = w;
+          }
+        }
+        if (sourceStartWrapper) {
+          const hash = await sourceStartWrapper.op!.hashCode();
+          startHashToWrapper.set(hash, sourceStartWrapper);
+          // Insert start/finish into opsForPath in chronological order
+          const insertIdx = opsForPath.findIndex(w => w.startBytePos > sourceStartWrapper!.startBytePos);
+          opsForPath.splice(insertIdx < 0 ? 0 : insertIdx, 0, sourceStartWrapper);
+          const finishWrapper = ops.find(w =>
+            w.startBytePos > sourceStartWrapper!.startBytePos &&
+            w.op?.operationType === FsOperationType.FINISH_UPLOAD &&
+            (w.op as UploadFinishFsOperation).uploadStartOperationHash === hash
+          );
+          if (finishWrapper) {
+            const finIdx = opsForPath.findIndex(w => w.startBytePos > finishWrapper.startBytePos);
+            opsForPath.splice(finIdx < 0 ? opsForPath.length : finIdx, 0, finishWrapper);
+          }
+        }
+        break;
+      }
+      if (startHashToWrapper.size > 0) break; // found one CP source, stop
     }
   }
 
@@ -210,7 +334,7 @@ export async function findFileHistory(
     });
   }
 
-  return { opsForPath, versions, historyStartsHere };
+  return { opsForPath, versions, historyStartsHere: false };
 }
 
 // Recursively collects all nodes in the subtrees of roots.

@@ -4,8 +4,7 @@ import { useFilesStore } from "@/stores/files-store";
 import { getApiCall } from "@/engine/api/api";
 import { buildByteToLogIndex, FileVersionEntry, findFileHistory, isRangeAllocated } from "@/engine/service/ops-log-analysis";
 import { findThumbnailsFor } from "@/hooks/use-files-store-ops";
-import { DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
+import { DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { FsObjectType } from "@/engine";
 import { FsOperationType, UploadStartFsOperation, UploadFinishFsOperation, RmFsOperation, RenameFsOperation, MvFsOperation, CpFsOperation } from "@/engine/service/fs-operation";
@@ -19,7 +18,6 @@ type Thumbnail = { size: number; byteOffset: number; byteLength: number };
 type HistoryData = {
   opsForPath: FsOperationWrapper[];
   versions: FileVersionEntry[];
-  historyStartsHere: boolean;
   actionLog: DriveActionLogEntry[];
   allocatedRanges: { start: number; end: number }[] | null;
   thumbsByVersion: Map<string, Thumbnail[]>;
@@ -40,8 +38,8 @@ function AllocationBadge({ byteOffset, byteLength, allocatedRanges }: { byteOffs
     : <span className="text-xs text-red-500">missing</span>;
 }
 
-function VersionsTab({ data, filePath }: { data: HistoryData; filePath: string }) {
-  const { versions, historyStartsHere, allocatedRanges, thumbsByVersion } = data;
+function VersionsTab({ data }: { data: HistoryData }) {
+  const { versions, allocatedRanges, thumbsByVersion } = data;
 
   let totalAllocated = 0;
   if (allocatedRanges) {
@@ -57,16 +55,11 @@ function VersionsTab({ data, filePath }: { data: HistoryData; filePath: string }
     }
   }
 
-  const currentVersionThumbs = thumbsByVersion.get(versions[versions.length - 1]?.createdOpHash ?? '') ?? [];
+  const currentVersion = versions[versions.length - 1];
+  const currentVersionThumbs = thumbsByVersion.get(currentVersion?.createdOpHash ?? '') ?? [];
 
   return (
     <div className="space-y-4">
-      {historyStartsHere && (
-        <div className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded px-3 py-1.5">
-          History starts here — this file was moved or renamed from another path.
-        </div>
-      )}
-
       <div>
         <div className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Version History</div>
         {versions.length === 0 ? (
@@ -111,11 +104,18 @@ function VersionsTab({ data, filePath }: { data: HistoryData; filePath: string }
         </div>
       )}
 
-      <div className="flex items-center justify-between border-t pt-3">
-        <span className="text-sm text-gray-500">Total allocated size</span>
-        <span className="font-semibold text-sm">
-          {allocatedRanges === null ? '…' : formatBytes(totalAllocated)}
-        </span>
+      <div className="flex gap-6 border-t pt-3">
+        <div className="flex-1">
+          <div className="text-xs text-gray-400 mb-1">Current</div>
+          <div className="flex items-center gap-1.5">
+            <span className="font-semibold text-sm">{currentVersion ? formatBytes(currentVersion.byteLength) : '—'}</span>
+            {currentVersion && <AllocationBadge byteOffset={currentVersion.byteOffset} byteLength={currentVersion.byteLength} allocatedRanges={allocatedRanges} />}
+          </div>
+        </div>
+        <div className="flex-1">
+          <div className="text-xs text-gray-400 mb-1">Total allocated</div>
+          <span className="font-semibold text-sm">{allocatedRanges === null ? '…' : formatBytes(totalAllocated)}</span>
+        </div>
       </div>
     </div>
   );
@@ -183,7 +183,7 @@ function OpLogTab({ data }: { data: HistoryData }) {
   );
 }
 
-export function FilePropertiesDialog({ filePath, nodeId, byteLength, inputCallback }: Props) {
+export function FilePropertiesDialog({ filePath, nodeId }: Props) {
   const driveClient = useFilesStore(state => state.driveClient);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -206,7 +206,7 @@ export function FilePropertiesDialog({ filePath, nodeId, byteLength, inputCallba
         ]);
         if (aborted) return;
 
-        const { opsForPath, versions, historyStartsHere } = await findFileHistory(ops, actionLog, filePath);
+        const { opsForPath, versions } = await findFileHistory(ops, actionLog, filePath, nodeId);
         if (aborted) return;
 
         const thumbsByVersion = new Map<string, Thumbnail[]>();
@@ -218,7 +218,7 @@ export function FilePropertiesDialog({ filePath, nodeId, byteLength, inputCallba
           thumbsByVersion.set(nodeId, findThumbnailsFor(driveClient, parentPath, nodeId));
         }
 
-        setHistoryData({ opsForPath, versions, historyStartsHere, actionLog, allocatedRanges, thumbsByVersion });
+        setHistoryData({ opsForPath, versions, actionLog, allocatedRanges, thumbsByVersion });
         setLoading(false);
       } catch (e) {
         if (!aborted) {
@@ -235,7 +235,6 @@ export function FilePropertiesDialog({ filePath, nodeId, byteLength, inputCallba
     <>
       <DialogHeader>
         <DialogTitle className="truncate">{fileName}</DialogTitle>
-        <div className="text-sm text-gray-500">Current size: {formatBytes(byteLength)}</div>
       </DialogHeader>
 
       <div className="my-4 min-h-[200px] max-h-[60vh] overflow-y-auto">
@@ -252,7 +251,7 @@ export function FilePropertiesDialog({ filePath, nodeId, byteLength, inputCallba
               <TabsTrigger value="oplog">Op Log</TabsTrigger>
             </TabsList>
             <TabsContent value="versions">
-              <VersionsTab data={historyData} filePath={filePath} />
+              <VersionsTab data={historyData} />
             </TabsContent>
             <TabsContent value="oplog">
               <OpLogTab data={historyData} />
@@ -261,9 +260,6 @@ export function FilePropertiesDialog({ filePath, nodeId, byteLength, inputCallba
         )}
       </div>
 
-      <DialogFooter>
-        <Button variant="outline" onClick={() => inputCallback(undefined)}>Close</Button>
-      </DialogFooter>
     </>
   );
 }
