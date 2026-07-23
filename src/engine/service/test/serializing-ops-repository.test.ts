@@ -17,6 +17,20 @@ function opByteLength(op: FsOperation) {
     return new TextEncoder().encode(op.serialize()).length;
 }
 
+// Guards the DriveLogs action-log correlation invariant: one saveOperation call must produce
+// exactly one entry in the op log. The byte-offset formula in drive-logs.tsx relies on this
+// (attributes.start + OPS_SEPARATOR_BYTE_LENGTH === startBytePos). If batching is ever
+// introduced, that formula must be updated in sync. See also: rest-filesystem-backend.ts.
+test('saveOperation produces exactly one entry per call (DriveLogs correlation invariant)', async () => {
+    const { serializingOpsRepository } = await getSerializingOpsRepository();
+    await serializingOpsRepository.saveOperation(testMkOp1);
+    expect(await serializingOpsRepository.getOperations(0)).toHaveLength(1);
+    await serializingOpsRepository.saveOperation(testMkOp2);
+    expect(await serializingOpsRepository.getOperations(0)).toHaveLength(2);
+    await serializingOpsRepository.saveOperation(testRmOp1);
+    expect(await serializingOpsRepository.getOperations(0)).toHaveLength(3);
+});
+
 test('saveOperation does not throw', async () => {
     const { serializingOpsRepository } = await getSerializingOpsRepository();
     await serializingOpsRepository.saveOperation(testMkOp1);

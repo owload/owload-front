@@ -8,6 +8,9 @@ export class RestFilesystemBackend implements FilesystemBackend {
         return new Uint8Array(await getApiCall(`/ops/${driveId}/${startBytePos}`, "arraybuffer"));
     }
 
+    // One call = exactly one FsOperation. DriveLogs correlates op log entries with action log
+    // entries via (attributes.start + OPS_SEPARATOR_BYTE_LENGTH === startBytePos); that formula
+    // breaks silently if multiple ops are ever batched into a single POST. See drive-logs.tsx.
     async saveOperation(driveId: DriveId, fsOperationData: Uint8Array): Promise<void> {
         return postApiCall(`/ops/${driveId}`, fsOperationData);
     }
