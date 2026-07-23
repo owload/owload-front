@@ -25,7 +25,8 @@ function getExtension(name: string) {
 
 export const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'tiff', 'svg'];
 export const playableVideoExtensions: string[] = ['mp4', 'mov'];
-export const openableExtensions = [...imageExtensions, ...playableVideoExtensions];
+export const textExtensions: string[] = ['txt'];
+export const openableExtensions = [...imageExtensions, ...playableVideoExtensions, ...textExtensions];
 
 export const SYSTEM_PREFIX = "$$$sy$s$stem!_";
 export const PATH_SYMBOL_REAPLACEMENT = "$"; // replace all / with this symbol in file names
@@ -72,6 +73,7 @@ export function useFilesStoreOps() {
     const selectIds = useFilesStore((state) => state.selectIds);
 
     const setMediaPreviewOpen = useFilesStore((state) => state.setMediaPreviewOpen);
+    const setTextEditorOpen = useFilesStore((state) => state.setTextEditorOpen);
     const navigateDir = useNavigateDir();
     const requestPassword = useRequestPassword();
     const requestMvOperationMode = useRequestMvOperationMode();
@@ -84,7 +86,7 @@ export function useFilesStoreOps() {
 
     const deactivateMobileSelectMode = useDeactivateMobileSelectMode();
     const confirmDelete = useConfirmDelete();
-    const { id: currentUserId } = useUserInfo();
+    const { id: _currentUserId } = useUserInfo();
 
     const assertInitialized = () => {
         if (driveClient == null) {
@@ -183,7 +185,11 @@ export function useFilesStoreOps() {
             }
             sync();
             selectIds([node.id]);
-            setMediaPreviewOpen(true);
+            if (textExtensions.includes(getExtension(node.name))) {
+                setTextEditorOpen(true);
+            } else {
+                setMediaPreviewOpen(true);
+            }
         }
     }
 
@@ -245,7 +251,7 @@ export function useFilesStoreOps() {
                                 break;
                             }
                             // Transfer ArrayBuffer ownership (zero-copy across threads)
-                            sw?.postMessage({ type: "responseData", requestId, data: value }, [value.buffer]);
+                            sw?.postMessage({ type: "responseData", requestId, data: value }, { transfer: [value.buffer] });
                         }
                     } catch {
                         sw?.postMessage({ type: "responseFinish", requestId });
@@ -521,7 +527,7 @@ export function useFilesStoreOps() {
         }
         if (fileObject.type === FsObjectType.DIR) {
             navigateDir(fileObject.id);
-        } else if (imageExtensions.includes(fileObject.extension!) || playableVideoExtensions.includes(fileObject.extension!)) {
+        } else if (imageExtensions.includes(fileObject.extension!) || playableVideoExtensions.includes(fileObject.extension!) || textExtensions.includes(fileObject.extension!)) {
             navigateDir(fileObject.id);
         } else {
             throw new Error("Operation declared supported, but not implemented");

@@ -6,8 +6,7 @@ import { buildByteToLogIndex, FileVersionEntry, findFileHistory, isRangeAllocate
 import { findThumbnailsFor } from "@/hooks/use-files-store-ops";
 import { DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { FsObjectType } from "@/engine";
-import { FsOperationType, UploadStartFsOperation, UploadFinishFsOperation, RmFsOperation, RenameFsOperation, MvFsOperation, CpFsOperation } from "@/engine/service/fs-operation";
+import { FsOperationType, UploadStartFsOperation, RmFsOperation, RenameFsOperation, MvFsOperation, CpFsOperation } from "@/engine/service/fs-operation";
 import { FsOperationWrapper } from "@/engine/service/ops-repository";
 import { DriveActionLogEntry } from "@/engine/service/drive-action-log";
 

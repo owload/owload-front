@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { Dialog, DialogContent } from "../ui/dialog";
 import { CreateDirDialog } from "./create-dir-dialog";
+import { CreateTextFileDialog } from "./create-text-file-dialog";
 import { useFilesStore } from "@/stores/files-store";
 import { RequestPasswordDialog } from "./request-password-dialog";
 import { ConfirmDeleteDialogProps, DialogCallbacks, FilePropertiesDialogProps, RenameDialogProps, RequestDescriptionDialogProps, RequestMvOperationModeDialogProps, RequestPasswordDialogProps } from "@/types/types";
@@ -43,6 +44,7 @@ export function FsOpsDialog() {
     return (<Dialog open={fsOpsDialogOpen} onOpenChange={handleClose}>
         <DialogContent>
             {fsOpsDialogType === "CREATE_FOLDER" && (<CreateDirDialog />)}
+            {fsOpsDialogType === "CREATE_TEXT_FILE" && (<CreateTextFileDialog />)}
             {fsOpsDialogType === "RENAME" && (<RenameDialog {...(fsDialogProps as RenameDialogProps)} />)}
             {fsOpsDialogType === "REQUEST_PASSWORD" && (<RequestPasswordDialog {...(fsDialogProps as RequestPasswordDialogProps & DialogCallbacks)} />)}
             {fsOpsDialogType === "REQUEST_DRIVE_DESCRIPTION" && (<RequestDriveDescriptionDialog {...(fsDialogProps as RequestDescriptionDialogProps & DialogCallbacks)} />)}

@@ -24,6 +24,10 @@ export function useCreateFolderDialog() {
   return useDialog<VoidDialogProps, void>("CREATE_FOLDER");
 }
 
+export function useCreateTextFileDialog() {
+  return useDialog<VoidDialogProps, void>("CREATE_TEXT_FILE");
+}
+
 export function useConfirmDelete(): (dialogProps: ConfirmDeleteDialogProps) => Promise<void> {
   return useDialog<ConfirmDeleteDialogProps, void>("CONFIRM_DELETE");
 }

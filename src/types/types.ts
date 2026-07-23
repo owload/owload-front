@@ -36,7 +36,7 @@ export interface UserInfo {
   name: string;
 }
 
-export type FsOpsDialogType = "RENAME" | "CREATE_FOLDER" | "REQUEST_PASSWORD" | "REQUEST_DRIVE_DESCRIPTION" | "REQUEST_MV_OPERATION_MODE" | "CONFIRM_DELETE" | "FILE_PROPERTIES"
+export type FsOpsDialogType = "RENAME" | "CREATE_FOLDER" | "CREATE_TEXT_FILE" | "REQUEST_PASSWORD" | "REQUEST_DRIVE_DESCRIPTION" | "REQUEST_MV_OPERATION_MODE" | "CONFIRM_DELETE" | "FILE_PROPERTIES"
 
 export interface RequestPasswordDialogProps {
   driveName: string

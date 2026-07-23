@@ -116,6 +116,14 @@ export class MockFilesystemBackend implements FilesystemBackend {
         return driveData.slice(byteOffset, byteOffset + byteLength);
     }
 
+    async deleteDataRange(_driveId: DriveId, _start: number, _end: number): Promise<void> {
+        // no-op in Mock backend
+    }
+
+    async getActionLog(_driveId: DriveId, _limit: number, _before?: number) {
+        return [];
+    }
+
     async preloadOperations() {
         // no preloading in Mock backend
     }
