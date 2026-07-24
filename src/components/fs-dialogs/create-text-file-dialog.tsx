@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "../ui/button";
 import { DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../ui/dialog";
 import { Input } from "../ui/input";
@@ -13,6 +13,11 @@ export function CreateTextFileDialog() {
     const setTextEditorOpen = useFilesStore((state) => state.setTextEditorOpen);
     const selectIds = useFilesStore((state) => state.selectIds);
     const closeDialog = useFsCloseDialogModal();
+    const inputRef = useRef<HTMLInputElement>(null);
+
+    useEffect(() => {
+        setTimeout(() => { inputRef.current?.focus(); }, 0);
+    }, []);
 
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
@@ -36,10 +41,9 @@ export function CreateTextFileDialog() {
             <form onSubmit={handleSubmit}>
                 <DialogDescription>File name (.txt will be added if missing)</DialogDescription>
                 <Input
+                    ref={inputRef}
                     value={fileName}
                     onChange={e => setFileName(e.target.value)}
-                    placeholder="notes.txt"
-                    autoFocus
                 />
                 <DialogFooter className="mt-4 sm:justify-end">
                     <Button type="submit" className="py-5" variant="default" disabled={!fileName.trim()}>
