@@ -14,19 +14,16 @@ export function RenameDialog({ pathSrc, originalName }: RenameDialogProps) {
     const closeDialog = useFsCloseDialogModal();
 
     useEffect(() => {
-        if (inputRef.current) {
-            const dotIdx = originalName.lastIndexOf(".");
+        const dotIdx = originalName.lastIndexOf(".");
+        setTimeout(() => {
+            if (!inputRef.current) return;
             inputRef.current.focus();
             if (dotIdx > 0) {
-                setTimeout(() => {
-                    inputRef.current && inputRef.current.setSelectionRange(0, dotIdx);
-                }, 0);
+                inputRef.current.setSelectionRange(0, dotIdx);
             } else {
-                setTimeout(() => {
-                    inputRef.current && inputRef.current.select();
-                }, 0);
+                inputRef.current.select();
             }
-        }
+        }, 0);
     }, [originalName]);
 
     function handleSubmit(e: React.FormEvent) {
