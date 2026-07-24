@@ -11,6 +11,7 @@ export function CreateTextFileDialog() {
     const [fileName, setFileName] = useState('');
     const { uploadFile, pwd } = useFilesStoreOps();
     const setTextEditorOpen = useFilesStore((state) => state.setTextEditorOpen);
+    const selectIds = useFilesStore((state) => state.selectIds);
     const closeDialog = useFsCloseDialogModal();
 
     async function handleSubmit(e: React.FormEvent) {
@@ -20,7 +21,8 @@ export function CreateTextFileDialog() {
         const finalName = name.endsWith('.txt') ? name : name + '.txt';
         try {
             const file = new File([''], finalName, { type: 'text/plain' });
-            await uploadFile(file, pwd()!);
+            const fileId = await uploadFile(file, pwd()!);
+            selectIds([fileId]);
             setTextEditorOpen(true);
         } catch (e) {
             if (!(e instanceof DialogClosedError)) throw e;

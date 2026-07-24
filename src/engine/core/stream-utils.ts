@@ -125,6 +125,10 @@ export function readBlobAsStream(blob: Blob, chunkLength: number): ReadableStrea
   let curChunkNum = 0;
   return new ReadableStream({
     async pull(controller) {
+      if (curChunkNum >= chunksCout) {
+        controller.close();
+        return;
+      }
       let last = curChunkNum === chunksCout - 1;
       let startPos = curChunkNum * chunkLength;
       let endPos = last ? blob.size : startPos + chunkLength;

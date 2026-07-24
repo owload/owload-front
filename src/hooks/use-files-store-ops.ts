@@ -467,6 +467,15 @@ export function useFilesStoreOps() {
         return fileId;
     }
 
+    // Like uploadFile but always REPLACEs and skips mid-upload sync so the
+    // caller's selection is not disturbed while the upload is in progress.
+    const saveFile = async (file: File, path: string): Promise<string> => {
+        assertInitialized();
+        const fileId = await driveClient!.uploadFile(file, path, 'REPLACE', undefined, undefined);
+        sync();
+        return fileId;
+    }
+
     const isOpenAvailable = (fileObjects: FileProperties[]) => {
         if (fileObjects.length !== 1) {
             return false;
@@ -581,6 +590,7 @@ export function useFilesStoreOps() {
         rename,
         selectFilesToMove,
         uploadFile,
+        saveFile,
         getFileData,
         isOpenAvailable,
         isDownloadAvailable,

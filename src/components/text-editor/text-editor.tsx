@@ -7,8 +7,9 @@ import { useSelectedFileObjects } from "@/hooks/use-selected-file-objects";
 import { DialogClosedError } from "@/types/errors";
 
 export function TextEditor() {
-    const { getFileData, uploadFile, pwd, closeSelectedObject } = useFilesStoreOps();
+    const { getFileData, saveFile, pwd, closeSelectedObject } = useFilesStoreOps();
     const setTextEditorOpen = useFilesStore((state) => state.setTextEditorOpen);
+    const selectIds = useFilesStore((state) => state.selectIds);
     const selectedFileObjects = useSelectedFileObjects();
     const file = selectedFileObjects[0];
 
@@ -45,7 +46,8 @@ export function TextEditor() {
         setError(null);
         try {
             const blob = new File([content], file.name, { type: 'text/plain' });
-            await uploadFile(blob, pwd()!);
+            const newFileId = await saveFile(blob, pwd()!);
+            selectIds([newFileId]);
             setOriginalContent(content);
         } catch (e) {
             if (!(e instanceof DialogClosedError)) {
