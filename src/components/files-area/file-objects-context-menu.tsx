@@ -15,7 +15,7 @@ import { FsObjectType } from "@/engine";
 export function FileObjectsContextMenu({ children, fileObject }: PropsWithChildren<{ fileObject: FileProperties }>) {
     const selectedFileObjects = useSelectedFileObjects();
     const openRenameDialog = useRenameDialog();
-    const { pwd, rm, downloadSelectedObject, openSelectedObject, isSelectedObjectOpenAvailable, isSelectedObjectDownloadAvailable, selectFilesToCopy, selectFilesToMove } = useFilesStoreOps();
+    const { pwd, rm, downloadSelectedObject, openSelectedObject, openSelectedObjectInNewTab, isSelectedObjectOpenAvailable, isSelectedObjectDownloadAvailable, selectFilesToCopy, selectFilesToMove } = useFilesStoreOps();
     const openFileProperties = useOpenFileProperties();
     const isMobile = useIsMobile();
     const mobileFileSelectModeOn = useIsMobileSelectModeOn();
@@ -90,6 +90,9 @@ export function FileObjectsContextMenu({ children, fileObject }: PropsWithChildr
                 {isSelectedObjectOpenAvailable() && <ContextMenuItem inset onClick={openSelectedObject}>
                     Open
                     <ContextMenuShortcut>⌘O</ContextMenuShortcut>
+                </ContextMenuItem>}
+                {isSelectedObjectOpenAvailable() && selectedFileObjects[0]?.type !== FsObjectType.DIR && <ContextMenuItem inset onClick={openSelectedObjectInNewTab}>
+                    Open in new tab
                 </ContextMenuItem>}
                 {isSelectedObjectDownloadAvailable() && <ContextMenuItem inset onClick={handleDownloadClick}>
                     Download

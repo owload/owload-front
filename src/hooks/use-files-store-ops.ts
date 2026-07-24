@@ -1,5 +1,5 @@
 import { useFilesStore } from "@/stores/files-store";
-import { useNavigateDir } from "./use-navigate-dir";
+import { useNavigateDir, useGetNavigateDirUrl } from "./use-navigate-dir";
 import { base64ToUint8Array, DriveClientFactory, FsObjectType, FsTreeNode, ProgressCallback, uint8ArrayToBase64, DriveId, RestFilesystemBackend, PreloadingFilesystemBackend, CachingFilesystemBackend, OperationCancelledError, DriveClient } from "@/engine";
 
 import { AbortContext, FileProperties } from "@/types/types";
@@ -75,6 +75,7 @@ export function useFilesStoreOps() {
     const setMediaPreviewOpen = useFilesStore((state) => state.setMediaPreviewOpen);
     const setTextEditorOpen = useFilesStore((state) => state.setTextEditorOpen);
     const navigateDir = useNavigateDir();
+    const getNavigateDirUrl = useGetNavigateDirUrl();
     const requestPassword = useRequestPassword();
     const requestMvOperationMode = useRequestMvOperationMode();
 
@@ -553,6 +554,15 @@ export function useFilesStoreOps() {
         openObject(selectedFileObjects[0]);
     }
 
+    const openInNewTab = (fileObject: FileProperties) => {
+        window.open(getNavigateDirUrl(fileObject.id), '_blank', 'noopener');
+    }
+
+    const openSelectedObjectInNewTab = () => {
+        const selectedFileObjects = useFilesStore.getState().fileObjects.filter(e => e.selected);
+        openInNewTab(selectedFileObjects[0]);
+    }
+
     const closeSelectedObject = () => {
         const selectedFileObjects = useFilesStore.getState().fileObjects.filter(e => e.selected);
         if (selectedFileObjects.length < 1) {
@@ -598,6 +608,8 @@ export function useFilesStoreOps() {
         isSelectedObjectDownloadAvailable,
         downloadSelectedObject,
         openSelectedObject,
+        openInNewTab,
+        openSelectedObjectInNewTab,
         openObject,
         downloadObject,
         closeSelectedObject,
