@@ -105,7 +105,7 @@ export function TextEditor() {
                     <p className="text-sm text-gray-600">Save before closing?</p>
                     <DialogFooter className="gap-2">
                         <Button variant="black" onClick={() => setConfirmClose(false)}>Cancel</Button>
-                        <Button variant="secondary" onClick={() => { setConfirmClose(false); doClose(); }}>Discard</Button>
+                        <Button variant="outline" onClick={() => { setConfirmClose(false); doClose(); }}>Discard</Button>
                         <Button onClick={handleSaveAndClose} disabled={saving}>Save</Button>
                     </DialogFooter>
                 </DialogContent>
