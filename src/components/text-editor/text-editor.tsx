@@ -123,7 +123,7 @@ export function TextEditor() {
                     >
                         {saving ? 'Saving…' : 'Save'}
                     </Button>
-                    <X size={20} onClick={handleClose} className="cursor-pointer text-gray-500 hover:text-gray-900 shrink-0" />
+                    <X size={20} onClick={saving ? undefined : handleClose} className={saving ? "text-gray-300 shrink-0" : "cursor-pointer text-gray-500 hover:text-gray-900 shrink-0"} />
                 </div>
                 <div className="flex-1 overflow-hidden flex flex-col">
                     {loading && (
