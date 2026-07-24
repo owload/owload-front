@@ -110,7 +110,8 @@ export function TextEditor() {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
-            <div className="fixed inset-0 z-150 bg-white flex flex-col">
+            <div className="fixed inset-0 z-150 bg-black/80 flex items-center justify-center">
+            <div className="bg-white rounded-lg shadow-xl flex flex-col w-[min(90vw,990px)] h-[91vh]">
                 <div className="flex items-center gap-3 px-4 h-12 border-b shrink-0">
                     <span className="font-medium text-sm truncate flex-1">{file.name}</span>
                     {isDirty && <span className="text-xs text-amber-500 shrink-0">● Unsaved changes</span>}
@@ -142,6 +143,7 @@ export function TextEditor() {
                         />
                     )}
                 </div>
+            </div>
             </div>
         </>
     );
