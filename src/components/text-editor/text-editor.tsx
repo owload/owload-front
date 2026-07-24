@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useFilesStore } from "@/stores/files-store";
 import { useFilesStoreOps } from "@/hooks/use-files-store-ops";
 import { useSelectedFileObjects } from "@/hooks/use-selected-file-objects";
@@ -18,6 +19,7 @@ export function TextEditor() {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [confirmClose, setConfirmClose] = useState(false);
 
     const isDirty = content !== originalContent;
 
@@ -72,46 +74,75 @@ export function TextEditor() {
         return () => window.removeEventListener('keydown', onKeyDown);
     }, []);
 
-    const handleClose = () => {
+    const doClose = () => {
         setTextEditorOpen(false);
         closeSelectedObject();
+    };
+
+    const handleClose = () => {
+        if (isDirty) {
+            setConfirmClose(true);
+        } else {
+            doClose();
+        }
+    };
+
+    const handleSaveAndClose = async () => {
+        setConfirmClose(false);
+        await handleSave();
+        doClose();
     };
 
     if (!file) return null;
 
     return (
-        <div className="fixed inset-0 z-150 bg-white flex flex-col">
-            <div className="flex items-center gap-3 px-4 h-12 border-b shrink-0">
-                <span className="font-medium text-sm truncate flex-1">{file.name}</span>
-                {isDirty && <span className="text-xs text-amber-500 shrink-0">● Unsaved changes</span>}
-                <Button
-                    size="sm"
-                    variant="default"
-                    onClick={handleSave}
-                    disabled={saving || !isDirty}
-                    className="shrink-0"
-                >
-                    {saving ? 'Saving…' : 'Save'}
-                </Button>
-                <X size={20} onClick={handleClose} className="cursor-pointer text-gray-500 hover:text-gray-900 shrink-0" />
+        <>
+            <Dialog open={confirmClose} onOpenChange={(open) => !open && setConfirmClose(false)}>
+                <DialogContent className="z-[200]">
+                    <DialogHeader>
+                        <DialogTitle>Unsaved changes</DialogTitle>
+                    </DialogHeader>
+                    <p className="text-sm text-gray-600">Save before closing?</p>
+                    <DialogFooter className="gap-2">
+                        <Button variant="black" onClick={() => setConfirmClose(false)}>Cancel</Button>
+                        <Button variant="secondary" onClick={() => { setConfirmClose(false); doClose(); }}>Discard</Button>
+                        <Button onClick={handleSaveAndClose} disabled={saving}>Save</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+            <div className="fixed inset-0 z-150 bg-white flex flex-col">
+                <div className="flex items-center gap-3 px-4 h-12 border-b shrink-0">
+                    <span className="font-medium text-sm truncate flex-1">{file.name}</span>
+                    {isDirty && <span className="text-xs text-amber-500 shrink-0">● Unsaved changes</span>}
+                    <Button
+                        size="sm"
+                        variant="default"
+                        onClick={handleSave}
+                        disabled={saving || !isDirty}
+                        className="shrink-0"
+                    >
+                        {saving ? 'Saving…' : 'Save'}
+                    </Button>
+                    <X size={20} onClick={handleClose} className="cursor-pointer text-gray-500 hover:text-gray-900 shrink-0" />
+                </div>
+                <div className="flex-1 overflow-hidden flex flex-col">
+                    {loading && (
+                        <div className="flex items-center justify-center flex-1 text-gray-400 text-sm">Loading…</div>
+                    )}
+                    {!loading && error && (
+                        <div className="p-4 text-red-500 text-sm">{error}</div>
+                    )}
+                    {!loading && !error && (
+                        <textarea
+                            className="flex-1 resize-none p-4 outline-none font-mono text-sm"
+                            value={content}
+                            onChange={e => setContent(e.target.value)}
+                            spellCheck={false}
+                            autoFocus
+                        />
+                    )}
+                </div>
             </div>
-            <div className="flex-1 overflow-hidden flex flex-col">
-                {loading && (
-                    <div className="flex items-center justify-center flex-1 text-gray-400 text-sm">Loading…</div>
-                )}
-                {!loading && error && (
-                    <div className="p-4 text-red-500 text-sm">{error}</div>
-                )}
-                {!loading && !error && (
-                    <textarea
-                        className="flex-1 resize-none p-4 outline-none font-mono text-sm"
-                        value={content}
-                        onChange={e => setContent(e.target.value)}
-                        spellCheck={false}
-                        autoFocus
-                    />
-                )}
-            </div>
-        </div>
+        </>
     );
 }
