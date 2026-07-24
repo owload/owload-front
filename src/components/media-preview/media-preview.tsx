@@ -76,7 +76,7 @@ export function MediaPreview() {
         let nextFileObject = fileObjects[nextFileObjectIndex];
         while (nextFileObject!.name.startsWith(SYSTEM_PREFIX)
             || nextFileObject!.type === FsObjectType.DIR
-            || !openableExtensions.includes(nextFileObject!.extension!)) {
+            || (!imageExtensions.includes(nextFileObject!.extension!) && !playableVideoExtensions.includes(nextFileObject!.extension!))) {
             nextFileObjectIndex = getNextFileObjectIndex(currentIndex, direction);
             nextFileObject = fileObjects[nextFileObjectIndex];
             currentIndex = nextFileObjectIndex;
