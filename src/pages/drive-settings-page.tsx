@@ -156,7 +156,7 @@ export function DriveSettingsPage() {
                 <div key={t.id} className="border rounded p-4 space-y-2">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-xs font-bold px-1.5 py-0.5 rounded bg-gray-100 text-gray-600">{t.role}</span>
-                    {tierBadge(t.tier)}
+                    {!t.isCustom && tierBadge(t.tier)}
                     {statusBadge(t.status)}
                     <span className="text-sm font-medium">{targetLabel(t)}</span>
                     {t.isCustom && healthBadge(health[t.id])}
