@@ -18,6 +18,7 @@ export class MockDriveBackend implements DriveBackend {
     async deleteStorageTarget(_driveId: DriveId, _targetId: string): Promise<void> {}
     async testCustomConfig(_config: import('../../drive-backend').CustomStorageConfig): Promise<{ ok: boolean; error?: string }> { return { ok: true }; }
     async testStorageTarget(_driveId: DriveId, _targetId: string): Promise<{ ok: boolean; error?: string }> { return { ok: true }; }
+    async testPreset(_presetId: string): Promise<{ ok: boolean; error?: string }> { return { ok: true }; }
 
     async createDrive(title: string, _storageTarget?: StorageTargetInput): Promise<DriveInfo> {
         const newDriveId = this.idSequence.toString();

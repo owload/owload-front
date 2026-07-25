@@ -72,12 +72,11 @@ export function DriveSettingsPage() {
   }
 
   function testAll(driveId: string, ts: DriveStorageTarget[]) {
-    const customTargets = ts.filter(t => t.isCustom);
     const initial: Record<string, HealthResult> = {};
-    customTargets.forEach(t => { initial[t.id] = { state: 'loading' }; });
+    ts.forEach(t => { initial[t.id] = { state: 'loading' }; });
     setHealth(initial);
 
-    customTargets.forEach(async (t) => {
+    ts.forEach(async (t) => {
       try {
         const result = await driveBackend.testStorageTarget(driveId, t.id);
         setHealth(prev => ({ ...prev, [t.id]: { state: result.ok ? 'ok' : 'error', error: result.error } }));
@@ -159,7 +158,7 @@ export function DriveSettingsPage() {
                     {!t.isCustom && tierBadge(t.tier)}
                     {statusBadge(t.status)}
                     <span className="text-sm font-medium">{targetLabel(t)}</span>
-                    {t.isCustom && healthBadge(health[t.id])}
+                    {healthBadge(health[t.id])}
                   </div>
                   <div className="flex gap-2 flex-wrap">
                     <span title={disabledReason ?? undefined}>

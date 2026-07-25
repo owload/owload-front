@@ -64,6 +64,7 @@ export abstract class DriveBackend {
   abstract deleteStorageTarget(driveId: DriveId, targetId: string): Promise<void>;
   abstract testCustomConfig(config: CustomStorageConfig): Promise<{ ok: boolean; error?: string }>;
   abstract testStorageTarget(driveId: DriveId, targetId: string): Promise<{ ok: boolean; error?: string }>;
+  abstract testPreset(presetId: string): Promise<{ ok: boolean; error?: string }>;
 }
 
 export class RestDriveBackend implements DriveBackend {
@@ -107,5 +108,9 @@ export class RestDriveBackend implements DriveBackend {
 
   testStorageTarget(driveId: DriveId, targetId: string): Promise<{ ok: boolean; error?: string }> {
     return postApiCall(`/drives/${driveId}/storage-targets/${targetId}/test-connection`);
+  }
+
+  testPreset(presetId: string): Promise<{ ok: boolean; error?: string }> {
+    return postApiCall(`/s3-presets/${presetId}/test`);
   }
 }
