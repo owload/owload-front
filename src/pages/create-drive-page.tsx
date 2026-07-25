@@ -39,6 +39,24 @@ function isCustomValid(c: CustomStorageConfig) {
   return !!(c.endpointUrl && c.region && c.bucket && c.accessKey && c.secretKey);
 }
 
+function targetDedupeKey(t: TargetConfig): string | null {
+  if (t.mode === 'preset' && t.presetId) return `preset:${t.presetId}`;
+  if (t.mode === 'custom' && t.custom.endpointUrl && t.custom.bucket) return `custom:${t.custom.endpointUrl}:${t.custom.bucket}`;
+  return null;
+}
+
+function findDuplicateTarget(master: TargetConfig, slaves: TargetConfig[]): string | null {
+  const all = [master, ...slaves];
+  const keys = all.map(targetDedupeKey);
+  for (let i = 0; i < keys.length; i++) {
+    if (keys[i] === null) continue;
+    for (let j = i + 1; j < keys.length; j++) {
+      if (keys[i] === keys[j]) return keys[i]!;
+    }
+  }
+  return null;
+}
+
 interface TargetPickerProps {
   label: string;
   target: TargetConfig;
@@ -171,6 +189,11 @@ export function CreateDrivePage() {
         alert(`Please fill in all connection fields for slave ${i + 1}`);
         return;
       }
+    }
+
+    if (findDuplicateTarget(master, slaves)) {
+      alert("Each storage target must use a unique S3 configuration. Remove or change the duplicate.");
+      return;
     }
 
     setLoading(true);
