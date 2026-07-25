@@ -1,13 +1,16 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { S3Preset, CustomStorageConfig, StorageTargetInput } from "@/engine";
+import { S3Preset, CustomStorageConfig, StorageTargetInput, RestDriveBackend } from "@/engine";
 
 export type TargetMode = 'preset' | 'custom';
+export type TestState = 'untested' | 'testing' | 'ok' | 'error';
 
 export interface TargetConfig {
   mode: TargetMode;
   presetId: string;
   custom: CustomStorageConfig;
+  testState: TestState;
+  testError?: string;
 }
 
 export const emptyCustom = (): CustomStorageConfig => ({
@@ -23,6 +26,7 @@ export const emptyTarget = (firstPresetId = ''): TargetConfig => ({
   mode: firstPresetId ? 'preset' : 'custom',
   presetId: firstPresetId,
   custom: emptyCustom(),
+  testState: 'untested',
 });
 
 export function buildTargetInput(t: TargetConfig): StorageTargetInput | undefined {
@@ -33,6 +37,11 @@ export function buildTargetInput(t: TargetConfig): StorageTargetInput | undefine
 
 export function isCustomValid(c: CustomStorageConfig) {
   return !!(c.endpointUrl && c.region && c.bucket && c.accessKey && c.secretKey);
+}
+
+export function isTargetReady(t: TargetConfig): boolean {
+  if (t.mode === 'preset') return !!t.presetId;
+  return t.testState === 'ok';
 }
 
 export function targetDedupeKey(t: TargetConfig): string | null {
@@ -65,12 +74,25 @@ export function TargetPicker({ label, target, hotOnly, allPresets, onChange }: T
   const presets = hotOnly ? allPresets.filter(p => p.tier === 'hot') : allPresets;
 
   function setMode(mode: TargetMode) {
-    onChange({ ...target, mode });
+    onChange({ ...target, mode, testState: 'untested', testError: undefined });
   }
 
   function setCustomField(field: keyof CustomStorageConfig, value: string | boolean) {
-    onChange({ ...target, custom: { ...target.custom, [field]: value } });
+    onChange({ ...target, custom: { ...target.custom, [field]: value }, testState: 'untested', testError: undefined });
   }
+
+  async function runTest() {
+    onChange({ ...target, testState: 'testing', testError: undefined });
+    try {
+      const result = await new RestDriveBackend().testCustomConfig(target.custom);
+      onChange({ ...target, testState: result.ok ? 'ok' : 'error', testError: result.error });
+    } catch (e: any) {
+      const msg = e?.response?.data?.detail ?? e?.message ?? 'Unknown error';
+      onChange({ ...target, testState: 'error', testError: msg });
+    }
+  }
+
+  const canTest = isCustomValid(target.custom);
 
   return (
     <div className="space-y-3">
@@ -121,6 +143,26 @@ export function TargetPicker({ label, target, hotOnly, allPresets, onChange }: T
           <div className="flex items-center gap-2">
             <input id={`ssl-${label}`} type="checkbox" checked={target.custom.useSsl} onChange={e => setCustomField('useSsl', e.target.checked)} className="h-4 w-4" />
             <label className="text-sm font-medium" htmlFor={`ssl-${label}`}>Use SSL</label>
+          </div>
+
+          <div className="flex items-center gap-3 pt-1">
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={!canTest || target.testState === 'testing'}
+              onClick={runTest}
+            >
+              {target.testState === 'testing' ? 'Testing…' : 'Test connection'}
+            </Button>
+            {target.testState === 'ok' && (
+              <span className="text-sm text-green-600 font-medium">✓ Connected</span>
+            )}
+            {target.testState === 'error' && (
+              <span className="text-sm text-red-500">✗ {target.testError ?? 'Connection failed'}</span>
+            )}
+            {target.testState === 'untested' && canTest && (
+              <span className="text-xs text-muted-foreground">Connection not verified</span>
+            )}
           </div>
         </div>
       )}

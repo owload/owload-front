@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { RestDriveBackend, S3Preset } from "@/engine";
-import { TargetConfig, TargetPicker, buildTargetInput, emptyTarget, findDuplicateTarget, isCustomValid } from "@/components/storage/target-picker";
+import { TargetConfig, TargetPicker, buildTargetInput, emptyTarget, findDuplicateTarget, isCustomValid, isTargetReady } from "@/components/storage/target-picker";
 import { useFilesStoreOps } from "@/hooks/use-files-store-ops";
 import { useFilesStore } from "@/stores/files-store";
 import { useEffect, useState } from "react";
@@ -134,7 +134,13 @@ export function CreateDrivePage() {
           )}
         </section>
 
-        <Button onClick={handleCreate} disabled={loading}>
+        {!isTargetReady(master) && master.mode === 'custom' && (
+          <p className="text-xs text-muted-foreground">Test the master connection before creating</p>
+        )}
+        {slaves.some(s => !isTargetReady(s)) && (
+          <p className="text-xs text-muted-foreground">Test all slave connections before creating</p>
+        )}
+        <Button onClick={handleCreate} disabled={loading || !isTargetReady(master) || slaves.some(s => !isTargetReady(s))}>
           {loading ? 'Creating…' : 'Create'}
         </Button>
       </main>

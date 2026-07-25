@@ -1,9 +1,12 @@
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { TargetConfig, TargetPicker, buildTargetInput, emptyTarget, isCustomValid } from "@/components/storage/target-picker";
+import { TargetConfig, TargetPicker, buildTargetInput, emptyTarget, isCustomValid, isTargetReady } from "@/components/storage/target-picker";
 import { DriveStorageTarget, RestDriveBackend, S3Preset } from "@/engine";
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
+
+type HealthState = 'loading' | 'ok' | 'error';
+interface HealthResult { state: HealthState; error?: string }
 
 function targetLabel(t: DriveStorageTarget): string {
   if (t.presetLabel) return t.presetLabel;
@@ -23,6 +26,12 @@ function statusBadge(status: DriveStorageTarget['status']) {
   return null;
 }
 
+function healthBadge(h: HealthResult | undefined) {
+  if (!h || h.state === 'loading') return <span className="text-xs text-muted-foreground">⏳ checking…</span>;
+  if (h.state === 'ok') return <span className="text-xs text-green-600 font-medium">✓ Connected</span>;
+  return <span className="text-xs text-red-500">✗ {h.error ?? 'Connection failed'}</span>;
+}
+
 function makeMasterDisabledReason(t: DriveStorageTarget): string | null {
   if (t.role === 'MASTER') return 'Already master';
   if (t.status === 'PROVISIONING') return 'Not ready (backfill in progress)';
@@ -35,6 +44,7 @@ export function DriveSettingsPage() {
   const { driveId } = useParams<{ driveId: string }>();
 
   const [targets, setTargets] = useState<DriveStorageTarget[]>([]);
+  const [health, setHealth] = useState<Record<string, HealthResult>>({});
   const [allPresets, setAllPresets] = useState<S3Preset[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -55,9 +65,26 @@ export function DriveSettingsPage() {
       setTargets(ts);
       setAllPresets(ps);
       setLoadError(null);
+      testAll(driveId, ts);
     } catch (e: any) {
       setLoadError(e?.response?.status ? `HTTP ${e.response.status}` : String(e?.message ?? e));
     }
+  }
+
+  function testAll(driveId: string, ts: DriveStorageTarget[]) {
+    const initial: Record<string, HealthResult> = {};
+    ts.forEach(t => { initial[t.id] = { state: 'loading' }; });
+    setHealth(initial);
+
+    ts.forEach(async (t) => {
+      try {
+        const result = await driveBackend.testStorageTarget(driveId, t.id);
+        setHealth(prev => ({ ...prev, [t.id]: { state: result.ok ? 'ok' : 'error', error: result.error } }));
+      } catch (e: any) {
+        const msg = e?.response?.data?.detail ?? e?.message ?? 'Unknown error';
+        setHealth(prev => ({ ...prev, [t.id]: { state: 'error', error: msg } }));
+      }
+    });
   }
 
   useEffect(() => { load(); }, [driveId]);
@@ -131,6 +158,7 @@ export function DriveSettingsPage() {
                     {tierBadge(t.tier)}
                     {statusBadge(t.status)}
                     <span className="text-sm font-medium">{targetLabel(t)}</span>
+                    {healthBadge(health[t.id])}
                   </div>
                   <div className="flex gap-2 flex-wrap">
                     <span title={disabledReason ?? undefined}>
@@ -174,8 +202,13 @@ export function DriveSettingsPage() {
           {showAddSlave && (
             <div className="border rounded p-4 space-y-4">
               <TargetPicker label="New slave" target={newSlave} hotOnly={false} allPresets={allPresets} onChange={setNewSlave} />
+              {!isTargetReady(newSlave) && newSlave.mode === 'custom' && (
+                <p className="text-xs text-muted-foreground">Test the connection before adding</p>
+              )}
               <div className="flex gap-2">
-                <Button size="sm" onClick={handleAddSlave} disabled={busy}>{busy ? 'Adding…' : 'Add'}</Button>
+                <Button size="sm" onClick={handleAddSlave} disabled={busy || !isTargetReady(newSlave)}>
+                  {busy ? 'Adding…' : 'Add'}
+                </Button>
                 <Button size="sm" variant="outline" onClick={() => setShowAddSlave(false)}>Cancel</Button>
               </div>
             </div>
@@ -183,7 +216,6 @@ export function DriveSettingsPage() {
         </section>
       </main>
 
-      {/* Delete confirmation dialog */}
       <Dialog open={!!deleteTarget} onOpenChange={open => !open && setDeleteTarget(null)}>
         <DialogContent>
           <DialogHeader>

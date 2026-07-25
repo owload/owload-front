@@ -62,6 +62,8 @@ export abstract class DriveBackend {
   abstract getStorageTargets(driveId: DriveId): Promise<DriveStorageTarget[]>;
   abstract makeMaster(driveId: DriveId, targetId: string): Promise<void>;
   abstract deleteStorageTarget(driveId: DriveId, targetId: string): Promise<void>;
+  abstract testCustomConfig(config: CustomStorageConfig): Promise<{ ok: boolean; error?: string }>;
+  abstract testStorageTarget(driveId: DriveId, targetId: string): Promise<{ ok: boolean; error?: string }>;
 }
 
 export class RestDriveBackend implements DriveBackend {
@@ -97,5 +99,13 @@ export class RestDriveBackend implements DriveBackend {
 
   deleteStorageTarget(driveId: DriveId, targetId: string): Promise<void> {
     return deleteApiCall(`/drives/${driveId}/storage-targets/${targetId}?confirm=true`);
+  }
+
+  testCustomConfig(config: CustomStorageConfig): Promise<{ ok: boolean; error?: string }> {
+    return postApiCall(`/storage-targets/test`, config);
+  }
+
+  testStorageTarget(driveId: DriveId, targetId: string): Promise<{ ok: boolean; error?: string }> {
+    return postApiCall(`/drives/${driveId}/storage-targets/${targetId}/test-connection`);
   }
 }
