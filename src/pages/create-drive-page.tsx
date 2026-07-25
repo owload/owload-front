@@ -1,6 +1,5 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { RestDriveBackend, S3Preset, StorageTargetInput, CustomStorageConfig } from "@/engine";
 import { useFilesStoreOps } from "@/hooks/use-files-store-ops";
 import { useFilesStore } from "@/stores/files-store";
@@ -97,15 +96,15 @@ export function CreateDrivePage() {
         <section className="space-y-3">
           <div className="font-montserrat text-xl font-bold">General info</div>
           <div className="space-y-2">
-            <Label>Drive name</Label>
+            <label className="text-sm font-medium">Drive name</label>
             <Input value={title} onChange={(e) => setTitle(e.target.value)} />
           </div>
           <div className="space-y-2">
-            <Label>Description</Label>
+            <label className="text-sm font-medium">Description</label>
             <Input value={description} onChange={(e) => setDescription(e.target.value)} />
           </div>
           <div className="space-y-2">
-            <Label>Password</Label>
+            <label className="text-sm font-medium">Password</label>
             <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
           </div>
         </section>
@@ -141,7 +140,7 @@ export function CreateDrivePage() {
 
           {storageMode === 'preset' && hasPresets && (
             <div className="space-y-2">
-              <Label>S3 preset</Label>
+              <label className="text-sm font-medium">S3 preset</label>
               <select
                 className="w-full border rounded px-3 py-2 text-sm bg-background"
                 value={selectedPresetId}
@@ -158,23 +157,23 @@ export function CreateDrivePage() {
             <div className="space-y-3 border rounded p-4">
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1 col-span-2">
-                  <Label>Endpoint URL</Label>
+                  <label className="text-sm font-medium">Endpoint URL</label>
                   <Input placeholder="https://s3.amazonaws.com" value={customConfig.endpointUrl} onChange={(e) => setCustomField('endpointUrl', e.target.value)} />
                 </div>
                 <div className="space-y-1">
-                  <Label>Region</Label>
+                  <label className="text-sm font-medium">Region</label>
                   <Input placeholder="us-east-1" value={customConfig.region} onChange={(e) => setCustomField('region', e.target.value)} />
                 </div>
                 <div className="space-y-1">
-                  <Label>Bucket</Label>
+                  <label className="text-sm font-medium">Bucket</label>
                   <Input value={customConfig.bucket} onChange={(e) => setCustomField('bucket', e.target.value)} />
                 </div>
                 <div className="space-y-1">
-                  <Label>Access key</Label>
+                  <label className="text-sm font-medium">Access key</label>
                   <Input value={customConfig.accessKey} onChange={(e) => setCustomField('accessKey', e.target.value)} />
                 </div>
                 <div className="space-y-1">
-                  <Label>Secret key</Label>
+                  <label className="text-sm font-medium">Secret key</label>
                   <Input type="password" value={customConfig.secretKey} onChange={(e) => setCustomField('secretKey', e.target.value)} />
                 </div>
               </div>
@@ -186,7 +185,7 @@ export function CreateDrivePage() {
                   onChange={(e) => setCustomField('useSsl', e.target.checked)}
                   className="h-4 w-4"
                 />
-                <Label htmlFor="use-ssl">Use SSL</Label>
+                <Label htmlFor="use-ssl">Use SSL</label>
               </div>
             </div>
           )}
