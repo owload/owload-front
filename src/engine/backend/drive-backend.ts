@@ -1,4 +1,4 @@
-import { postApiCall, getApiCall } from "../api/api";
+import { postApiCall, getApiCall, deleteApiCall, patchApiCall } from "../api/api";
 import { getRandomNonce } from "../core/enc";
 import { uint8ArrayToBase64 } from "../core/stream-utils";
 import { type UserId } from "./user-backend";
@@ -37,6 +37,18 @@ export interface CustomStorageConfig {
   useSsl: boolean;
 }
 
+export interface DriveStorageTarget {
+  id: string;
+  role: 'MASTER' | 'SLAVE';
+  status: 'ACTIVE' | 'PROVISIONING' | 'REMOVING';
+  tier: S3PresetTier;
+  presetId?: string;
+  presetLabel?: string;
+  isCustom: boolean;
+  customEndpointUrl?: string;
+  customBucket?: string;
+}
+
 export type StorageTargetInput =
   | { presetId: string; customConfig?: never }
   | { customConfig: CustomStorageConfig; presetId?: never };
@@ -47,6 +59,9 @@ export abstract class DriveBackend {
   abstract getAccessibleDrives(): Promise<DriveInfo[]>;
   abstract getS3Presets(): Promise<S3Preset[]>;
   abstract addStorageTarget(driveId: DriveId, target: StorageTargetInput): Promise<void>;
+  abstract getStorageTargets(driveId: DriveId): Promise<DriveStorageTarget[]>;
+  abstract makeMaster(driveId: DriveId, targetId: string): Promise<void>;
+  abstract deleteStorageTarget(driveId: DriveId, targetId: string): Promise<void>;
 }
 
 export class RestDriveBackend implements DriveBackend {
@@ -70,5 +85,17 @@ export class RestDriveBackend implements DriveBackend {
 
   addStorageTarget(driveId: DriveId, target: StorageTargetInput): Promise<void> {
     return postApiCall(`/drives/${driveId}/storage-targets`, target);
+  }
+
+  getStorageTargets(driveId: DriveId): Promise<DriveStorageTarget[]> {
+    return getApiCall(`/drives/${driveId}/storage-targets`);
+  }
+
+  makeMaster(driveId: DriveId, targetId: string): Promise<void> {
+    return patchApiCall(`/drives/${driveId}/storage-targets/${targetId}/make-master`);
+  }
+
+  deleteStorageTarget(driveId: DriveId, targetId: string): Promise<void> {
+    return deleteApiCall(`/drives/${driveId}/storage-targets/${targetId}?confirm=true`);
   }
 }

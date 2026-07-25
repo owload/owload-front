@@ -2,8 +2,7 @@ import { getRandomNonce } from "@/engine/core/enc";
 import { uint8ArrayToBase64 } from "@/engine/core/stream-utils";
 import { UserId } from "../../user-backend";
 import { getTestUserId } from "./test-user-info";
-import { DriveBackend, DriveId, DriveInfo, Privilege, S3Preset, StorageTargetInput } from "../../drive-backend";
-
+import { DriveBackend, DriveId, DriveInfo, DriveStorageTarget, Privilege, S3Preset, StorageTargetInput } from "../../drive-backend";
 
 export class MockDriveBackend implements DriveBackend {
     private readonly drives = new Map<DriveId, DriveInfo>();
@@ -14,6 +13,9 @@ export class MockDriveBackend implements DriveBackend {
     }
 
     async addStorageTarget(_driveId: DriveId, _target: StorageTargetInput): Promise<void> {}
+    async getStorageTargets(_driveId: DriveId): Promise<DriveStorageTarget[]> { return []; }
+    async makeMaster(_driveId: DriveId, _targetId: string): Promise<void> {}
+    async deleteStorageTarget(_driveId: DriveId, _targetId: string): Promise<void> {}
 
     async createDrive(title: string, _storageTarget?: StorageTargetInput): Promise<DriveInfo> {
         const newDriveId = this.idSequence.toString();

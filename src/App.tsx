@@ -11,6 +11,7 @@ import { AppSidebar } from './components/sidebar/app-sidebar';
 import { FsOpsDialog } from './components/fs-dialogs/fs-ops-dialog';
 import { DriveExplorerArea } from './components/files-area/drive-explore-area';
 import { DriveLogs } from './components/drive-logs/drive-logs';
+import { DriveSettingsPage } from './pages/drive-settings-page';
 
 function Layout() {
   const location = useLocation();
@@ -51,6 +52,7 @@ function App() {
             <Route path="/drive/:driveId" element={<DriveExplorerPage />}>
               <Route path="/drive/:driveId/:dirId?" element={<DriveExplorerArea />} />
               <Route path="/drive/:driveId/logs" element={<DriveLogs />}></Route>
+              <Route path="/drive/:driveId/settings" element={<DriveSettingsPage />}></Route>
             </Route>
           </Route>
           <Route path="/create" element={<Layout />}>

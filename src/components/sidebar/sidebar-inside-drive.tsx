@@ -16,10 +16,12 @@ import { Progress } from "../ui/progress"
 import { DriveSwitcher } from "./drive-switcher"
 import { useUploadFile } from "@/hooks/use-upload-file"
 import { useCreateFolderDialog } from "@/hooks/use-dialogs"
+import { useParams } from "react-router-dom"
 
 export function SidebarInsideDrive() {
   const uploadFile = useUploadFile();
   const openCreateFolderDialog = useCreateFolderDialog();
+  const { driveId } = useParams<{ driveId: string }>();
 
   const menuItems = [
     {
@@ -45,7 +47,7 @@ export function SidebarInsideDrive() {
     },
     {
       title: "Settings",
-      url: "#",
+      url: driveId ? `/drive/${driveId}/settings` : "#",
       icon: Settings,
     },
   ]

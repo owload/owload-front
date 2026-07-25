@@ -4,7 +4,7 @@ export {DriveClientFactory} from "./service/drive-client-factory";
 export { FsObjectType, ROOT_NODE_ID } from "./service/fs-state";
 export { FsTreeNode } from './service/fs-tree-node';
 export {RestUserBackend} from './backend/user-backend'
-export { type DriveInfo, type S3Preset, type CustomStorageConfig, type StorageTargetInput, RestDriveBackend } from "@/engine/backend/drive-backend";
+export { type DriveInfo, type S3Preset, type CustomStorageConfig, type StorageTargetInput, type DriveStorageTarget, RestDriveBackend } from "@/engine/backend/drive-backend";
 export { DriveClient, type ProgressCallback, type ProgressInfo, OperationCancelledError } from './service/drive-client';
 export { uint8ArrayToBase64, base64ToUint8Array } from '@/engine/core/stream-utils';
 export { type DriveId } from "@/engine/backend/drive-backend";
