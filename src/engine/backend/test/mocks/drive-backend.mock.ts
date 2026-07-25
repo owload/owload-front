@@ -4,6 +4,7 @@ import { UserId } from "../../user-backend";
 import { getTestUserId } from "./test-user-info";
 import { DriveBackend, DriveId, DriveInfo, Privilege, S3Preset, StorageTargetInput } from "../../drive-backend";
 
+
 export class MockDriveBackend implements DriveBackend {
     private readonly drives = new Map<DriveId, DriveInfo>();
     private idSequence = 0;
@@ -11,6 +12,8 @@ export class MockDriveBackend implements DriveBackend {
     async getS3Presets(): Promise<S3Preset[]> {
         return [];
     }
+
+    async addStorageTarget(_driveId: DriveId, _target: StorageTargetInput): Promise<void> {}
 
     async createDrive(title: string, _storageTarget?: StorageTargetInput): Promise<DriveInfo> {
         const newDriveId = this.idSequence.toString();

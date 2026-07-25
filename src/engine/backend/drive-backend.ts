@@ -46,6 +46,7 @@ export abstract class DriveBackend {
   abstract getDriveInfo(driveId: DriveId): Promise<DriveInfo>;
   abstract getAccessibleDrives(): Promise<DriveInfo[]>;
   abstract getS3Presets(): Promise<S3Preset[]>;
+  abstract addStorageTarget(driveId: DriveId, target: StorageTargetInput): Promise<void>;
 }
 
 export class RestDriveBackend implements DriveBackend {
@@ -65,5 +66,9 @@ export class RestDriveBackend implements DriveBackend {
 
   getS3Presets(): Promise<S3Preset[]> {
     return getApiCall(`/s3-presets`);
+  }
+
+  addStorageTarget(driveId: DriveId, target: StorageTargetInput): Promise<void> {
+    return postApiCall(`/drives/${driveId}/storage-targets`, target);
   }
 }
