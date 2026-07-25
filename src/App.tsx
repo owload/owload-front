@@ -52,8 +52,8 @@ function App() {
             <Route path="/drive/:driveId" element={<DriveExplorerPage />}>
               <Route path="/drive/:driveId/:dirId?" element={<DriveExplorerArea />} />
               <Route path="/drive/:driveId/logs" element={<DriveLogs />}></Route>
-              <Route path="/drive/:driveId/settings" element={<DriveSettingsPage />}></Route>
             </Route>
+            <Route path="/drive/:driveId/settings" element={<DriveSettingsPage />}></Route>
           </Route>
           <Route path="/create" element={<Layout />}>
             <Route index element={<CreateDrivePage />} />
