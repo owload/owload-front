@@ -38,7 +38,7 @@ export function DriveBlock({ driveInfo }: { driveInfo: DriveInfo }) {
     function handleSettingsClick(event: React.MouseEvent<HTMLButtonElement>) {
         event.stopPropagation();
         event.preventDefault();
-        
+        navigate(`/drive/${driveInfo.id}/settings`);
     }
 
     return (
