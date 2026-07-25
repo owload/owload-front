@@ -185,7 +185,7 @@ export function CreateDrivePage() {
                   onChange={(e) => setCustomField('useSsl', e.target.checked)}
                   className="h-4 w-4"
                 />
-                <Label htmlFor="use-ssl">Use SSL</label>
+                <label className="text-sm font-medium" htmlFor="use-ssl">Use SSL</label>
               </div>
             </div>
           )}
