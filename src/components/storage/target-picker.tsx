@@ -40,6 +40,7 @@ export function isCustomValid(c: CustomStorageConfig) {
 }
 
 export function isTargetReady(t: TargetConfig): boolean {
+  if (t.mode === 'preset') return !!t.presetId;
   return t.testState === 'ok';
 }
 
@@ -106,28 +107,13 @@ export function TargetPicker({ label, target, hotOnly, allPresets, onChange }: T
 
       {target.mode === 'preset' && (
         presets.length > 0 ? (
-          <div className="space-y-3">
-            <select
-              className="w-full border rounded px-3 py-2 text-sm bg-background"
-              value={target.presetId}
-              onChange={e => onChange({ ...target, presetId: e.target.value, testState: 'untested', testError: undefined })}
-            >
-              {presets.map(p => <option key={p.id} value={p.id}>{p.label}{p.tier === 'cold' ? ' (cold)' : ''}</option>)}
-            </select>
-            <div className="flex items-center gap-3">
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={!canTest || target.testState === 'testing'}
-                onClick={runTest}
-              >
-                {target.testState === 'testing' ? 'Testing…' : 'Test connection'}
-              </Button>
-              {target.testState === 'ok' && <span className="text-sm text-green-600 font-medium">✓ Connected</span>}
-              {target.testState === 'error' && <span className="text-sm text-red-500">✗ {target.testError ?? 'Connection failed'}</span>}
-              {target.testState === 'untested' && canTest && <span className="text-xs text-muted-foreground">Connection not verified</span>}
-            </div>
-          </div>
+          <select
+            className="w-full border rounded px-3 py-2 text-sm bg-background"
+            value={target.presetId}
+            onChange={e => onChange({ ...target, presetId: e.target.value, testState: 'untested', testError: undefined })}
+          >
+            {presets.map(p => <option key={p.id} value={p.id}>{p.label}{p.tier === 'cold' ? ' (cold)' : ''}</option>)}
+          </select>
         ) : (
           <p className="text-sm text-muted-foreground">No presets available.</p>
         )
