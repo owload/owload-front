@@ -17,11 +17,13 @@ import { DriveSwitcher } from "./drive-switcher"
 import { useUploadFile } from "@/hooks/use-upload-file"
 import { useCreateFolderDialog } from "@/hooks/use-dialogs"
 import { useParams } from "react-router-dom"
+import { useFilesStore } from "@/stores/files-store"
 
 export function SidebarInsideDrive() {
   const uploadFile = useUploadFile();
   const openCreateFolderDialog = useCreateFolderDialog();
   const { driveId } = useParams<{ driveId: string }>();
+  const filesInitialized = useFilesStore((state) => state.filesInitialized);
 
   const menuItems = [
     {
@@ -63,7 +65,7 @@ export function SidebarInsideDrive() {
         <SidebarGroup className="gap-2">
           <DriveSwitcher />
         </SidebarGroup>
-        <SidebarGroup className="gap-2">
+        {filesInitialized && <SidebarGroup className="gap-2">
             <Button className="py-5 w-full" variant={'secondary'} onClick={openCreateFolderDialog}>
               <FolderPlus />
               Create
@@ -73,7 +75,7 @@ export function SidebarInsideDrive() {
             <CloudUpload />
             <span>Upload</span>
           </Button>
-        </SidebarGroup>
+        </SidebarGroup>}
 
         <SidebarGroup />
         {/* <SidebarGroupLabel>Application</SidebarGroupLabel> */}

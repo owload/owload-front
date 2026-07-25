@@ -16,7 +16,7 @@ import {
 import { useFilesStore } from "@/stores/files-store"
 import { Skeleton } from "../ui/skeleton"
 import { DriveSelectOption } from "./drive-select-option"
-import { Link, useLocation } from "react-router-dom"
+import { Link, useLocation, useParams } from "react-router-dom"
 import { DriveIcon } from "../drives/drive-icon"
 import { cn } from "@/lib/utils"
 import { DebouncedSkeleton } from "../ui/debounced-skeleton"
@@ -27,10 +27,11 @@ export function DriveSwitcher({ className }: { className?: string }) {
   const location = useLocation();
   const mode = location.pathname.startsWith("/drive") ? "drive-inside" : "drives";
   const { isMobile } = useSidebar();
+  const { driveId: urlDriveId } = useParams<{ driveId: string }>();
   const drives = useFilesStore((state) => state.drives);
   const driveStats = useFilesStore((state) => state.driveStats);
   const driveClient = useFilesStore((state) => state.driveClient);
-  const currentDriveId = driveClient?.getDriveId();
+  const currentDriveId = driveClient?.getDriveId() ?? (mode === 'drive-inside' ? urlDriveId : undefined);
   const currentDriveInfo = currentDriveId ? drives.find(d => d.id === currentDriveId) : null;
   const currentDriveDescription = currentDriveId ? driveStats[currentDriveId]?.description : null;
 
@@ -47,8 +48,7 @@ export function DriveSwitcher({ className }: { className?: string }) {
     return 0;
   }).slice(0, MAX_DRIVES_TO_SHOW);
   const drivesInitialized = useFilesStore((state) => state.drivesInitialized);
-  const filesInitialized = useFilesStore((state) => state.filesInitialized);
-  const initialized = mode === 'drive-inside' ? drivesInitialized && filesInitialized : drivesInitialized;
+  const initialized = drivesInitialized;
 
   return (
     <SidebarMenu className={className}>
