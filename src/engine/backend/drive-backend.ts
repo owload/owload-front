@@ -111,6 +111,6 @@ export class RestDriveBackend implements DriveBackend {
   }
 
   testPreset(presetId: string): Promise<{ ok: boolean; error?: string }> {
-    return postApiCall(`/s3-presets/${presetId}/test`);
+    return postApiCall(`/s3-presets/${presetId}/test-connection`);
   }
 }
