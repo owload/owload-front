@@ -6,7 +6,7 @@ import { useFilesStore } from "@/stores/files-store";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-type StorageMode = 'default' | 'preset' | 'custom';
+type StorageMode = 'preset' | 'custom';
 
 const emptyCustomConfig = (): CustomStorageConfig => ({
   endpointUrl: '',
@@ -26,7 +26,7 @@ export function CreateDrivePage() {
   const [description, setDescription] = useState('');
   const [password, setPassword] = useState('');
 
-  const [storageMode, setStorageMode] = useState<StorageMode>('default');
+  const [storageMode, setStorageMode] = useState<StorageMode>('preset');
   const [presets, setPresets] = useState<S3Preset[]>([]);
   const [selectedPresetId, setSelectedPresetId] = useState('');
   const [customConfig, setCustomConfig] = useState<CustomStorageConfig>(emptyCustomConfig);
@@ -40,7 +40,6 @@ export function CreateDrivePage() {
       setPresets(hot);
       if (hot.length > 0) {
         setSelectedPresetId(hot[0].id);
-        setStorageMode('preset');
       }
     }).catch(() => {});
   }, []);
@@ -86,8 +85,6 @@ export function CreateDrivePage() {
     setCustomConfig((prev) => ({ ...prev, [field]: value }));
   }
 
-  const hasPresets = presets.length > 0;
-
   return (
     <div className="absolute top-14 bottom-0 inset-x-0 pl-10 pt-8 overflow-y-auto">
       <h1 className="font-montserrat text-3xl font-bold">Create new drive</h1>
@@ -113,15 +110,13 @@ export function CreateDrivePage() {
           <div className="font-montserrat text-xl font-bold">Storage</div>
 
           <div className="flex gap-2">
-            {hasPresets && (
-              <Button
-                variant={storageMode === 'preset' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setStorageMode('preset')}
-              >
-                Preset
-              </Button>
-            )}
+            <Button
+              variant={storageMode === 'preset' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setStorageMode('preset')}
+            >
+              Preset
+            </Button>
             <Button
               variant={storageMode === 'custom' ? 'default' : 'outline'}
               size="sm"
@@ -129,27 +124,26 @@ export function CreateDrivePage() {
             >
               Custom
             </Button>
-            <Button
-              variant={storageMode === 'default' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setStorageMode('default')}
-            >
-              Default
-            </Button>
           </div>
 
-          {storageMode === 'preset' && hasPresets && (
+          {storageMode === 'preset' && (
             <div className="space-y-2">
-              <label className="text-sm font-medium">S3 preset</label>
-              <select
-                className="w-full border rounded px-3 py-2 text-sm bg-background"
-                value={selectedPresetId}
-                onChange={(e) => setSelectedPresetId(e.target.value)}
-              >
-                {presets.map((p) => (
-                  <option key={p.id} value={p.id}>{p.label}</option>
-                ))}
-              </select>
+              {presets.length > 0 ? (
+                <>
+                  <label className="text-sm font-medium">S3 preset</label>
+                  <select
+                    className="w-full border rounded px-3 py-2 text-sm bg-background"
+                    value={selectedPresetId}
+                    onChange={(e) => setSelectedPresetId(e.target.value)}
+                  >
+                    {presets.map((p) => (
+                      <option key={p.id} value={p.id}>{p.label}</option>
+                    ))}
+                  </select>
+                </>
+              ) : (
+                <p className="text-sm text-muted-foreground">No presets available. Use Custom to enter your own S3 connection.</p>
+              )}
             </div>
           )}
 
@@ -188,12 +182,6 @@ export function CreateDrivePage() {
                 <label className="text-sm font-medium" htmlFor="use-ssl">Use SSL</label>
               </div>
             </div>
-          )}
-
-          {storageMode === 'default' && (
-            <p className="text-sm text-muted-foreground">
-              The server's default S3 storage will be used.
-            </p>
           )}
         </section>
 
