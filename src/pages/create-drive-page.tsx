@@ -32,6 +32,7 @@ export function CreateDrivePage() {
   const [customConfig, setCustomConfig] = useState<CustomStorageConfig>(emptyCustomConfig);
 
   const [loading, setLoading] = useState(false);
+  const [presetsError, setPresetsError] = useState<string | null>(null);
 
   useEffect(() => {
     const driveBackend = new RestDriveBackend();
@@ -41,7 +42,10 @@ export function CreateDrivePage() {
       if (hot.length > 0) {
         setSelectedPresetId(hot[0].id);
       }
-    }).catch(() => {});
+    }).catch((e) => {
+      console.error('GET /s3-presets failed:', e);
+      setPresetsError(e?.response?.status ? `HTTP ${e.response.status}: ${e.response.data?.detail ?? e.message}` : String(e?.message ?? e));
+    });
   }, []);
 
   function buildStorageTarget(): StorageTargetInput | undefined {
@@ -128,7 +132,9 @@ export function CreateDrivePage() {
 
           {storageMode === 'preset' && (
             <div className="space-y-2">
-              {presets.length > 0 ? (
+              {presetsError ? (
+                <p className="text-sm text-red-500">Failed to load presets: {presetsError}</p>
+              ) : presets.length > 0 ? (
                 <>
                   <label className="text-sm font-medium">S3 preset</label>
                   <select
