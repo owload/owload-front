@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { RestDriveBackend, S3Preset } from "@/engine";
-import { TargetConfig, TargetPicker, buildTargetInput, emptyTarget, findDuplicateTarget, isCustomValid, isTargetReady } from "@/components/storage/target-picker";
+import { TargetConfig, TestState, TargetPicker, buildTargetInput, emptyTarget, findDuplicateTarget, isCustomValid } from "@/components/storage/target-picker";
 import { useFilesStoreOps } from "@/hooks/use-files-store-ops";
 import { useFilesStore } from "@/stores/files-store";
 import { useEffect, useState } from "react";
@@ -49,22 +49,30 @@ export function CreateDrivePage() {
     setSlaves(prev => prev.map((s, idx) => idx === i ? t : s));
   }
 
+  async function testIfNeeded(t: TargetConfig): Promise<TargetConfig> {
+    if (t.mode !== 'custom' || t.testState === 'ok') return t;
+    try {
+      const result = await new RestDriveBackend().testCustomConfig(t.custom);
+      return { ...t, testState: result.ok ? 'ok' : 'error' as TestState, testError: result.error };
+    } catch (e: any) {
+      const msg = e?.response?.data?.detail ?? e?.message ?? 'Unknown error';
+      return { ...t, testState: 'error', testError: msg };
+    }
+  }
+
   async function handleCreate() {
     if (!title || !description || !password) { alert("Please fill in all fields"); return; }
 
-    const masterInput = buildTargetInput(master);
     if (master.mode === 'custom' && !isCustomValid(master.custom)) {
       alert("Please fill in all master storage connection fields");
       return;
     }
-
     for (const [i, slave] of slaves.entries()) {
       if (slave.mode === 'custom' && !isCustomValid(slave.custom)) {
         alert(`Please fill in all connection fields for slave ${i + 1}`);
         return;
       }
     }
-
     if (findDuplicateTarget(master, slaves)) {
       alert("Each storage target must use a unique S3 configuration. Remove or change the duplicate.");
       return;
@@ -72,11 +80,19 @@ export function CreateDrivePage() {
 
     setLoading(true);
     try {
+      const testedMaster = await testIfNeeded(master);
+      const testedSlaves = await Promise.all(slaves.map(testIfNeeded));
+      setMaster(testedMaster);
+      setSlaves(testedSlaves);
+
+      if (testedMaster.mode === 'custom' && testedMaster.testState !== 'ok') return;
+      if (testedSlaves.some(s => s.mode === 'custom' && s.testState !== 'ok')) return;
+
       const driveBackend = new RestDriveBackend();
-      const driveInfo = await driveBackend.createDrive(title, masterInput);
+      const driveInfo = await driveBackend.createDrive(title, buildTargetInput(testedMaster));
       const driveId = driveInfo.id;
 
-      for (const slave of slaves) {
+      for (const slave of testedSlaves) {
         const slaveInput = buildTargetInput(slave);
         if (slaveInput) await driveBackend.addStorageTarget(driveId, slaveInput);
       }
@@ -134,13 +150,7 @@ export function CreateDrivePage() {
           )}
         </section>
 
-        {!isTargetReady(master) && master.mode === 'custom' && (
-          <p className="text-xs text-muted-foreground">Test the master connection before creating</p>
-        )}
-        {slaves.some(s => !isTargetReady(s)) && (
-          <p className="text-xs text-muted-foreground">Test all slave connections before creating</p>
-        )}
-        <Button onClick={handleCreate} disabled={loading || !isTargetReady(master) || slaves.some(s => !isTargetReady(s))}>
+        <Button onClick={handleCreate} disabled={loading}>
           {loading ? 'Creating…' : 'Create'}
         </Button>
       </main>
