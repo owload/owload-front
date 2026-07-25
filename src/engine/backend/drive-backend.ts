@@ -20,17 +20,39 @@ export interface DriveInfo {
   counterNonce: string;
 };
 
+export type S3PresetTier = 'hot' | 'cold';
+
+export interface S3Preset {
+  id: string;
+  label: string;
+  tier: S3PresetTier;
+}
+
+export interface CustomStorageConfig {
+  endpointUrl: string;
+  region: string;
+  bucket: string;
+  accessKey: string;
+  secretKey: string;
+  useSsl: boolean;
+}
+
+export type StorageTargetInput =
+  | { presetId: string; customConfig?: never }
+  | { customConfig: CustomStorageConfig; presetId?: never };
+
 export abstract class DriveBackend {
-  abstract createDrive(title: string): Promise<DriveInfo>;
+  abstract createDrive(title: string, storageTarget?: StorageTargetInput): Promise<DriveInfo>;
   abstract getDriveInfo(driveId: DriveId): Promise<DriveInfo>;
   abstract getAccessibleDrives(): Promise<DriveInfo[]>;
+  abstract getS3Presets(): Promise<S3Preset[]>;
 }
 
 export class RestDriveBackend implements DriveBackend {
-  createDrive(title: string): Promise<DriveInfo> {
+  createDrive(title: string, storageTarget?: StorageTargetInput): Promise<DriveInfo> {
     const keyNonce = uint8ArrayToBase64(getRandomNonce());
     const counterNonce = uint8ArrayToBase64(getRandomNonce());
-    return postApiCall(`/drives`, { title, keyNonce, counterNonce });
+    return postApiCall(`/drives`, { title, keyNonce, counterNonce, ...storageTarget });
   }
 
   getAccessibleDrives(): Promise<DriveInfo[]> {
@@ -39,5 +61,9 @@ export class RestDriveBackend implements DriveBackend {
 
   getDriveInfo(driveId: DriveId): Promise<DriveInfo> {
     return getApiCall(`/drives/${driveId}`);
+  }
+
+  getS3Presets(): Promise<S3Preset[]> {
+    return getApiCall(`/s3-presets`);
   }
 }
