@@ -117,6 +117,8 @@ export function DriveSettingsPage() {
     }
   }
 
+  const usedPresetIds = new Set(targets.filter(t => t.presetId).map(t => t.presetId!));
+  const firstFreePresetId = allPresets.find(p => !usedPresetIds.has(p.id))?.id ?? '';
   const isDuplicateSlave = findDuplicateWithExisting(newSlave, targets);
 
   async function handleAddSlave() {
@@ -127,7 +129,7 @@ export function DriveSettingsPage() {
     try {
       await driveBackend.addStorageTarget(driveId, input);
       setShowAddSlave(false);
-      setNewSlave(emptyTarget(allPresets[0]?.id ?? ''));
+      setNewSlave(emptyTarget(firstFreePresetId));
       await load();
     } finally {
       setBusy(false);
@@ -195,7 +197,7 @@ export function DriveSettingsPage() {
 
           {canAddSlave && !showAddSlave && (
             <Button variant="outline" size="sm" onClick={() => {
-              setNewSlave(emptyTarget(allPresets[0]?.id ?? ''));
+              setNewSlave(emptyTarget(firstFreePresetId));
               setShowAddSlave(true);
             }}>
               + Add slave storage
