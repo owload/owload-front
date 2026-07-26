@@ -117,16 +117,10 @@ export function DriveSettingsPage() {
     }
   }
 
+  const isDuplicateSlave = findDuplicateWithExisting(newSlave, targets);
+
   async function handleAddSlave() {
     if (!driveId || busy) return;
-    if (newSlave.mode === 'custom' && !isCustomValid(newSlave.custom)) {
-      alert('Please fill in all storage connection fields');
-      return;
-    }
-    if (findDuplicateWithExisting(newSlave, targets)) {
-      alert('This drive already has a storage target pointing at the same location');
-      return;
-    }
     const input = buildTargetInput(newSlave);
     if (!input) return;
     setBusy(true);
@@ -135,9 +129,6 @@ export function DriveSettingsPage() {
       setShowAddSlave(false);
       setNewSlave(emptyTarget(allPresets[0]?.id ?? ''));
       await load();
-    } catch (e: any) {
-      const msg = e?.response?.data?.detail ?? e?.message ?? 'Failed to add storage target';
-      alert(msg);
     } finally {
       setBusy(false);
     }
@@ -217,8 +208,11 @@ export function DriveSettingsPage() {
               {!isTargetReady(newSlave) && newSlave.mode === 'custom' && (
                 <p className="text-xs text-muted-foreground">Test the connection before adding</p>
               )}
+              {isDuplicateSlave && (
+                <p className="text-xs text-red-500">This drive already has a storage target pointing at the same location</p>
+              )}
               <div className="flex gap-2">
-                <Button size="sm" onClick={handleAddSlave} disabled={busy || !isTargetReady(newSlave)}>
+                <Button size="sm" onClick={handleAddSlave} disabled={busy || !isTargetReady(newSlave) || isDuplicateSlave}>
                   {busy ? 'Adding…' : 'Add'}
                 </Button>
                 <Button size="sm" variant="outline" onClick={() => setShowAddSlave(false)}>Cancel</Button>
