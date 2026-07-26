@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { TargetConfig, TargetPicker, buildTargetInput, emptyTarget, isCustomValid, isTargetReady } from "@/components/storage/target-picker";
+import { TargetConfig, TargetPicker, buildTargetInput, emptyTarget, findDuplicateWithExisting, isCustomValid, isTargetReady } from "@/components/storage/target-picker";
 import { DriveStorageTarget, RestDriveBackend, S3Preset } from "@/engine";
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
@@ -123,6 +123,10 @@ export function DriveSettingsPage() {
       alert('Please fill in all storage connection fields');
       return;
     }
+    if (findDuplicateWithExisting(newSlave, targets)) {
+      alert('This drive already has a storage target pointing at the same location');
+      return;
+    }
     const input = buildTargetInput(newSlave);
     if (!input) return;
     setBusy(true);
@@ -131,6 +135,9 @@ export function DriveSettingsPage() {
       setShowAddSlave(false);
       setNewSlave(emptyTarget(allPresets[0]?.id ?? ''));
       await load();
+    } catch (e: any) {
+      const msg = e?.response?.data?.detail ?? e?.message ?? 'Failed to add storage target';
+      alert(msg);
     } finally {
       setBusy(false);
     }

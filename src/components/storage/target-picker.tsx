@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { S3Preset, CustomStorageConfig, StorageTargetInput, RestDriveBackend } from "@/engine";
+import { S3Preset, CustomStorageConfig, StorageTargetInput, RestDriveBackend, DriveStorageTarget } from "@/engine";
 
 export type TargetMode = 'preset' | 'custom';
 export type TestState = 'untested' | 'testing' | 'ok' | 'error';
@@ -48,6 +48,18 @@ export function targetDedupeKey(t: TargetConfig): string | null {
   if (t.mode === 'preset' && t.presetId) return `preset:${t.presetId}`;
   if (t.mode === 'custom' && t.custom.endpointUrl && t.custom.bucket) return `custom:${t.custom.endpointUrl}:${t.custom.bucket}`;
   return null;
+}
+
+export function findDuplicateWithExisting(newTarget: TargetConfig, existing: DriveStorageTarget[]): boolean {
+  if (newTarget.mode === 'preset' && newTarget.presetId) {
+    return existing.some(t => t.presetId === newTarget.presetId);
+  }
+  if (newTarget.mode === 'custom' && newTarget.custom.endpointUrl && newTarget.custom.bucket) {
+    return existing.some(t => t.isCustom &&
+      t.customEndpointUrl === newTarget.custom.endpointUrl &&
+      t.customBucket === newTarget.custom.bucket);
+  }
+  return false;
 }
 
 export function findDuplicateTarget(master: TargetConfig, slaves: TargetConfig[]): boolean {
