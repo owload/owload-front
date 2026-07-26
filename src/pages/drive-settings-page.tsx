@@ -204,7 +204,7 @@ export function DriveSettingsPage() {
 
           {showAddSlave && (
             <div className="border rounded p-4 space-y-4">
-              <TargetPicker label="New slave" target={newSlave} hotOnly={false} allPresets={allPresets} onChange={setNewSlave} />
+              <TargetPicker label="New slave" target={newSlave} hotOnly={false} allPresets={allPresets} excludePresetIds={targets.filter(t => t.presetId).map(t => t.presetId!)} onChange={setNewSlave} />
               {!isTargetReady(newSlave) && newSlave.mode === 'custom' && (
                 <p className="text-xs text-muted-foreground">Test the connection before adding</p>
               )}

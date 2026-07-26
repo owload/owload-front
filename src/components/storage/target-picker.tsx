@@ -79,11 +79,14 @@ interface TargetPickerProps {
   target: TargetConfig;
   hotOnly: boolean;
   allPresets: S3Preset[];
+  excludePresetIds?: string[];
   onChange: (t: TargetConfig) => void;
 }
 
-export function TargetPicker({ label, target, hotOnly, allPresets, onChange }: TargetPickerProps) {
-  const presets = hotOnly ? allPresets.filter(p => p.tier === 'hot') : allPresets;
+export function TargetPicker({ label, target, hotOnly, allPresets, excludePresetIds, onChange }: TargetPickerProps) {
+  const presets = allPresets
+    .filter(p => !hotOnly || p.tier === 'hot')
+    .filter(p => !excludePresetIds?.includes(p.id));
 
   function setMode(mode: TargetMode) {
     onChange({ ...target, mode, testState: 'untested', testError: undefined });
