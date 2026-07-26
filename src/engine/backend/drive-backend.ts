@@ -47,6 +47,8 @@ export interface DriveStorageTarget {
   isCustom: boolean;
   customEndpointUrl?: string;
   customBucket?: string;
+  backfillCopied?: number | null;
+  backfillTotal?: number | null;
 }
 
 export type StorageTargetInput =

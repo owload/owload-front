@@ -20,9 +20,14 @@ function tierBadge(tier: DriveStorageTarget['tier']) {
     : <span className="text-xs px-1.5 py-0.5 rounded bg-orange-100 text-orange-700">hot</span>;
 }
 
-function statusBadge(status: DriveStorageTarget['status']) {
-  if (status === 'PROVISIONING') return <span className="text-xs px-1.5 py-0.5 rounded bg-yellow-100 text-yellow-700">backfill in progress</span>;
-  if (status === 'REMOVING') return <span className="text-xs px-1.5 py-0.5 rounded bg-red-100 text-red-700">removing</span>;
+function statusBadge(t: DriveStorageTarget) {
+  if (t.status === 'PROVISIONING') {
+    const progress = t.backfillTotal != null && t.backfillTotal > 0
+      ? ` (${t.backfillCopied ?? 0}/${t.backfillTotal})`
+      : '';
+    return <span className="text-xs px-1.5 py-0.5 rounded bg-yellow-100 text-yellow-700">backfill in progress{progress}</span>;
+  }
+  if (t.status === 'REMOVING') return <span className="text-xs px-1.5 py-0.5 rounded bg-red-100 text-red-700">removing</span>;
   return null;
 }
 
@@ -156,7 +161,7 @@ export function DriveSettingsPage() {
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-xs font-bold px-1.5 py-0.5 rounded bg-gray-100 text-gray-600">{t.role}</span>
                     {!t.isCustom && tierBadge(t.tier)}
-                    {statusBadge(t.status)}
+                    {statusBadge(t)}
                     <span className="text-sm font-medium">{targetLabel(t)}</span>
                     {healthBadge(health[t.id])}
                   </div>
