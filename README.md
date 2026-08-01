@@ -12,7 +12,12 @@ Secure cloud storage with client-side encryption. Files are encrypted on your de
 
 ## Security model
 
-Plaintext data and symmetric keys never leave the client. A compromised server can read only encrypted ciphertext. See [security audit notes](docs/security.md) for a detailed threat model.
+Plaintext data and symmetric keys never leave the client. A compromised server can read only encrypted ciphertext.
+
+- **Key derivation**: drive password → PBKDF2-SHA-512 (100k iterations) → `K_master`; HKDF-SHA-256 derives independent stream keys for ops log, file data, and caches
+- **Encryption**: AES-256-CTR per stream; keystream uniqueness is guaranteed per stream by HKDF, not by counter alone
+- **File integrity**: SHA-256 of plaintext computed on upload, verified on download; mismatch throws before the file is returned to the caller
+- **Ops log integrity**: hash chain (`previousOperationHash`) embedded in each operation; tampering with any intermediate op breaks all subsequent chain entries
 
 ## Requirements
 
@@ -92,6 +97,6 @@ npm run test:browser
 ## Tech stack
 
 - **Frontend** — React 19, TypeScript, Tailwind CSS, shadcn/ui, Zustand, React Router
-- **Encryption** — Web Crypto API (AES-CTR, PBKDF2)
+- **Encryption** — Web Crypto API (AES-256-CTR, PBKDF2-SHA-512, HKDF-SHA-256)
 - **Desktop** — Tauri 2
 - **Auth** — Keycloak (OIDC)
