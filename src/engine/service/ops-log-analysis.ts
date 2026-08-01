@@ -322,50 +322,122 @@ export async function findFileHistory(
   }
 
   // Phase 3: if no START_UPLOAD found via primary segments (file created by CP, never uploaded directly),
-  // trace through the CP to the source file's latest START_UPLOAD before the copy.
+  // trace through the CP to collect all versions of the source file (and any files it overwrote).
+  // Mirrors Phase 1 + Phase 1b logic, but applied to the source path limited to ops before the CP.
   if (!primaryStartFound) {
     for (const cpWrapper of opsForPath) {
       if (cpWrapper.op?.operationType !== FsOperationType.CP) continue;
       const cp = cpWrapper.op as CpFsOperation;
       for (let j = 0; j < cp.fileNames.length; j++) {
-        // Verify this CP slot corresponds to currentPath (dest matches, including auto-rename)
+        // Verify this CP slot corresponds to the file's path at the time of the CP.
+        // Can't compare against currentPath — the file may have been renamed since.
+        const cpPos = cpWrapper.startBytePos;
+        const cpSeg = segments.find(s => cpPos >= s.startBytePos && cpPos < s.endBytePos);
+        const cpSegPath = cpSeg?.path ?? currentPath;
         const effectiveDest = cp.destFileNames?.[j] ?? cp.fileNames[j];
         const destPath = joinPath(cp.pathDest, effectiveDest);
-        const basename = currentPath.slice(currentPath.lastIndexOf('/') + 1);
-        const dir = currentPath.slice(0, currentPath.lastIndexOf('/')) || '/';
-        const matches = destPath === currentPath ||
-          (cp.mode === 'RENAME' && !cp.destFileNames && dir === cp.pathDest && isAutoRename(cp.fileNames[j], basename));
+        const cpBasename = cpSegPath.slice(cpSegPath.lastIndexOf('/') + 1);
+        const cpDir = cpSegPath.slice(0, cpSegPath.lastIndexOf('/')) || '/';
+        const matches = destPath === cpSegPath ||
+          (cp.mode === 'RENAME' && !cp.destFileNames && cpDir === cp.pathDest && isAutoRename(cp.fileNames[j], cpBasename));
         if (!matches) continue;
 
-        // Find the latest START_UPLOAD at the source path before this CP op
+        // Phase 3 / Phase 1 for source: backward-trace the source file's own path segments.
+        // The source may have been renamed/moved before the CP, so its START_UPLOAD.path
+        // may differ from sourcePath. Also detect REPLACE-mode MVs along the way (Phase 1b).
         const sourcePath = joinPath(cp.pathSrc, cp.fileNames[j]);
-        let sourceStartWrapper: FsOperationWrapper | null = null;
-        for (const w of ops) {
-          if (w.startBytePos >= cpWrapper.startBytePos) break;
-          if (w.op?.operationType === FsOperationType.START_UPLOAD &&
-              (w.op as UploadStartFsOperation).path === sourcePath) {
-            sourceStartWrapper = w;
+        const srcSegments: PathSegment[] = [{ path: sourcePath, startBytePos: 0, endBytePos: cpWrapper.startBytePos }];
+        const srcOverwritePoints: { destPath: string; beforePos: number }[] = [];
+        let srcTracedPath = sourcePath;
+        for (let k = ops.length - 1; k >= 0; k--) {
+          const w = ops[k];
+          if (w.startBytePos >= cpWrapper.startBytePos) continue;
+          const wOp = w.op;
+          if (!wOp) continue;
+          let prevSrcPath: string | null = null;
+          if (wOp.operationType === FsOperationType.RENAME) {
+            const r = wOp as RenameFsOperation;
+            if (r.pathDest === srcTracedPath) prevSrcPath = r.pathSrc;
+          } else if (wOp.operationType === FsOperationType.MV) {
+            const mv = wOp as MvFsOperation;
+            for (let m = 0; m < mv.fileNames.length; m++) {
+              const effectiveMvDest = mv.destFileNames?.[m] ?? mv.fileNames[m];
+              if (joinPath(mv.pathDest, effectiveMvDest) === srcTracedPath) {
+                prevSrcPath = joinPath(mv.pathSrc, mv.fileNames[m]);
+                if (mv.mode === 'REPLACE') {
+                  srcOverwritePoints.push({ destPath: srcTracedPath, beforePos: w.startBytePos });
+                }
+                break;
+              }
+            }
+          }
+          if (prevSrcPath !== null) {
+            srcSegments[0] = { ...srcSegments[0], startBytePos: w.startBytePos };
+            srcSegments.unshift({ path: prevSrcPath, startBytePos: 0, endBytePos: w.startBytePos });
+            srcTracedPath = prevSrcPath;
           }
         }
-        if (sourceStartWrapper) {
-          const hash = await sourceStartWrapper.op!.hashCode();
-          startHashToWrapper.set(hash, sourceStartWrapper);
-          // Insert start/finish into opsForPath in chronological order
-          const insertIdx = opsForPath.findIndex(w => w.startBytePos > sourceStartWrapper!.startBytePos);
-          opsForPath.splice(insertIdx < 0 ? 0 : insertIdx, 0, sourceStartWrapper);
-          const finishWrapper = ops.find(w =>
-            w.startBytePos > sourceStartWrapper!.startBytePos &&
-            w.op?.operationType === FsOperationType.FINISH_UPLOAD &&
-            (w.op as UploadFinishFsOperation).uploadStartOperationHash === hash
+
+        // Phase 3 / Phase 1b for source: backward-trace each overwritten file's own path segments.
+        const srcOverwriteSegmentSets: PathSegment[][] = [];
+        for (const ow of srcOverwritePoints) {
+          const owSegs: PathSegment[] = [{ path: ow.destPath, startBytePos: 0, endBytePos: ow.beforePos }];
+          let owTracedPath = ow.destPath;
+          for (let k = ops.length - 1; k >= 0; k--) {
+            const w = ops[k];
+            if (w.startBytePos >= ow.beforePos) continue;
+            const wOp = w.op;
+            if (!wOp) continue;
+            let prevPath: string | null = null;
+            if (wOp.operationType === FsOperationType.RENAME) {
+              const r = wOp as RenameFsOperation;
+              if (r.pathDest === owTracedPath) prevPath = r.pathSrc;
+            } else if (wOp.operationType === FsOperationType.MV) {
+              const mv = wOp as MvFsOperation;
+              for (let m = 0; m < mv.fileNames.length; m++) {
+                const effectiveMvDest = mv.destFileNames?.[m] ?? mv.fileNames[m];
+                if (joinPath(mv.pathDest, effectiveMvDest) === owTracedPath) {
+                  prevPath = joinPath(mv.pathSrc, mv.fileNames[m]);
+                  break;
+                }
+              }
+            }
+            if (prevPath !== null) {
+              owSegs[0] = { ...owSegs[0], startBytePos: w.startBytePos };
+              owSegs.unshift({ path: prevPath, startBytePos: 0, endBytePos: w.startBytePos });
+              owTracedPath = prevPath;
+            }
+          }
+          srcOverwriteSegmentSets.push(owSegs);
+        }
+
+        // Collect all START_UPLOAD ops matching source segments or source overwrite segments
+        for (const w of ops) {
+          if (w.startBytePos >= cpWrapper.startBytePos) break;
+          if (w.op?.operationType !== FsOperationType.START_UPLOAD) continue;
+          const startOp = w.op as UploadStartFsOperation;
+          const inSrc = srcSegments.some(s => startOp.path === s.path && w.startBytePos >= s.startBytePos && w.startBytePos < s.endBytePos);
+          const inSrcOw = !inSrc && srcOverwriteSegmentSets.some(owSegs =>
+            owSegs.some(s => startOp.path === s.path && w.startBytePos >= s.startBytePos && w.startBytePos < s.endBytePos)
+          );
+          if (!inSrc && !inSrcOw) continue;
+          const hash = await startOp.hashCode();
+          startHashToWrapper.set(hash, w);
+          const insertIdx = opsForPath.findIndex(o => o.startBytePos > w.startBytePos);
+          opsForPath.splice(insertIdx < 0 ? 0 : insertIdx, 0, w);
+          const finishWrapper = ops.find(fw =>
+            fw.startBytePos > w.startBytePos &&
+            fw.op?.operationType === FsOperationType.FINISH_UPLOAD &&
+            (fw.op as UploadFinishFsOperation).uploadStartOperationHash === hash
           );
           if (finishWrapper) {
-            const finIdx = opsForPath.findIndex(w => w.startBytePos > finishWrapper.startBytePos);
+            const finIdx = opsForPath.findIndex(o => o.startBytePos > finishWrapper.startBytePos);
             opsForPath.splice(finIdx < 0 ? opsForPath.length : finIdx, 0, finishWrapper);
           }
         }
         break;
       }
-      if (startHashToWrapper.size > 0) break; // found one CP source, stop
+      if (startHashToWrapper.size > 0) break;
     }
   }
 
