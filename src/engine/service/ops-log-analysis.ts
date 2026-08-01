@@ -233,6 +233,41 @@ export async function findFileHistory(
     }
   }
 
+  // Phase 1b: for each overwrite point, backward-trace the overwritten file's own path segments
+  // (it may have been renamed/moved before being overwritten, so its START_UPLOAD path differs
+  // from the dest path we recorded).
+  const overwriteSegmentSets: PathSegment[][] = [];
+  for (const ow of overwritePoints) {
+    const owSegs: PathSegment[] = [{ path: ow.destPath, startBytePos: 0, endBytePos: ow.beforePos }];
+    let owTracedPath = ow.destPath;
+    for (let i = ops.length - 1; i >= 0; i--) {
+      const owWrapper = ops[i];
+      if (owWrapper.startBytePos >= ow.beforePos) continue;
+      const owOp = owWrapper.op;
+      if (!owOp) continue;
+      let prevPath: string | null = null;
+      if (owOp.operationType === FsOperationType.RENAME) {
+        const r = owOp as RenameFsOperation;
+        if (r.pathDest === owTracedPath) prevPath = r.pathSrc;
+      } else if (owOp.operationType === FsOperationType.MV) {
+        const mv = owOp as MvFsOperation;
+        for (let j = 0; j < mv.fileNames.length; j++) {
+          const effectiveDest = mv.destFileNames?.[j] ?? mv.fileNames[j];
+          if (joinPath(mv.pathDest, effectiveDest) === owTracedPath) {
+            prevPath = joinPath(mv.pathSrc, mv.fileNames[j]);
+            break;
+          }
+        }
+      }
+      if (prevPath !== null) {
+        owSegs[0] = { ...owSegs[0], startBytePos: owWrapper.startBytePos };
+        owSegs.unshift({ path: prevPath, startBytePos: 0, endBytePos: owWrapper.startBytePos });
+        owTracedPath = prevPath;
+      }
+    }
+    overwriteSegmentSets.push(owSegs);
+  }
+
   // Phase 2: forward pass — collect ops that fall within their path segment.
   const startHashToWrapper = new Map<string, FsOperationWrapper>();
   const opsForPath: FsOperationWrapper[] = [];
@@ -264,9 +299,12 @@ export async function findFileHistory(
     if (op.operationType === FsOperationType.START_UPLOAD) {
       const startOp = op as UploadStartFsOperation;
       const primaryMatch = !!seg && startOp.path === seg.path;
-      // Include uploads that were overwritten by a REPLACE-mode MV that brought our file here.
-      const overwriteMatch = !primaryMatch && overwritePoints.some(
-        ow => startOp.path === ow.destPath && pos < ow.beforePos
+      // Include uploads of files that were overwritten by the REPLACE-mode MV that brought
+      // our file here. The overwritten file's path segments are pre-traced in Phase 1b.
+      const overwriteMatch = !primaryMatch && overwriteSegmentSets.some(owSegs =>
+        owSegs.some(owSeg =>
+          startOp.path === owSeg.path && pos >= owSeg.startBytePos && pos < owSeg.endBytePos
+        )
       );
       if (primaryMatch || overwriteMatch) {
         if (primaryMatch) primaryStartFound = true;
