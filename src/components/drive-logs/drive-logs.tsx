@@ -500,7 +500,7 @@ export function DriveLogs() {
               } else {
                 title = `Upload ${path}`;
               }
-              const dataPresent = allocatedRanges !== null
+              const dataPresent = byteLength > 0 && allocatedRanges !== null
                 ? isRangeAllocated(byteOffset, byteLength, allocatedRanges)
                 : null;
               const unverified = logLoaded && (!startOp.logEntry || (finishOp && !finishOp.logEntry));
@@ -511,11 +511,11 @@ export function DriveLogs() {
                     <span>{title}</span>
                     <span className="text-gray-400 text-xs">{formatBytes(byteLength)}</span>
                     {didOverwrite && <span className="text-xs text-orange-600">overwrites existing</span>}
-                    {dataPresent === null
+                    {byteLength > 0 && (dataPresent === null
                       ? <span className="text-xs text-gray-300">checking…</span>
                       : dataPresent
                         ? <span className="text-xs text-green-600">data on S3</span>
-                        : <span className="text-xs text-red-500">data missing</span>}
+                        : <span className="text-xs text-red-500">data missing</span>)}
                     {dataPresent && !thumbnailInfo && finishOp && (
                       <button
                         onClick={() => downloadUploadGroup(group)}

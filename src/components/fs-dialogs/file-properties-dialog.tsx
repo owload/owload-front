@@ -31,6 +31,7 @@ function formatBytes(bytes: number): string {
 }
 
 function AllocationBadge({ byteOffset, byteLength, allocatedRanges }: { byteOffset: number; byteLength: number; allocatedRanges: { start: number; end: number }[] | null }) {
+  if (byteLength === 0) return null;
   if (allocatedRanges === null) return <span className="text-xs text-gray-300">checking…</span>;
   const present = isRangeAllocated(byteOffset, byteLength, allocatedRanges);
   return present
@@ -87,7 +88,7 @@ function VersionsTab({ data, onDownloadVersion, downloadingVersions }: {
                 {!v.finishOp && <span className="text-xs text-amber-500">pending</span>}
                 <AllocationBadge byteOffset={v.byteOffset} byteLength={v.byteLength} allocatedRanges={allocatedRanges} />
                 {i === versions.length - 1 && <span className="text-xs text-blue-500">current</span>}
-                {allocatedRanges !== null && isRangeAllocated(v.byteOffset, v.byteLength, allocatedRanges) && v.finishOp && (
+                {v.byteLength > 0 && allocatedRanges !== null && isRangeAllocated(v.byteOffset, v.byteLength, allocatedRanges) && v.finishOp && (
                   <button
                     onClick={() => onDownloadVersion(v)}
                     disabled={downloadingVersions.has(v.createdOpHash)}
