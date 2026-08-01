@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { DriveActionLogEntry } from "@/engine/service/drive-action-log";
 import { PATH_SYMBOL_REAPLACEMENT, SYSTEM_PREFIX } from "@/hooks/use-files-store-ops";
+import { saveFileToDisk } from "@/lib/utils";
 import { buildByteToLogIndex, isRangeAllocated } from "@/engine/service/ops-log-analysis";
 import { useFilesStore } from "@/stores/files-store";
 import { AbortContext } from "@/types/types";
@@ -175,6 +176,20 @@ export function DriveLogs() {
   const [cleaning, setCleaning] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [logLoaded, setLogLoaded] = useState(false);
+  const [downloadingOps, setDownloadingOps] = useState<Set<number>>(new Set());
+
+  const downloadUploadGroup = async (group: UploadGroup) => {
+    if (!driveClient) return;
+    const key = group.startOp.startBytePos;
+    setDownloadingOps(prev => new Set(prev).add(key));
+    try {
+      const contentHash = group.finishOp ? (group.finishOp.op as UploadFinishFsOperation).fileContentHash : '';
+      const data = await driveClient.getFileData(group.byteOffset, group.byteLength, contentHash);
+      saveFileToDisk(data, group.path.split('/').pop() ?? 'file');
+    } finally {
+      setDownloadingOps(prev => { const s = new Set(prev); s.delete(key); return s; });
+    }
+  };
 
   useEffect(() => {
     if (!driveClient) return;
@@ -501,6 +516,15 @@ export function DriveLogs() {
                       : dataPresent
                         ? <span className="text-xs text-green-600">data on S3</span>
                         : <span className="text-xs text-red-500">data missing</span>}
+                    {dataPresent && !thumbnailInfo && finishOp && (
+                      <button
+                        onClick={() => downloadUploadGroup(group)}
+                        disabled={downloadingOps.has(startOp.startBytePos)}
+                        className="text-xs text-blue-600 hover:underline disabled:opacity-40"
+                      >
+                        {downloadingOps.has(startOp.startBytePos) ? '…' : '↓'}
+                      </button>
+                    )}
                   </div>
                   <UploadMeta startOp={startOp} finishOp={finishOp} logLoaded={logLoaded} />
                 </div>

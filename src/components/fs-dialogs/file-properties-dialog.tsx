@@ -4,6 +4,7 @@ import { useFilesStore } from "@/stores/files-store";
 import { getApiCall } from "@/engine/api/api";
 import { buildByteToLogIndex, FileVersionEntry, findFileHistory, isRangeAllocated } from "@/engine/service/ops-log-analysis";
 import { findThumbnailsFor } from "@/hooks/use-files-store-ops";
+import { saveFileToDisk } from "@/lib/utils";
 import { DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { FsOperationType, UploadStartFsOperation, RmFsOperation, RenameFsOperation, MvFsOperation, CpFsOperation } from "@/engine/service/fs-operation";
@@ -37,7 +38,11 @@ function AllocationBadge({ byteOffset, byteLength, allocatedRanges }: { byteOffs
     : <span className="text-xs text-red-500">missing</span>;
 }
 
-function VersionsTab({ data }: { data: HistoryData }) {
+function VersionsTab({ data, onDownloadVersion, downloadingVersions }: {
+  data: HistoryData;
+  onDownloadVersion: (v: FileVersionEntry) => void;
+  downloadingVersions: Set<string>;
+}) {
   const { versions, allocatedRanges, thumbsByVersion } = data;
 
   let totalAllocated = 0;
@@ -82,6 +87,15 @@ function VersionsTab({ data }: { data: HistoryData }) {
                 {!v.finishOp && <span className="text-xs text-amber-500">pending</span>}
                 <AllocationBadge byteOffset={v.byteOffset} byteLength={v.byteLength} allocatedRanges={allocatedRanges} />
                 {i === versions.length - 1 && <span className="text-xs text-blue-500">current</span>}
+                {allocatedRanges !== null && isRangeAllocated(v.byteOffset, v.byteLength, allocatedRanges) && v.finishOp && (
+                  <button
+                    onClick={() => onDownloadVersion(v)}
+                    disabled={downloadingVersions.has(v.createdOpHash)}
+                    className="text-xs text-blue-600 hover:underline disabled:opacity-40"
+                  >
+                    {downloadingVersions.has(v.createdOpHash) ? '…' : '↓'}
+                  </button>
+                )}
               </div>
             ))}
           </div>
@@ -187,9 +201,23 @@ export function FilePropertiesDialog({ filePath, nodeId }: Props) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [historyData, setHistoryData] = useState<HistoryData | null>(null);
+  const [downloadingVersions, setDownloadingVersions] = useState<Set<string>>(new Set());
+
+  const fileName = filePath.split('/').pop() ?? filePath;
+
+  const downloadVersion = async (v: FileVersionEntry) => {
+    if (!driveClient || !v.finishOp) return;
+    const key = v.createdOpHash;
+    setDownloadingVersions(prev => new Set(prev).add(key));
+    try {
+      const data = await driveClient.getFileData(v.byteOffset, v.byteLength, v.finishOp.fileContentHash);
+      saveFileToDisk(data, v.op.path.split('/').pop() ?? fileName);
+    } finally {
+      setDownloadingVersions(prev => { const s = new Set(prev); s.delete(key); return s; });
+    }
+  };
 
   const parentPath = filePath.split('/').slice(0, -1).join('/') || '/';
-  const fileName = filePath.split('/').pop() ?? filePath;
 
   useEffect(() => {
     if (!driveClient) return;
@@ -250,7 +278,7 @@ export function FilePropertiesDialog({ filePath, nodeId }: Props) {
               <TabsTrigger value="oplog">Op Log</TabsTrigger>
             </TabsList>
             <TabsContent value="versions">
-              <VersionsTab data={historyData} />
+              <VersionsTab data={historyData} onDownloadVersion={downloadVersion} downloadingVersions={downloadingVersions} />
             </TabsContent>
             <TabsContent value="oplog">
               <OpLogTab data={historyData} />
