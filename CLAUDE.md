@@ -57,7 +57,7 @@ Key backend methods:
 EncryptingOpsRepository    – AES-CTR encrypt/decrypt raw op bytes
   └─ SplittingOpsRepository – splits byte stream by OPS_SEPARATOR [195, 184, 234]
        └─ SerializingOpsRepository – serializes FsOperation ↔ JSON
-            └─ HashValidatingOpsRepository – verifies chain hash + RSA signature
+            └─ HashValidatingOpsRepository – verifies chain hash (previousOperationHash)
 ```
 
 Each op is stored as `[SEP][opBytes][SEP]`. The backend logs `start` at the leading separator byte; the client's `startBytePos` (in `FsOperationWrapper`) is 3 bytes after → `actionLog.attributes.start + OPS_SEPARATOR_BYTE_LENGTH === op.startBytePos`.

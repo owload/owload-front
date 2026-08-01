@@ -1,6 +1,7 @@
 import { PadTransformStream, readAsStream, readBlob, readToUint8Array, SkipTransformStream } from './stream-utils';
 
-//TODO: IMPORTANT use different nonce for ops and data encryption
+// Per-stream key derivation via HKDF is required before this module is used for
+// production encryption — see owl-docs/decisions/0016-per-stream-key-derivation-for-aes-ctr.md
 
 export function write() {
   console.log('message from module');
@@ -78,7 +79,19 @@ export function getCounter(nonce: Uint8Array, iteration: number): Uint8Array {
   return counter;
 }
 
-export async function generateKey(password: string, salt: Uint8Array, extractable = false): Promise<CryptoKey> {
+export async function deriveStreamKey(masterKey: CryptoKey, counterNonce: Uint8Array, stream: string): Promise<CryptoKey> {
+  const rawKey = await crypto.subtle.exportKey('raw', masterKey);
+  const hkdfKey = await crypto.subtle.importKey('raw', rawKey, 'HKDF', false, ['deriveKey']);
+  return crypto.subtle.deriveKey(
+    { name: 'HKDF', hash: 'SHA-256', salt: counterNonce, info: new TextEncoder().encode(stream) },
+    hkdfKey,
+    { name: 'AES-CTR', length: ENCRYPTION_KEY_BYTE_LENGTH * 8 },
+    false,
+    ['encrypt', 'decrypt']
+  );
+}
+
+export async function generateKey(password: string, salt: Uint8Array, extractable = true): Promise<CryptoKey> {
   const keyMaterial = await crypto.subtle.importKey('raw', getMessageEncoding(password), 'PBKDF2', false, [
     'deriveBits',
     'deriveKey',

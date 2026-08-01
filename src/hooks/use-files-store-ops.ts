@@ -207,7 +207,7 @@ export function useFilesStoreOps() {
         const preloadingFilesystemBackend = new PreloadingFilesystemBackend(cachingFilesystemBackend);
         let storedKeyEncoded: CryptoKey | undefined = undefined;
         if (storedKeyExtracted) {
-            storedKeyEncoded = await crypto.subtle.importKey("raw", base64ToUint8Array(storedKeyExtracted), 'AES-CTR', false, ['encrypt', 'decrypt']);
+            storedKeyEncoded = await crypto.subtle.importKey("raw", base64ToUint8Array(storedKeyExtracted), 'AES-CTR', true, ['encrypt', 'decrypt']);
         }
         else if (!password) {
             preloadingFilesystemBackend.preloadOperations(driveId, 0); // start preloading operations while user entering the password

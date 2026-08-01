@@ -41,6 +41,14 @@ export class OperationCancelledError extends Error {
 export type ProgressCallback = (progressInfo: ProgressInfo) => void;
 type SaveProgressCallback = (n: number) => void; // parameter represents number of bytes saved
 
+export interface DriveStreamKeys {
+  data: CryptoKey;
+  cacheFsState: CryptoKey;
+  cacheActLog: CryptoKey;
+  cacheOpLog: CryptoKey;
+  cacheKeys: CryptoKey;
+}
+
 export class DriveClient {
   private fsState = new FsState();
   private actionLog: DriveActionLogEntry[] = [];
@@ -48,8 +56,8 @@ export class DriveClient {
   private readonly driveName: string;
   private readonly operationService: OperationService;
   private readonly filesystemBackend: FilesystemBackend;
-  private readonly privateKey;
-  private readonly nonce;
+  private readonly streamKeys: DriveStreamKeys;
+  private readonly nonce: Uint8Array;
   private readonly operationLog: FsOperationWrapper[] = [];
   private path = '/';
 
@@ -58,13 +66,13 @@ export class DriveClient {
     driveName: string,
     operationService: OperationService,
     filesystemBackend: FilesystemBackend,
-    privateKey: CryptoKey,
+    streamKeys: DriveStreamKeys,
     nonce: Uint8Array) {
     this.driveId = driveId;
     this.driveName = driveName;
     this.operationService = operationService;
     this.filesystemBackend = filesystemBackend;
-    this.privateKey = privateKey;
+    this.streamKeys = streamKeys;
     this.nonce = nonce;
   }
 
@@ -304,7 +312,7 @@ export class DriveClient {
     if (abortSignal?.aborted) throw new OperationCancelledError();
     const fileContentStream = readBlobAsStream(file, UPLOAD_CHUNK_LENGTH);
     const [encryptProgressCallback, transferProgressCallback] = this.getProgressHandlers(progressCallback, file.size);
-    const enc = createEncryptingStream(fileContentStream, this.privateKey, this.nonce, sessionInfo.byteOffset, UPLOAD_CHUNK_LENGTH, encryptProgressCallback);
+    const enc = createEncryptingStream(fileContentStream, this.streamKeys.data, this.nonce, sessionInfo.byteOffset, UPLOAD_CHUNK_LENGTH, encryptProgressCallback);
     const ws = this.getSaveWritableStream(sessionInfo.sessionId, await uploadStartOperation.hashCode(), transferProgressCallback, abortSignal);
     await enc.pipeTo(ws, { signal: abortSignal });
     return opRes[0];
@@ -317,7 +325,7 @@ export class DriveClient {
       lastOperationHash,
       fsState: this.fsState.serialize()
     });
-    const encryptedState = await encrypt(serializedState, this.privateKey, this.nonce);
+    const encryptedState = await encrypt(serializedState, this.streamKeys.cacheFsState, this.nonce);
     await setCachedValue<Uint8Array>(FS_SNAPSHOT_CACHE, cacheKey, encryptedState);
   }
 
@@ -326,7 +334,7 @@ export class DriveClient {
     const cachedValue = await getCachedUint8Value(FS_SNAPSHOT_CACHE, cacheKey);
     if (cachedValue) {
       const decoder = new TextDecoder();
-      const decryptedStateStr = decoder.decode(await encrypt(cachedValue, this.privateKey, this.nonce));
+      const decryptedStateStr = decoder.decode(await encrypt(cachedValue, this.streamKeys.cacheFsState, this.nonce));
       const parsed = JSON.parse(decryptedStateStr);
       parsed.fsState = FsState.deserialize(parsed.fsState);
       return parsed;
@@ -335,7 +343,7 @@ export class DriveClient {
 
   private async saveActionLogCache(entries: DriveActionLogEntry[]): Promise<void> {
     const cacheKey = await this.getActionLogCacheKey();
-    const encrypted = await encrypt(JSON.stringify(entries), this.privateKey, this.nonce);
+    const encrypted = await encrypt(JSON.stringify(entries), this.streamKeys.cacheActLog, this.nonce);
     await setCachedValue<Uint8Array>(ACTION_LOG_CACHE, cacheKey, encrypted);
   }
 
@@ -344,7 +352,7 @@ export class DriveClient {
     const cached = await getCachedUint8Value(ACTION_LOG_CACHE, cacheKey);
     if (!cached) return null;
     try {
-      const decrypted = await encrypt(cached, this.privateKey, this.nonce);
+      const decrypted = await encrypt(cached, this.streamKeys.cacheActLog, this.nonce);
       return JSON.parse(new TextDecoder().decode(decrypted));
     } catch {
       return null;
@@ -352,7 +360,7 @@ export class DriveClient {
   }
 
   private async getActionLogCacheKey(): Promise<string> {
-    const encrypted = await encrypt(this.driveId + '_actions', this.privateKey, this.nonce);
+    const encrypted = await encrypt(this.driveId + '_actions', this.streamKeys.cacheKeys, this.nonce);
     return uint8ArrayToBase64(encrypted);
   }
 
@@ -360,7 +368,7 @@ export class DriveClient {
     const key = await this.getOpLogCacheKey();
     const serializable = ops.map(({ opStr, startBytePos, byteLength, valid, rejectionReason }) =>
       ({ opStr, startBytePos, byteLength, valid, rejectionReason }));
-    const encrypted = await encrypt(JSON.stringify(serializable), this.privateKey, this.nonce);
+    const encrypted = await encrypt(JSON.stringify(serializable), this.streamKeys.cacheOpLog, this.nonce);
     await setCachedValue<Uint8Array>(OP_LOG_CACHE, key, encrypted);
   }
 
@@ -369,7 +377,7 @@ export class DriveClient {
     const cached = await getCachedUint8Value(OP_LOG_CACHE, key);
     if (!cached) return null;
     try {
-      const decrypted = await encrypt(cached, this.privateKey, this.nonce);
+      const decrypted = await encrypt(cached, this.streamKeys.cacheOpLog, this.nonce);
       const serialized: { opStr: string; startBytePos: number; byteLength: number; valid: boolean; rejectionReason?: RejectionReason }[] =
         JSON.parse(new TextDecoder().decode(decrypted));
       return serialized.map(({ opStr, startBytePos, byteLength, valid, rejectionReason }) => {
@@ -385,12 +393,12 @@ export class DriveClient {
   }
 
   private async getOpLogCacheKey(): Promise<string> {
-    const encrypted = await encrypt(this.driveId + '_oplog', this.privateKey, this.nonce);
+    const encrypted = await encrypt(this.driveId + '_oplog', this.streamKeys.cacheKeys, this.nonce);
     return uint8ArrayToBase64(encrypted);
   }
 
   private async getFsStateCacheKey(): Promise<string> {
-    const encryptedDriveId = await encrypt(this.driveId, this.privateKey, this.nonce);
+    const encryptedDriveId = await encrypt(this.driveId, this.streamKeys.cacheKeys, this.nonce);
     return uint8ArrayToBase64(encryptedDriveId);
   }
 
@@ -441,7 +449,7 @@ export class DriveClient {
         }
       }
     });
-    return createEncryptingStream(rs, this.privateKey, this.nonce, byteOffset, DOWNLOAD_CHUNK_LENGTH, encryptProgressCallback);
+    return createEncryptingStream(rs, this.streamKeys.data, this.nonce, byteOffset, DOWNLOAD_CHUNK_LENGTH, encryptProgressCallback);
   }
 
   public async getFileData(byteOffset: number, byteLength: number, contentHash: string, cache = false, progressCallback?: ProgressCallback): Promise<Uint8Array<ArrayBuffer>> {
