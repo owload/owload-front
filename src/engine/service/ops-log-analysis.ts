@@ -182,6 +182,8 @@ export async function findFileHistory(
   const segments: PathSegment[] = [{ path: currentPath, startBytePos: 0, endBytePos: Infinity }];
   const boundaryOps = new Set<FsOperationWrapper>(); // ops that transition between segments
   let tracedPath = currentPath;
+  // Overwrite points: REPLACE-mode MV brought our file to destPath, overwriting whatever was there.
+  const overwritePoints: { destPath: string; beforePos: number }[] = [];
 
   for (let i = ops.length - 1; i >= 0; i--) {
     const opWrapper = ops[i];
@@ -200,6 +202,9 @@ export async function findFileHistory(
         const effectiveDest = mv.destFileNames?.[j] ?? mv.fileNames[j];
         if (joinPath(mv.pathDest, effectiveDest) === tracedPath) {
           prevPath = joinPath(mv.pathSrc, mv.fileNames[j]);
+          if (mv.mode === 'REPLACE') {
+            overwritePoints.push({ destPath: tracedPath, beforePos: opWrapper.startBytePos });
+          }
           break;
         }
         // RENAME-mode MV: destFileNames is null; auto-generated name not stored.
@@ -231,6 +236,7 @@ export async function findFileHistory(
   // Phase 2: forward pass — collect ops that fall within their path segment.
   const startHashToWrapper = new Map<string, FsOperationWrapper>();
   const opsForPath: FsOperationWrapper[] = [];
+  let primaryStartFound = false;
 
   for (const opWrapper of ops) {
     const op = opWrapper.op;
@@ -254,22 +260,32 @@ export async function findFileHistory(
 
     const pos = opWrapper.startBytePos;
     const seg = segments.find(s => pos >= s.startBytePos && pos < s.endBytePos);
-    if (!seg) continue;
 
     if (op.operationType === FsOperationType.START_UPLOAD) {
-      if ((op as UploadStartFsOperation).path === seg.path) {
+      const startOp = op as UploadStartFsOperation;
+      const primaryMatch = !!seg && startOp.path === seg.path;
+      // Include uploads that were overwritten by a REPLACE-mode MV that brought our file here.
+      const overwriteMatch = !primaryMatch && overwritePoints.some(
+        ow => startOp.path === ow.destPath && pos < ow.beforePos
+      );
+      if (primaryMatch || overwriteMatch) {
+        if (primaryMatch) primaryStartFound = true;
         const hash = await op.hashCode();
         startHashToWrapper.set(hash, opWrapper);
         opsForPath.push(opWrapper);
       }
-    } else if (opInvolvesCurrentPath(op, seg.path)) {
+      continue;
+    }
+
+    if (!seg) continue;
+    if (opInvolvesCurrentPath(op, seg.path)) {
       opsForPath.push(opWrapper);
     }
   }
 
-  // Phase 3: if no START_UPLOAD found (file created by CP, never uploaded directly),
+  // Phase 3: if no START_UPLOAD found via primary segments (file created by CP, never uploaded directly),
   // trace through the CP to the source file's latest START_UPLOAD before the copy.
-  if (startHashToWrapper.size === 0) {
+  if (!primaryStartFound) {
     for (const cpWrapper of opsForPath) {
       if (cpWrapper.op?.operationType !== FsOperationType.CP) continue;
       const cp = cpWrapper.op as CpFsOperation;
