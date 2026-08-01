@@ -46,7 +46,7 @@ export function AesCtrTransformStream(
           length: ACTUAL_COUNTER_BIT_LENGTH,
         },
         keyEncoded,
-        chunk
+        chunk as Uint8Array<ArrayBuffer>
       );
       controller.enqueue(new Uint8Array(cypher));
       iteration += chunkLen / ENCRYPTION_BLOCK_BYTE_LENGTH;
@@ -58,7 +58,7 @@ export function AesCtrTransformStream(
   });
 }
 
-export function getCounter(nonce: Uint8Array, iteration: number): Uint8Array {
+export function getCounter(nonce: Uint8Array, iteration: number): Uint8Array<ArrayBuffer> {
   const counter = new Uint8Array(ENCRYPTION_BLOCK_BYTE_LENGTH);
   counter.set(nonce);
   let byteMask = 0xff;
@@ -79,7 +79,7 @@ export function getCounter(nonce: Uint8Array, iteration: number): Uint8Array {
   return counter;
 }
 
-export async function deriveStreamKey(masterKey: CryptoKey, counterNonce: Uint8Array, stream: string): Promise<CryptoKey> {
+export async function deriveStreamKey(masterKey: CryptoKey, counterNonce: Uint8Array<ArrayBuffer>, stream: string): Promise<CryptoKey> {
   const rawKey = await crypto.subtle.exportKey('raw', masterKey);
   const hkdfKey = await crypto.subtle.importKey('raw', rawKey, 'HKDF', false, ['deriveKey']);
   return crypto.subtle.deriveKey(
@@ -91,7 +91,7 @@ export async function deriveStreamKey(masterKey: CryptoKey, counterNonce: Uint8A
   );
 }
 
-export async function generateKey(password: string, salt: Uint8Array, extractable = true): Promise<CryptoKey> {
+export async function generateKey(password: string, salt: Uint8Array<ArrayBuffer>, extractable = true): Promise<CryptoKey> {
   const keyMaterial = await crypto.subtle.importKey('raw', getMessageEncoding(password), 'PBKDF2', false, [
     'deriveBits',
     'deriveKey',
@@ -110,7 +110,7 @@ export async function generateKey(password: string, salt: Uint8Array, extractabl
   );
 }
 
-function getMessageEncoding(message: string): Uint8Array {
+function getMessageEncoding(message: string): Uint8Array<ArrayBuffer> {
   const enc = new TextEncoder();
   return enc.encode(message);
 }
