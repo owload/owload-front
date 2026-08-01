@@ -426,8 +426,8 @@ export class DriveClient {
   }
 
   public async getFileDataStream(byteOffset: number, byteLength: number, contentHash: string, cache = false, progressCallback?: ProgressCallback): Promise<ReadableStream<Uint8Array>> {
-    // Download-side integrity verification (compare decrypted bytes against contentHash) is
-    // deferred to epic 0019-file-data-integrity.
+    // Streaming reads are partial/byte-range and used for media preview (contentHash = "").
+    // Full-file integrity is verified in getFileData after collecting all decrypted bytes.
     const thisObj = this;
     const firstChunkLength = DOWNLOAD_CHUNK_LENGTH - byteOffset % DOWNLOAD_CHUNK_LENGTH;
     const [encryptProgressCallback, transferProgressCallback] = this.getProgressHandlers(progressCallback, byteLength);
@@ -456,7 +456,14 @@ export class DriveClient {
 
   public async getFileData(byteOffset: number, byteLength: number, contentHash: string, cache = false, progressCallback?: ProgressCallback): Promise<Uint8Array<ArrayBuffer>> {
     const dec = await this.getFileDataStream(byteOffset, byteLength, contentHash, cache, progressCallback);
-    return readToUint8Array(dec, byteLength);
+    const data = await readToUint8Array(dec, byteLength);
+    if (contentHash) {
+      const computed = uint8ArrayToBase64(new Uint8Array(await crypto.subtle.digest('SHA-256', data)));
+      if (computed !== contentHash) {
+        throw new Error('File integrity check failed: content hash mismatch');
+      }
+    }
+    return data;
   }
 
   private getSaveWritableStream(sessionId: SessionId,
