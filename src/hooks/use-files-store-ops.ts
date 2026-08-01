@@ -508,14 +508,13 @@ export function useFilesStoreOps() {
     }
 
     const getFileData = async (fileProps: FileProperties, cache = false) => {
-        fileProps.contentHash = "--";
         if (driveClient == null) {
             throw new Error("Uninitialized");
         }
-        if (fileProps.byteOffset == null || fileProps.byteLength == null || fileProps.contentHash == null) {
-            throw new Error("Failed to download file: byteOffset, byteLength or contentHash missing");
+        if (fileProps.byteOffset == null || fileProps.byteLength == null) {
+            throw new Error("Failed to download file: byteOffset or byteLength missing");
         }
-        return driveClient.getFileData(fileProps.byteOffset, fileProps.byteLength, fileProps.contentHash!, cache);
+        return driveClient.getFileData(fileProps.byteOffset, fileProps.byteLength, fileProps.contentHash ?? '', cache);
     }
 
     const downloadFile = async (fileProps: FileProperties, cache = false) => {

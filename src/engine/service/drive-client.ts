@@ -310,10 +310,11 @@ export class DriveClient {
     }
     // upload file chunks
     if (abortSignal?.aborted) throw new OperationCancelledError();
+    const fileContentHash = uint8ArrayToBase64(new Uint8Array(await crypto.subtle.digest('SHA-256', await file.arrayBuffer())));
     const fileContentStream = readBlobAsStream(file, UPLOAD_CHUNK_LENGTH);
     const [encryptProgressCallback, transferProgressCallback] = this.getProgressHandlers(progressCallback, file.size);
     const enc = createEncryptingStream(fileContentStream, this.streamKeys.data, this.nonce, sessionInfo.byteOffset, UPLOAD_CHUNK_LENGTH, encryptProgressCallback);
-    const ws = this.getSaveWritableStream(sessionInfo.sessionId, await uploadStartOperation.hashCode(), transferProgressCallback, abortSignal);
+    const ws = this.getSaveWritableStream(sessionInfo.sessionId, await uploadStartOperation.hashCode(), fileContentHash, transferProgressCallback, abortSignal);
     await enc.pipeTo(ws, { signal: abortSignal });
     return opRes[0];
   }
@@ -425,7 +426,8 @@ export class DriveClient {
   }
 
   public async getFileDataStream(byteOffset: number, byteLength: number, contentHash: string, cache = false, progressCallback?: ProgressCallback): Promise<ReadableStream<Uint8Array>> {
-    contentHash; //todo
+    // Download-side integrity verification (compare decrypted bytes against contentHash) is
+    // deferred to epic 0019-file-data-integrity.
     const thisObj = this;
     const firstChunkLength = DOWNLOAD_CHUNK_LENGTH - byteOffset % DOWNLOAD_CHUNK_LENGTH;
     const [encryptProgressCallback, transferProgressCallback] = this.getProgressHandlers(progressCallback, byteLength);
@@ -459,15 +461,13 @@ export class DriveClient {
 
   private getSaveWritableStream(sessionId: SessionId,
     uploadStartOperationHash: string,
+    fileContentHash: string,
     progressCallback: SaveProgressCallback,
     abortSignal?: AbortSignal
   ): WritableStream<Uint8Array> {
-    let contentHash = "";
     const saveDataBlockFunc = this.filesystemBackend.saveDataBlock.bind(this.filesystemBackend, sessionId);
+    const finalizeFunc = () => this.performOp(new UploadFinishFsOperation(uploadStartOperationHash, fileContentHash));
     let uploadedBytesLength = 0;
-    const finalizeOperationFunc = async (contentHash: string) => {
-      await this.performOp(new UploadFinishFsOperation(uploadStartOperationHash, contentHash));
-    };
     return new WritableStream({
       async write(chunk: Uint8Array) {
         await saveDataBlockFunc(chunk, uploadedBytesLength, abortSignal);
@@ -477,7 +477,7 @@ export class DriveClient {
         }
       },
       async close() {
-        await finalizeOperationFunc(contentHash);
+        await finalizeFunc();
       }
     });
   }
