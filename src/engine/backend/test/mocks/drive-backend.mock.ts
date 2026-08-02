@@ -2,7 +2,7 @@ import { getRandomNonce } from "@/engine/core/enc";
 import { uint8ArrayToBase64 } from "@/engine/core/stream-utils";
 import { UserId } from "../../user-backend";
 import { getTestUserId } from "./test-user-info";
-import { DriveBackend, DriveId, DriveInfo, DriveStorageTarget, Privilege, S3Preset, StorageTargetInput } from "../../drive-backend";
+import { CustomTargetDeletionDecision, DriveBackend, DriveId, DriveInfo, DriveStorageTarget, Privilege, S3Preset, StorageTargetInput } from "../../drive-backend";
 
 export class MockDriveBackend implements DriveBackend {
     private readonly drives = new Map<DriveId, DriveInfo>();
@@ -10,6 +10,10 @@ export class MockDriveBackend implements DriveBackend {
 
     async getS3Presets(): Promise<S3Preset[]> {
         return [];
+    }
+
+    async deleteDrive(driveId: DriveId, _customTargetDecisions: CustomTargetDeletionDecision[]): Promise<void> {
+        this.drives.delete(driveId);
     }
 
     async addStorageTarget(_driveId: DriveId, _target: StorageTargetInput): Promise<void> {}

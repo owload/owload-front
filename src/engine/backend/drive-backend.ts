@@ -55,10 +55,16 @@ export type StorageTargetInput =
   | { presetId: string; customConfig?: never }
   | { customConfig: CustomStorageConfig; presetId?: never };
 
+export interface CustomTargetDeletionDecision {
+  targetId: string;
+  deleteData: boolean;
+}
+
 export abstract class DriveBackend {
   abstract createDrive(title: string, storageTarget?: StorageTargetInput): Promise<DriveInfo>;
   abstract getDriveInfo(driveId: DriveId): Promise<DriveInfo>;
   abstract getAccessibleDrives(): Promise<DriveInfo[]>;
+  abstract deleteDrive(driveId: DriveId, customTargetDecisions: CustomTargetDeletionDecision[]): Promise<void>;
   abstract getS3Presets(): Promise<S3Preset[]>;
   abstract addStorageTarget(driveId: DriveId, target: StorageTargetInput): Promise<void>;
   abstract getStorageTargets(driveId: DriveId): Promise<DriveStorageTarget[]>;
@@ -82,6 +88,10 @@ export class RestDriveBackend implements DriveBackend {
 
   getDriveInfo(driveId: DriveId): Promise<DriveInfo> {
     return getApiCall(`/drives/${driveId}`);
+  }
+
+  deleteDrive(driveId: DriveId, customTargetDecisions: CustomTargetDeletionDecision[]): Promise<void> {
+    return deleteApiCall(`/drives/${driveId}`, { customTargetDecisions });
   }
 
   getS3Presets(): Promise<S3Preset[]> {
