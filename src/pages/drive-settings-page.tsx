@@ -64,6 +64,7 @@ export function DriveSettingsPage() {
   const [busy, setBusy] = useState(false);
 
   const [deleteTarget, setDeleteTarget] = useState<DriveStorageTarget | null>(null);
+  const [deleteTargetError, setDeleteTargetError] = useState<string | null>(null);
   const [showAddSlave, setShowAddSlave] = useState(false);
   const [newSlave, setNewSlave] = useState<TargetConfig>(emptyTarget());
 
@@ -122,13 +123,16 @@ export function DriveSettingsPage() {
     }
   }
 
-  async function handleDelete() {
+  async function handleDelete(force = false) {
     if (!driveId || !deleteTarget || busy) return;
     setBusy(true);
+    setDeleteTargetError(null);
     try {
-      await driveBackend.deleteStorageTarget(driveId, deleteTarget.id);
+      await driveBackend.deleteStorageTarget(driveId, deleteTarget.id, force);
       setDeleteTarget(null);
       await load();
+    } catch (e: any) {
+      setDeleteTargetError(e?.response?.data?.detail ?? e?.message ?? 'Failed to delete target');
     } finally {
       setBusy(false);
     }
@@ -168,13 +172,13 @@ export function DriveSettingsPage() {
     setShowDeleteDrive(true);
   }
 
-  async function handleDeleteDrive() {
+  async function handleDeleteDrive(force = false) {
     if (!driveId || !driveInfo || deletingDrive || !allCustomDecided || !confirmTextMatches) return;
     setDeletingDrive(true);
     setDeleteDriveError(null);
     try {
       const decisions = customTargets.map(t => ({ targetId: t.id, deleteData: customDecisions[t.id]! }));
-      await driveBackend.deleteDrive(driveId, decisions);
+      await driveBackend.deleteDrive(driveId, decisions, force);
       closeDrive(driveId);
       await updateDrives();
       navigate('/');
@@ -227,7 +231,7 @@ export function DriveSettingsPage() {
                         size="sm"
                         variant="secondary"
                         disabled={busy}
-                        onClick={() => setDeleteTarget(t)}
+                        onClick={() => { setDeleteTargetError(null); setDeleteTarget(t); }}
                       >
                         Delete
                       </Button>
@@ -290,14 +294,28 @@ export function DriveSettingsPage() {
               <div>
                 <p>Data on <strong>{deleteTarget ? targetLabel(deleteTarget) : ''}</strong> will be permanently deleted and cannot be recovered.</p>
                 <p className="mt-2 text-destructive font-medium">This action cannot be undone.</p>
+                {deleteTargetError && (
+                  <div className="mt-2 space-y-1">
+                    <p className="text-sm text-red-500">{deleteTargetError}</p>
+                    <p className="text-xs text-muted-foreground">
+                      If this target's storage is permanently unreachable, you can remove it anyway —
+                      its data may be left behind on that storage.
+                    </p>
+                  </div>
+                )}
               </div>
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2">
             <Button variant="outline" onClick={() => setDeleteTarget(null)}>Cancel</Button>
-            <Button variant="destructive" onClick={handleDelete} disabled={busy}>
+            <Button variant="destructive" onClick={() => handleDelete(false)} disabled={busy}>
               {busy ? 'Deleting…' : 'Delete'}
             </Button>
+            {deleteTargetError && (
+              <Button variant="destructive" onClick={() => handleDelete(true)} disabled={busy}>
+                Force delete anyway
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -351,7 +369,15 @@ export function DriveSettingsPage() {
                   <Input value={confirmTitle} onChange={e => setConfirmTitle(e.target.value)} autoComplete="off" />
                 </div>
 
-                {deleteDriveError && <p className="text-sm text-red-500">{deleteDriveError}</p>}
+                {deleteDriveError && (
+                  <div className="space-y-1">
+                    <p className="text-sm text-red-500">{deleteDriveError}</p>
+                    <p className="text-xs text-muted-foreground">
+                      If a target's storage is permanently unreachable, you can delete the drive
+                      anyway — its data may be left behind on that storage.
+                    </p>
+                  </div>
+                )}
               </div>
             </DialogDescription>
           </DialogHeader>
@@ -359,11 +385,20 @@ export function DriveSettingsPage() {
             <Button variant="outline" onClick={() => setShowDeleteDrive(false)}>Cancel</Button>
             <Button
               variant="destructive"
-              onClick={handleDeleteDrive}
+              onClick={() => handleDeleteDrive(false)}
               disabled={deletingDrive || !allCustomDecided || !confirmTextMatches}
             >
               {deletingDrive ? 'Deleting…' : 'Delete drive'}
             </Button>
+            {deleteDriveError && (
+              <Button
+                variant="destructive"
+                onClick={() => handleDeleteDrive(true)}
+                disabled={deletingDrive || !allCustomDecided || !confirmTextMatches}
+              >
+                Force delete anyway
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>

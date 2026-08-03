@@ -64,12 +64,12 @@ export abstract class DriveBackend {
   abstract createDrive(title: string, storageTarget?: StorageTargetInput): Promise<DriveInfo>;
   abstract getDriveInfo(driveId: DriveId): Promise<DriveInfo>;
   abstract getAccessibleDrives(): Promise<DriveInfo[]>;
-  abstract deleteDrive(driveId: DriveId, customTargetDecisions: CustomTargetDeletionDecision[]): Promise<void>;
+  abstract deleteDrive(driveId: DriveId, customTargetDecisions: CustomTargetDeletionDecision[], force?: boolean): Promise<void>;
   abstract getS3Presets(): Promise<S3Preset[]>;
   abstract addStorageTarget(driveId: DriveId, target: StorageTargetInput): Promise<void>;
   abstract getStorageTargets(driveId: DriveId): Promise<DriveStorageTarget[]>;
   abstract makeMaster(driveId: DriveId, targetId: string): Promise<void>;
-  abstract deleteStorageTarget(driveId: DriveId, targetId: string): Promise<void>;
+  abstract deleteStorageTarget(driveId: DriveId, targetId: string, force?: boolean): Promise<void>;
   abstract testCustomConfig(config: CustomStorageConfig): Promise<{ ok: boolean; error?: string }>;
   abstract testStorageTarget(driveId: DriveId, targetId: string): Promise<{ ok: boolean; error?: string }>;
   abstract testPreset(presetId: string): Promise<{ ok: boolean; error?: string }>;
@@ -90,8 +90,8 @@ export class RestDriveBackend implements DriveBackend {
     return getApiCall(`/drives/${driveId}`);
   }
 
-  deleteDrive(driveId: DriveId, customTargetDecisions: CustomTargetDeletionDecision[]): Promise<void> {
-    return deleteApiCall(`/drives/${driveId}`, { customTargetDecisions });
+  deleteDrive(driveId: DriveId, customTargetDecisions: CustomTargetDeletionDecision[], force = false): Promise<void> {
+    return deleteApiCall(`/drives/${driveId}${force ? '?force=true' : ''}`, { customTargetDecisions });
   }
 
   getS3Presets(): Promise<S3Preset[]> {
@@ -110,8 +110,8 @@ export class RestDriveBackend implements DriveBackend {
     return patchApiCall(`/drives/${driveId}/storage-targets/${targetId}/make-master`);
   }
 
-  deleteStorageTarget(driveId: DriveId, targetId: string): Promise<void> {
-    return deleteApiCall(`/drives/${driveId}/storage-targets/${targetId}?confirm=true`);
+  deleteStorageTarget(driveId: DriveId, targetId: string, force = false): Promise<void> {
+    return deleteApiCall(`/drives/${driveId}/storage-targets/${targetId}?confirm=true${force ? '&force=true' : ''}`);
   }
 
   testCustomConfig(config: CustomStorageConfig): Promise<{ ok: boolean; error?: string }> {

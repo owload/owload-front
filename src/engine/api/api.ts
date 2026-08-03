@@ -40,11 +40,13 @@ function waitForOnline() {
 async function apiCall<T, D>(url: string, method: "GET" | "POST" | "DELETE" | "PATCH", responseType: "json" | "arraybuffer" | "text" = "json", retryCount: number, timeout: number, delay: number, data?: D, signal?: AbortSignal): Promise<T> {
     let res: AxiosResponse<T>;
     let attempt = 0;
+    let lastError: unknown;
     while (attempt <= retryCount) {
         try {
             res = await makeProperAxiosApiCall<T, D>(url, method, responseType, timeout, data, signal);
             return res.data;
         } catch (e) {
+            lastError = e;
             if (e instanceof AxiosError && !isRetryableError(e)) { throw e; }
             attempt++;
             if (typeof window !== "undefined" && !navigator.onLine) {
@@ -54,7 +56,10 @@ async function apiCall<T, D>(url: string, method: "GET" | "POST" | "DELETE" | "P
             }
         }
     }
-    throw new Error(`API call failed after ${attempt-1} retries: ${method} ${url}`);
+    // Re-throw the actual last failure (preserves e.response.status/data.detail
+    // for the caller to show) instead of a synthetic message that discards it —
+    // this is what happens once retries are exhausted, not just on the first try.
+    throw lastError ?? new Error(`API call failed after ${attempt - 1} retries: ${method} ${url}`);
 }
 
 async function makeProperAxiosApiCall<T, D>(url: string, method: "GET" | "POST" | "DELETE" | "PATCH", responseType: "json" | "arraybuffer" | "text" = "json", timeout: number, data?: D, signal?: AbortSignal): Promise<AxiosResponse<T>> {

@@ -12,14 +12,14 @@ export class MockDriveBackend implements DriveBackend {
         return [];
     }
 
-    async deleteDrive(driveId: DriveId, _customTargetDecisions: CustomTargetDeletionDecision[]): Promise<void> {
+    async deleteDrive(driveId: DriveId, _customTargetDecisions: CustomTargetDeletionDecision[], _force?: boolean): Promise<void> {
         this.drives.delete(driveId);
     }
 
     async addStorageTarget(_driveId: DriveId, _target: StorageTargetInput): Promise<void> {}
     async getStorageTargets(_driveId: DriveId): Promise<DriveStorageTarget[]> { return []; }
     async makeMaster(_driveId: DriveId, _targetId: string): Promise<void> {}
-    async deleteStorageTarget(_driveId: DriveId, _targetId: string): Promise<void> {}
+    async deleteStorageTarget(_driveId: DriveId, _targetId: string, _force?: boolean): Promise<void> {}
     async testCustomConfig(_config: import('../../drive-backend').CustomStorageConfig): Promise<{ ok: boolean; error?: string }> { return { ok: true }; }
     async testStorageTarget(_driveId: DriveId, _targetId: string): Promise<{ ok: boolean; error?: string }> { return { ok: true }; }
     async testPreset(_presetId: string): Promise<{ ok: boolean; error?: string }> { return { ok: true }; }
