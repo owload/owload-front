@@ -5,11 +5,13 @@ import { Outlet, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useFilesStoreOps } from '@/hooks/use-files-store-ops';
 import { AbortContext } from '@/types/types';
 import { DialogClosedError } from '@/types/errors';
+import { useOpenFileProperties } from '@/hooks/use-dialogs';
 
 export function DriveExplorerPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const fileNotFound = (location.state as any)?.fileNotFound === true;
+  const notFoundNodeId: string | undefined = (location.state as any)?.notFoundNodeId;
 
   const passwordRetryFlag = useFilesStore((state) => state.passwordRetryFlag);
   const setPasswordRetryFlag = useFilesStore((state) => state.setPasswordRetryFlag);
@@ -43,7 +45,7 @@ export function DriveExplorerPage() {
         if (dirId) {
           const found = await cdByDirId(dirId);
           if (!found) {
-            navigate(`/drive/${driveId}`, { state: { fileNotFound: true } });
+            navigate(`/drive/${driveId}`, { state: { fileNotFound: true, notFoundNodeId: dirId } });
           }
         } else {
           sync();
@@ -79,7 +81,7 @@ export function DriveExplorerPage() {
     if (dirId) {
       cdByDirId(dirId).then(found => {
         if (!found) {
-          navigate(`/drive/${driveId}`, { state: { fileNotFound: true } });
+          navigate(`/drive/${driveId}`, { state: { fileNotFound: true, notFoundNodeId: dirId } });
         }
       });
     } else {
@@ -100,11 +102,21 @@ export function DriveExplorerPage() {
   }, [driveKey, filesInitialized]);
 
 
+  const openFileProperties = useOpenFileProperties();
+
   return (
     <>
       {fileNotFound && (
         <div className="absolute top-14 inset-x-0 z-50 flex items-center gap-3 bg-amber-50 border-b border-amber-200 px-4 py-2 text-sm text-amber-800">
           <span>This file no longer exists.</span>
+          {notFoundNodeId && (
+            <button
+              className="underline text-amber-700 hover:text-amber-900"
+              onClick={() => openFileProperties({ nodeId: notFoundNodeId, filePath: '', byteLength: 0 }).catch(() => {})}
+            >
+              View properties
+            </button>
+          )}
           <button
             className="ml-auto text-amber-600 hover:text-amber-900"
             onClick={() => navigate(location.pathname, { replace: true, state: {} })}

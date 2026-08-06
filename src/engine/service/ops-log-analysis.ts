@@ -179,9 +179,11 @@ export async function findFileHistory(
 
   // Phase 1: backward scan — build path segments following the RENAME/MV chain.
   // Segments: file was at `path` for ops in [startBytePos, endBytePos).
-  const segments: PathSegment[] = [{ path: currentPath, startBytePos: 0, endBytePos: Infinity }];
+  // If currentPath is empty (e.g. deleted file opened by nodeId only), fall back to startPath.
+  const effectivePath = currentPath || startPath || "";
+  const segments: PathSegment[] = [{ path: effectivePath, startBytePos: 0, endBytePos: Infinity }];
   const boundaryOps = new Set<FsOperationWrapper>(); // ops that transition between segments
-  let tracedPath = currentPath;
+  let tracedPath = effectivePath;
   // Overwrite points: REPLACE-mode MV brought our file to destPath, overwriting whatever was there.
   const overwritePoints: { destPath: string; beforePos: number }[] = [];
 
