@@ -169,13 +169,13 @@ export function useFilesStoreOps() {
         sync();
     }
 
-    const cdByDirId = async (dirId: string) => {
+    const cdByDirId = async (dirId: string): Promise<boolean> => {
         if (driveClient == null) {
             throw new Error("Uninitialized");
         }
         const node = driveClient.getNodeById(dirId);
         if (!node) {
-            throw new Error("Node not found");
+            return false;
         }
         if (node?.type === FsObjectType.DIR) {
             driveClient.cdByDirId(dirId);
@@ -192,6 +192,7 @@ export function useFilesStoreOps() {
                 setMediaPreviewOpen(true);
             }
         }
+        return true;
     }
 
     const initialize = async (driveId: DriveId, password: string | undefined, initialPath: string, abortContext: AbortContext) => {
