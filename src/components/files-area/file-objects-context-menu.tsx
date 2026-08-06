@@ -9,6 +9,7 @@ import ContextMenuHandler from "./selectable-area/context-menu-handler";
 import { FileProperties } from "@/types/types";
 import { useFilesStore } from "@/stores/files-store";
 import { FsObjectType } from "@/engine";
+import { isTauri } from "@/lib/utils";
 
 
 
@@ -92,7 +93,7 @@ export function FileObjectsContextMenu({ children, fileObject }: PropsWithChildr
                     <ContextMenuShortcut>⌘O</ContextMenuShortcut>
                 </ContextMenuItem>}
                 {isSelectedObjectOpenAvailable() && selectedFileObjects[0]?.type !== FsObjectType.DIR && <ContextMenuItem inset onClick={openSelectedObjectInNewTab}>
-                    Open in new tab
+                    {isTauri() ? 'Open in new window' : 'Open in new tab'}
                 </ContextMenuItem>}
                 {isSelectedObjectDownloadAvailable() && <ContextMenuItem inset onClick={handleDownloadClick}>
                     Download

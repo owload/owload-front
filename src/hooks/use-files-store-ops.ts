@@ -3,7 +3,7 @@ import { useNavigateDir, useGetNavigateDirUrl } from "./use-navigate-dir";
 import { base64ToUint8Array, DriveClientFactory, FsObjectType, FsTreeNode, ProgressCallback, uint8ArrayToBase64, DriveId, RestFilesystemBackend, PreloadingFilesystemBackend, CachingFilesystemBackend, OperationCancelledError, DriveClient } from "@/engine";
 
 import { AbortContext, FileProperties } from "@/types/types";
-import { saveFileToDisk } from "@/lib/utils";
+import { isTauri, saveFileToDisk } from "@/lib/utils";
 import { useConfirmDelete, useRequestMvOperationMode, useRequestPassword } from "./use-dialogs";
 import { FsOperationNameConflictMode } from "@/engine/service/fs-operation";
 import { FsFileProperties } from "@/engine/service/fs-state";
@@ -554,8 +554,21 @@ export function useFilesStoreOps() {
         openObject(selectedFileObjects[0]);
     }
 
-    const openInNewTab = (fileObject: FileProperties) => {
-        window.open(getNavigateDirUrl(fileObject.id), '_blank', 'noopener');
+    const openInNewTab = async (fileObject: FileProperties) => {
+        const url = getNavigateDirUrl(fileObject.id);
+        if (isTauri()) {
+            const { WebviewWindow } = await import('@tauri-apps/api/webviewWindow');
+            new WebviewWindow('file-' + fileObject.id, {
+                url,
+                title: 'Owload',
+                width: 1280,
+                height: 800,
+                minWidth: 900,
+                minHeight: 600,
+            });
+        } else {
+            window.open(url, '_blank', 'noopener');
+        }
     }
 
     const openSelectedObjectInNewTab = () => {

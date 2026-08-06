@@ -12,22 +12,35 @@ export function truncate(str: string, maxLen: number): string {
   return str.substring(0, maxLen-11) + "..." + str.substring(str.length-8, str.length)
 }
 
-export function saveFileToDisk(data: Uint8Array, name: string) {
-      const f = new File([data], name);
-      const url = URL.createObjectURL(f)
-      const a = document.createElement('a');
-      a.style.display = 'none';
-      a.href = url;
-      a.download = name;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
+export async function saveFileToDisk(data: Uint8Array, name: string) {
+    if (isTauri()) {
+        const { save } = await import('@tauri-apps/plugin-dialog');
+        const { invoke } = await import('@tauri-apps/api/core');
+        const path = await save({ defaultPath: name });
+        if (path) {
+            await invoke('save_file_to_disk', { path, data: Array.from(data) });
+        }
+    } else {
+        const f = new File([data], name);
+        const url = URL.createObjectURL(f);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        a.download = name;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+    }
 }
 
 export function joinPath(path1: string, path2: string): string {
   const pathComponents = path1.split('/');
   pathComponents.push(...path2.split('/'));
   return '/' + pathComponents.filter(Boolean).join('/');
+}
+
+export function isTauri(): boolean {
+    return '__TAURI_INTERNALS__' in window;
 }
 
 export function getExtension(name: string) {
