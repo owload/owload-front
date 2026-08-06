@@ -23,6 +23,7 @@ export function CreateDrivePage() {
   const [slaves, setSlaves] = useState<TargetConfig[]>([]);
 
   const [loading, setLoading] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
 
   useEffect(() => {
     const driveBackend = new RestDriveBackend();
@@ -79,6 +80,7 @@ export function CreateDrivePage() {
     }
 
     setLoading(true);
+    setCreateError(null);
     try {
       const testedMaster = await testIfNeeded(master);
       const testedSlaves = await Promise.all(slaves.map(testIfNeeded));
@@ -101,6 +103,8 @@ export function CreateDrivePage() {
       await initialize(driveId, password, "/", { aborted: false });
       await setDriveDescription(description);
       await navigate(`/drive/${driveId}`);
+    } catch (e: any) {
+      setCreateError(e?.response?.data?.detail ?? e?.message ?? 'Failed to create drive');
     } finally {
       setLoading(false);
     }
@@ -150,6 +154,7 @@ export function CreateDrivePage() {
           )}
         </section>
 
+        {createError && <p className="text-sm text-red-500">{createError}</p>}
         <Button onClick={handleCreate} disabled={loading}>
           {loading ? 'Creating…' : 'Create'}
         </Button>
