@@ -2,6 +2,18 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Working rules
+
+Full text: `../owload-docs/CONTRIBUTING.md`. In short:
+
+- Work comes from tasks in `../owload-docs/epics/`. A task is committed **at the same time in `owload-docs`, `owload-back` and `owload-front`** (docs always get the task status / architecture update); commit messages reference the same task.
+- **Before every push, in every repository, check the diff:**
+  - (a) no sensitive data — secrets, tokens/JWTs, keys, `.env` values, real hostnames/IPs, personal data or machine-specific paths;
+  - (b) security does not get worse — the server must never receive, store or log the password, `K_master` or any derived key, plaintext content/names/paths, or anything outside the API contract (`../owload-docs/architecture/backend.md`); crypto changes need an ADR.
+- English only in code, comments, docs and commit messages.
+- Commit identity is `Owload <info@owload.com>` only — no `Co-Authored-By` or generated-by lines; pass it per commit with `git -c user.name=Owload -c user.email=info@owload.com commit ...`.
+- Pre-production: commit straight to `main`; rewrite history only when explicitly agreed.
+
 ## Project documentation
 
 Architecture docs, ADRs and planned epics live in the sibling repo **`../owload-docs`**:
