@@ -23,7 +23,7 @@ export function UploadStateButton({ className, size = 44 }: { className?: string
                 <div
                     className={cn(
                         "rounded-full bg-primary text-primary-foreground shadow-sm hover:bg-primary/80 flex items-center justify-center cursor-pointer disabled:opacity-50 disabled:cursor-default disabled:hover:bg-primary",
-                        hasError && "bg-[#EB5757] hover:bg-[#d94a4a]",
+                        hasError && "bg-[#EB5757] text-white hover:bg-[#d94a4a]",
                         className
                     )}
                     onPointerDown={(e) => e.stopPropagation()}
@@ -31,7 +31,7 @@ export function UploadStateButton({ className, size = 44 }: { className?: string
                 >
                     {hasError && allFinished
                         ? <TriangleAlert size={Math.round(size * 0.5)} />
-                        : <FileProgressCircle></FileProgressCircle>}
+                        : <FileProgressCircle progressColor={hasError ? "#ffffff" : undefined} className={hasError ? "text-white" : undefined}></FileProgressCircle>}
                 </div>
             </DrawerTrigger>
             <DrawerContent>

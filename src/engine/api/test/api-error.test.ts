@@ -1,6 +1,6 @@
 import { AxiosError, AxiosHeaders } from 'axios';
 import { describe, expect, test } from 'vitest';
-import { describeApiError, isStorageUnavailableError, readErrorDetail } from '../api-error';
+import { describeApiError, describeApiErrorLines, isStorageUnavailableError, readErrorDetail } from '../api-error';
 
 function axiosError(status: number | null, data?: unknown): AxiosError {
   const config = { headers: new AxiosHeaders() };
@@ -120,6 +120,25 @@ describe('describeApiError', () => {
     expect(describeApiError(axiosError(502, { detail: storageDetail([{ targetId: 'x', role: '', reason: 'OTHER' }]) }))).toContain(
       'A storage returned an error.',
     );
+  });
+});
+
+describe('describeApiErrorLines', () => {
+  test('gives one sentence per line, and joins into describeApiError', () => {
+    const error = axiosError(502, {
+      detail: storageDetail([{ targetId: 'm', role: 'MASTER', reason: 'ACCESS_DENIED' }, slave]),
+    });
+    expect(describeApiErrorLines(error)).toEqual([
+      'Access to the main storage was denied. Check its credentials in the drive settings.',
+      'A secondary storage is not reachable or not responding.',
+      'Nothing was saved.',
+    ]);
+    expect(describeApiError(error)).toBe(describeApiErrorLines(error).join(' '));
+  });
+
+  test('a single line for plain errors', () => {
+    expect(describeApiErrorLines(axiosError(null))).toHaveLength(1);
+    expect(describeApiErrorLines(new Error('x'), 'Upload failed.')).toEqual(['Upload failed.']);
   });
 });
 

@@ -1,5 +1,5 @@
 import { cn, getExtension, truncate } from "@/lib/utils";
-import { File } from "lucide-react";
+import { File, TriangleAlert } from "lucide-react";
 import { Progress } from "../ui/progress";
 import { UploadQueueItem } from "@/types/types";
 import { useMediaBreakpoint } from "@/hooks/use-media-breakpoint";
@@ -110,8 +110,15 @@ export function FileProgressItem({ uploadQueueItem }: FileProgressItemProps) {
                     </tr>
                     {uploadQueueItem.status === "ERROR" && uploadQueueItem.errorMessage &&
                         <tr>
-                            <td colSpan={4} className="pr-2 pt-1 font-noto text-[12px] leading-snug text-[#EB5757]" title={uploadQueueItem.errorMessage}>
-                                <span className="line-clamp-3">{uploadQueueItem.errorMessage}</span>
+                            <td colSpan={4} className="pt-2 pr-1">
+                                <div
+                                    role="alert"
+                                    title={uploadQueueItem.errorMessage}
+                                    className="flex items-start gap-2 rounded-md border border-[#EB5757]/30 bg-[#EB5757]/10 px-2.5 py-2 font-noto text-[13px] leading-snug text-[#B42318]"
+                                >
+                                    <TriangleAlert size={15} className="mt-[1px] shrink-0" />
+                                    <span className="whitespace-pre-line">{uploadQueueItem.errorMessage}</span>
+                                </div>
                             </td>
                         </tr>
                     }

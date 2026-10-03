@@ -116,6 +116,11 @@ function describeGroup(group: FailureGroup): string {
  * anything else falls back to the server's message, or to `fallback`.
  */
 export function describeApiError(error: unknown, fallback = "The operation failed."): string {
+  return describeApiErrorLines(error, fallback).join(" ");
+}
+
+/** The same explanation as {@link describeApiError}, one sentence per line (for display). */
+export function describeApiErrorLines(error: unknown, fallback = "The operation failed."): string[] {
   const detail = readErrorDetail(error);
 
   const storage = asStorageTargetsUnavailable(detail);
@@ -127,13 +132,13 @@ export function describeApiError(error: unknown, fallback = "The operation faile
         ? "Nothing was saved."
         : "Part of the data may have been left on the storages that were available."
     );
-    return sentences.join(" ");
+    return sentences;
   }
 
-  if (typeof detail === "string" && detail.trim()) return detail;
+  if (typeof detail === "string" && detail.trim()) return [detail];
 
   if (error instanceof AxiosError && !error.response) {
-    return "Cannot reach the server. Check your connection and try again.";
+    return ["Cannot reach the server. Check your connection and try again."];
   }
-  return fallback;
+  return [fallback];
 }

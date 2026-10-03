@@ -1,11 +1,11 @@
 import { useIsAllTransferFinished, useTotalTransferProgress } from "@/hooks/use-upload-progress";
 import { cn } from "@/lib/utils";
 
-export function FileProgressCircle({ size = 19, strokeWidth = 3, progressColor = "#00755E", emptyColor = "transparent" }: { size?: number, strokeWidth?: number, progressColor?: string, emptyColor?: string }) {
+export function FileProgressCircle({ size = 19, strokeWidth = 3, progressColor = "#00755E", emptyColor = "transparent", className }: { size?: number, strokeWidth?: number, progressColor?: string, emptyColor?: string, className?: string }) {
     const getTotalProgress = useTotalTransferProgress();
     const allFinished = () => useIsAllTransferFinished();
     return (
-        <div className="rounded-full text-primary-foreground flex items-center justify-center">
+        <div className={cn("rounded-full text-primary-foreground flex items-center justify-center", className)}>
             <span className="text-[10px]">{getTotalProgress()}%</span>
             <svg style={{ width: (size+strokeWidth)*2, height: (size+strokeWidth)*2 }} className={cn("absolute", {
                 "animate-spin": !allFinished()

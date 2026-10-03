@@ -1,4 +1,4 @@
-import { CloudUpload, X } from "lucide-react";
+import { CloudUpload, TriangleAlert, X } from "lucide-react";
 import { FileProgressCardTitle } from "./file-progress-card-title";
 import { FileProgressItem } from "./file-progress-item";
 import { useFilesStore } from "@/stores/files-store";
@@ -27,8 +27,10 @@ export function FileProgressCard() {
             <DrawerHeader className="p-0 m-0">
                 <DrawerTitle className="p-0 m-0">
                     <FileProgressCardTitle progress={allFinished && errorCount > 0 ? 100 : getTotalProgress()} error={errorCount > 0}>
-                        <div className="inline-block pr-3">
-                            <FileProgressCircle size={17} strokeWidth={3} emptyColor="#e5e7eb" progressColor={errorCount > 0 ? "#ffffff" : undefined} />
+                        <div className="inline-block pr-3 align-middle">
+                            {allFinished && errorCount > 0
+                                ? <TriangleAlert size={22} className="relative -top-px" />
+                                : <FileProgressCircle size={17} strokeWidth={3} emptyColor={errorCount > 0 ? "rgba(127,29,29,0.15)" : "#e5e7eb"} progressColor={errorCount > 0 ? "#7f1d1d" : undefined} />}
                         </div>
                         {allFinished && errorCount > 0
                             ? `Upload failed: ${errorCount} of ${batchSize} ${batchSize > 1 ? "files" : "file"}`
