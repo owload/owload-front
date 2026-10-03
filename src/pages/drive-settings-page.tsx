@@ -4,6 +4,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { TargetConfig, TargetPicker, buildTargetInput, emptyTarget, findDuplicateWithExisting, isTargetReady } from "@/components/storage/target-picker";
 import { DriveInfo, DriveStorageTarget, RestDriveBackend, S3Preset } from "@/engine";
 import { useEffect, useState } from "react";
+import { DebouncedSkeleton } from "@/components/ui/debounced-skeleton";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useNavigate, useParams } from "react-router-dom";
 import { useUserInfo } from "@/auth-context-provider";
 import { useFilesStore } from "@/stores/files-store";
@@ -61,6 +63,7 @@ export function DriveSettingsPage() {
   const [health, setHealth] = useState<Record<string, HealthResult>>({});
   const [allPresets, setAllPresets] = useState<S3Preset[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
 
   const [deleteTarget, setDeleteTarget] = useState<DriveStorageTarget | null>(null);
@@ -91,6 +94,8 @@ export function DriveSettingsPage() {
       testAll(driveId, ts);
     } catch (e: any) {
       setLoadError(e?.response?.status ? `HTTP ${e.response.status}` : String(e?.message ?? e));
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -110,7 +115,7 @@ export function DriveSettingsPage() {
     });
   }
 
-  useEffect(() => { load(); }, [driveId]);
+  useEffect(() => { setLoading(true); setTargets([]); load(); }, [driveId]);
 
   async function handleMakeMaster(targetId: string) {
     if (!driveId || busy) return;
@@ -189,6 +194,24 @@ export function DriveSettingsPage() {
     }
   }
 
+  const targetsSkeleton = (
+    <div className="space-y-3">
+      {[0, 1].map(i => (
+        <div key={i} className="border rounded p-4 space-y-3">
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-5 w-16" />
+            <Skeleton className="h-5 w-10" />
+            <Skeleton className="h-5 w-48" />
+          </div>
+          <div className="flex gap-2">
+            <Skeleton className="h-8 w-28" />
+            <Skeleton className="h-8 w-16" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+
   return (
     <div className="absolute top-14 bottom-0 inset-x-0 pl-10 pt-8 overflow-y-auto">
       <h1 className="font-montserrat text-3xl font-bold">Drive Settings</h1>
@@ -199,78 +222,86 @@ export function DriveSettingsPage() {
 
           {loadError && <p className="text-sm text-red-500">Failed to load targets: {loadError}</p>}
 
-          {targets.length === 0 && !loadError && (
-            <p className="text-sm text-muted-foreground">No targets found.</p>
-          )}
+          <DebouncedSkeleton
+            contentInitialized={!loading}
+            skeletonComponent={targetsSkeleton}
+            initializedComponent={
+              <>
+                {targets.length === 0 && !loadError && (
+                  <p className="text-sm text-muted-foreground">No targets found.</p>
+                )}
 
-          <div className="space-y-3">
-            {targets.map(t => {
-              const disabledReason = makeMasterDisabledReason(t);
-              return (
-                <div key={t.id} className="border rounded p-4 space-y-2">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-xs font-bold px-1.5 py-0.5 rounded bg-gray-100 text-gray-600">{t.role}</span>
-                    {!t.isCustom && tierBadge(t.tier)}
-                    {statusBadge(t)}
-                    <span className="text-sm font-medium">{targetLabel(t)}</span>
-                    {healthBadge(health[t.id])}
-                  </div>
-                  <div className="flex gap-2 flex-wrap">
-                    <span title={disabledReason ?? undefined}>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        disabled={!!disabledReason || busy}
-                        onClick={() => handleMakeMaster(t.id)}
-                      >
-                        Make master
-                      </Button>
-                    </span>
-                    {t.role === 'SLAVE' && (
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        disabled={busy}
-                        onClick={() => { setDeleteTargetError(null); setDeleteTarget(t); }}
-                      >
-                        Delete
-                      </Button>
-                    )}
-                  </div>
-                  {disabledReason && t.role !== 'MASTER' && (
-                    <p className="text-xs text-muted-foreground">{disabledReason}</p>
-                  )}
+                <div className="space-y-3">
+                  {targets.map(t => {
+                    const disabledReason = makeMasterDisabledReason(t);
+                    return (
+                      <div key={t.id} className="border rounded p-4 space-y-2">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-xs font-bold px-1.5 py-0.5 rounded bg-gray-100 text-gray-600">{t.role}</span>
+                          {!t.isCustom && tierBadge(t.tier)}
+                          {statusBadge(t)}
+                          <span className="text-sm font-medium">{targetLabel(t)}</span>
+                          {healthBadge(health[t.id])}
+                        </div>
+                        <div className="flex gap-2 flex-wrap">
+                          <span title={disabledReason ?? undefined}>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              disabled={!!disabledReason || busy}
+                              onClick={() => handleMakeMaster(t.id)}
+                            >
+                              Make master
+                            </Button>
+                          </span>
+                          {t.role === 'SLAVE' && (
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              disabled={busy}
+                              onClick={() => { setDeleteTargetError(null); setDeleteTarget(t); }}
+                            >
+                              Delete
+                            </Button>
+                          )}
+                        </div>
+                        {disabledReason && t.role !== 'MASTER' && (
+                          <p className="text-xs text-muted-foreground">{disabledReason}</p>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
-              );
-            })}
-          </div>
 
-          {canAddSlave && !showAddSlave && (
-            <Button variant="outline" size="sm" onClick={() => {
-              setNewSlave(emptyTarget(firstFreePresetId));
-              setShowAddSlave(true);
-            }}>
-              + Add slave storage
-            </Button>
-          )}
+                {canAddSlave && !showAddSlave && (
+                  <Button variant="outline" size="sm" onClick={() => {
+                    setNewSlave(emptyTarget(firstFreePresetId));
+                    setShowAddSlave(true);
+                  }}>
+                    + Add slave storage
+                  </Button>
+                )}
 
-          {showAddSlave && (
-            <div className="border rounded p-4 space-y-4">
-              <TargetPicker label="New slave" target={newSlave} hotOnly={false} allPresets={allPresets} excludePresetIds={targets.filter(t => t.presetId).map(t => t.presetId!)} onChange={setNewSlave} />
-              {!isTargetReady(newSlave) && newSlave.mode === 'custom' && (
-                <p className="text-xs text-muted-foreground">Test the connection before adding</p>
-              )}
-              {isDuplicateSlave && (
-                <p className="text-xs text-red-500">This drive already has a storage target pointing at the same location</p>
-              )}
-              <div className="flex gap-2">
-                <Button size="sm" onClick={handleAddSlave} disabled={busy || !isTargetReady(newSlave) || isDuplicateSlave}>
-                  {busy ? 'Adding…' : 'Add'}
-                </Button>
-                <Button size="sm" variant="outline" onClick={() => setShowAddSlave(false)}>Cancel</Button>
-              </div>
-            </div>
-          )}
+                {showAddSlave && (
+                  <div className="border rounded p-4 space-y-4">
+                    <TargetPicker label="New slave" target={newSlave} hotOnly={false} allPresets={allPresets} excludePresetIds={targets.filter(t => t.presetId).map(t => t.presetId!)} onChange={setNewSlave} />
+                    {!isTargetReady(newSlave) && newSlave.mode === 'custom' && (
+                      <p className="text-xs text-muted-foreground">Test the connection before adding</p>
+                    )}
+                    {isDuplicateSlave && (
+                      <p className="text-xs text-red-500">This drive already has a storage target pointing at the same location</p>
+                    )}
+                    <div className="flex gap-2">
+                      <Button size="sm" onClick={handleAddSlave} disabled={busy || !isTargetReady(newSlave) || isDuplicateSlave}>
+                        {busy ? 'Adding…' : 'Add'}
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => setShowAddSlave(false)}>Cancel</Button>
+                    </div>
+                  </div>
+                )}
+              </>
+            }
+          />
         </section>
 
         <section className="space-y-3 border border-destructive/30 rounded p-4">
@@ -278,8 +309,8 @@ export function DriveSettingsPage() {
           <p className="text-sm text-muted-foreground">
             Permanently delete this drive. This cannot be undone.
           </p>
-          <span title={isOwner ? undefined : 'Only the drive owner can delete it'}>
-            <Button variant="destructive" size="sm" disabled={!isOwner || busy} onClick={openDeleteDrive}>
+          <span title={loading || isOwner ? undefined : 'Only the drive owner can delete it'}>
+            <Button variant="destructive" size="sm" disabled={loading || !isOwner || busy} onClick={openDeleteDrive}>
               Delete drive
             </Button>
           </span>
