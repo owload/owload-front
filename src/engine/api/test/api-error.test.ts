@@ -17,29 +17,56 @@ function storageDetail(targets: object[], rolledBack = true) {
   };
 }
 
-const slave = { targetId: 't1', role: 'SLAVE', label: 'Hot EU', reason: 'UNREACHABLE' };
+const slave = { targetId: 't1', role: 'SLAVE', reason: 'UNREACHABLE' };
+const master = { targetId: 'm1', role: 'MASTER', reason: 'UNREACHABLE' };
 
 describe('describeApiError', () => {
   test.each([
-    ['UNREACHABLE', 'Storage "Hot EU" (secondary) is not reachable or not responding.'],
-    ['ACCESS_DENIED', 'Access to storage "Hot EU" (secondary) was denied. Check its credentials in the drive settings.'],
-    ['BUCKET_NOT_FOUND', 'The bucket of storage "Hot EU" (secondary) was not found. Check its settings.'],
-    ['OTHER', 'Storage "Hot EU" (secondary) returned an error.'],
-  ])('names the storage and explains reason %s', (reason, sentence) => {
-    const error = axiosError(502, { detail: storageDetail([{ ...slave, reason }]) });
+    ['MASTER', 'UNREACHABLE', 'The main storage is not reachable or not responding.'],
+    ['MASTER', 'ACCESS_DENIED', 'Access to the main storage was denied. Check its credentials in the drive settings.'],
+    ['MASTER', 'BUCKET_NOT_FOUND', 'The main storage could not be found. Check its settings.'],
+    ['MASTER', 'OTHER', 'The main storage returned an error.'],
+    ['SLAVE', 'UNREACHABLE', 'A secondary storage is not reachable or not responding.'],
+    ['SLAVE', 'ACCESS_DENIED', 'Access to a secondary storage was denied. Check its credentials in the drive settings.'],
+    ['SLAVE', 'BUCKET_NOT_FOUND', 'A secondary storage could not be found. Check its settings.'],
+    ['SLAVE', 'OTHER', 'A secondary storage returned an error.'],
+  ])('says whether the %s storage is the problem, reason %s', (role, reason, sentence) => {
+    const error = axiosError(502, { detail: storageDetail([{ targetId: 'x', role, reason }]) });
     expect(describeApiError(error)).toBe(`${sentence} Nothing was saved.`);
   });
 
-  test('lists every failed storage and uses the user-facing role words', () => {
+  test('reports the main and a secondary storage separately, main first', () => {
+    const error = axiosError(502, {
+      detail: storageDetail([slave, { targetId: 'm', role: 'MASTER', reason: 'ACCESS_DENIED' }]),
+    });
+    expect(describeApiError(error)).toBe(
+      'Access to the main storage was denied. Check its credentials in the drive settings. ' +
+      'A secondary storage is not reachable or not responding. Nothing was saved.',
+    );
+  });
+
+  test('merges several secondary storages that failed the same way', () => {
+    const error = axiosError(502, { detail: storageDetail([slave, { ...slave, targetId: 't2' }]) });
+    expect(describeApiError(error)).toBe('2 secondary storages are not reachable or not responding. Nothing was saved.');
+    const denied = axiosError(502, {
+      detail: storageDetail([
+        { targetId: 'a', role: 'SLAVE', reason: 'ACCESS_DENIED' },
+        { targetId: 'b', role: 'SLAVE', reason: 'ACCESS_DENIED' },
+      ]),
+    });
+    expect(describeApiError(denied)).toContain('Access to 2 secondary storages was denied. Check their credentials');
+  });
+
+  test('never contains a storage name or any parameter, even if the server sent one', () => {
     const error = axiosError(502, {
       detail: storageDetail([
-        { targetId: 'm', role: 'MASTER', label: 'Archive', reason: 'ACCESS_DENIED' },
-        slave,
+        { ...slave, label: 'Hot EU', endpoint: 'https://s3.example.com', bucket: 'my-bucket', accessKey: 'AK123' },
       ]),
     });
     const text = describeApiError(error);
-    expect(text).toContain('Access to storage "Archive" (main) was denied.');
-    expect(text).toContain('Storage "Hot EU" (secondary) is not reachable');
+    for (const secret of ['Hot EU', 's3.example.com', 'my-bucket', 'AK123', 't1']) {
+      expect(text).not.toContain(secret);
+    }
     expect(text).not.toMatch(/master|slave/i);
   });
 
@@ -51,10 +78,10 @@ describe('describeApiError', () => {
   });
 
   test('reads an error body delivered as an ArrayBuffer (data-block uploads)', () => {
-    const bytes = new TextEncoder().encode(JSON.stringify({ detail: storageDetail([slave]) }));
+    const bytes = new TextEncoder().encode(JSON.stringify({ detail: storageDetail([master]) }));
     const error = axiosError(502, bytes.buffer);
     expect(isStorageUnavailableError(error)).toBe(true);
-    expect(describeApiError(error)).toContain('Hot EU');
+    expect(describeApiError(error)).toContain('The main storage');
   });
 
   test('reads an error body delivered as a JSON string', () => {
@@ -86,9 +113,13 @@ describe('describeApiError', () => {
     expect(describeApiError(undefined)).toBe('The operation failed.');
   });
 
-  test('tolerates a target without a label', () => {
-    const error = axiosError(502, { detail: storageDetail([{ targetId: 't', role: 'SLAVE', reason: 'UNREACHABLE' }]) });
-    expect(describeApiError(error)).toContain('Storage "Storage" (secondary)');
+  test('copes with an empty or unknown-role target list', () => {
+    expect(describeApiError(axiosError(502, { detail: storageDetail([]) }))).toBe(
+      'A storage of this drive is not available. Nothing was saved.',
+    );
+    expect(describeApiError(axiosError(502, { detail: storageDetail([{ targetId: 'x', role: '', reason: 'OTHER' }]) }))).toContain(
+      'A storage returned an error.',
+    );
   });
 });
 

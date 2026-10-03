@@ -4,7 +4,7 @@ import { FileProgressItem } from "./file-progress-item";
 import { useFilesStore } from "@/stores/files-store";
 import { DrawerHeader, DrawerTitle, DrawerTrigger } from "../ui/drawer";
 import { FileProgressCircle } from "./file-progress-circle";
-import { useIsAllTransferFinished, useTotalTransferProgress } from "@/hooks/use-upload-progress";
+import { filterLastProgressThresholdItems, useIsAllTransferFinished, useTotalTransferProgress, useUploadErrorCount } from "@/hooks/use-upload-progress";
 import { useDeactivateMobileSelectMode } from "@/hooks/use-mobile-select-mode";
 import { useUploadFile } from "@/hooks/use-upload-file";
 
@@ -12,6 +12,8 @@ export function FileProgressCard() {
     const uploadQueue = useFilesStore((state) => state.uploadQueue);
     const getTotalProgress = useTotalTransferProgress();
     const allFinished = useIsAllTransferFinished();
+    const errorCount = useUploadErrorCount();
+    const batchSize = filterLastProgressThresholdItems(uploadQueue).length;
     const deactivateMobileSelectMode = useDeactivateMobileSelectMode();
     const uploadFile = useUploadFile();
 
@@ -24,11 +26,13 @@ export function FileProgressCard() {
         <div className="w-full sm:w-130 bg-white rounded-t-md h-full">
             <DrawerHeader className="p-0 m-0">
                 <DrawerTitle className="p-0 m-0">
-                    <FileProgressCardTitle progress={getTotalProgress()}>
+                    <FileProgressCardTitle progress={allFinished && errorCount > 0 ? 100 : getTotalProgress()} error={errorCount > 0}>
                         <div className="inline-block pr-3">
-                            <FileProgressCircle size={17} strokeWidth={3} emptyColor="#e5e7eb" />
+                            <FileProgressCircle size={17} strokeWidth={3} emptyColor="#e5e7eb" progressColor={errorCount > 0 ? "#ffffff" : undefined} />
                         </div>
-                        {allFinished ? "Uploaded" : "Uploading"} {uploadQueue.length} {uploadQueue.length > 1 ? "files" : "file"}{allFinished ? "" : "..."}
+                        {allFinished && errorCount > 0
+                            ? `Upload failed: ${errorCount} of ${batchSize} ${batchSize > 1 ? "files" : "file"}`
+                            : `${allFinished ? "Uploaded" : "Uploading"} ${uploadQueue.length} ${uploadQueue.length > 1 ? "files" : "file"}${allFinished ? "" : "..."}`}
                     </FileProgressCardTitle>
                 </DrawerTitle>
             </DrawerHeader>

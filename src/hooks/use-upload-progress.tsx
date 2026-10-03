@@ -47,3 +47,12 @@ export function useIsAllTransferFinished() {
         return previousValue && currentItem.status !== "QUEUED" && currentItem.status !== "PROGRESS";
     }, true);
 }
+
+// Number of failed uploads in the current batch (the same grouping the progress
+// uses): a new batch of uploads starts with a clean indicator, while the failed
+// items stay visible in the upload card itself.
+export function useUploadErrorCount() {
+    const uploadQueue = useFilesStore((state) => state.uploadQueue);
+    return filterLastProgressThresholdItems(uploadQueue).filter(item => item.status === "ERROR").length;
+}
+

@@ -10,10 +10,10 @@ export const STORAGE_TARGETS_UNAVAILABLE = "STORAGE_TARGETS_UNAVAILABLE";
 
 export type StorageFailureReason = "UNREACHABLE" | "ACCESS_DENIED" | "BUCKET_NOT_FOUND" | "OTHER";
 
+/** One failed storage. Deliberately no name and no connection parameter: only its role and why it failed. */
 export interface FailedStorageTarget {
   targetId: string;
-  role: string;
-  label: string;
+  role: string; // "MASTER" | "SLAVE"
   reason: StorageFailureReason | string;
 }
 
@@ -65,29 +65,54 @@ export function isStorageUnavailableError(error: unknown): boolean {
 }
 
 // The backend says MASTER/SLAVE; users see main/secondary (decisions/0015).
-function roleWord(role: string): string {
-  if (role === "MASTER") return "main";
-  if (role === "SLAVE") return "secondary";
-  return role.toLowerCase();
+
+interface FailureGroup {
+  role: string;
+  reason: string;
+  count: number;
 }
 
-function describeFailedTarget(target: FailedStorageTarget): string {
-  const name = `"${target.label || "Storage"}"${target.role ? ` (${roleWord(target.role)})` : ""}`;
-  switch (target.reason) {
+// The main storage first, then the secondary ones; equal (role, reason) pairs are merged.
+function groupFailures(targets: FailedStorageTarget[]): FailureGroup[] {
+  const groups: FailureGroup[] = [];
+  for (const t of targets) {
+    const existing = groups.find(g => g.role === t.role && g.reason === t.reason);
+    if (existing) existing.count++;
+    else groups.push({ role: t.role, reason: t.reason, count: 1 });
+  }
+  const rank = (role: string) => (role === "MASTER" ? 0 : role === "SLAVE" ? 1 : 2);
+  return groups.sort((a, b) => rank(a.role) - rank(b.role));
+}
+
+function nounPhrase(group: FailureGroup): string {
+  if (group.role === "MASTER") return "the main storage";
+  const kind = group.role === "SLAVE" ? "secondary storage" : "storage";
+  if (group.count === 1) return `a ${kind}`;
+  return `${group.count} ${kind.replace("storage", "storages")}`;
+}
+
+const capitalize = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
+
+function describeGroup(group: FailureGroup): string {
+  const subject = nounPhrase(group);
+  const plural = group.count > 1;
+  const their = plural ? "their" : "its";
+  switch (group.reason) {
     case "UNREACHABLE":
-      return `Storage ${name} is not reachable or not responding.`;
+      return `${capitalize(subject)} ${plural ? "are" : "is"} not reachable or not responding.`;
     case "ACCESS_DENIED":
-      return `Access to storage ${name} was denied. Check its credentials in the drive settings.`;
+      return `Access to ${subject} was denied. Check ${their} credentials in the drive settings.`;
     case "BUCKET_NOT_FOUND":
-      return `The bucket of storage ${name} was not found. Check its settings.`;
+      return `${capitalize(subject)} could not be found. Check ${their} settings.`;
     default:
-      return `Storage ${name} returned an error.`;
+      return `${capitalize(subject)} ${plural ? "returned errors" : "returned an error"}.`;
   }
 }
 
 /**
  * A short, readable explanation of why an API call failed. For a write that a
- * storage of the drive refused, names every failed storage and the reason; for
+ * storage of the drive refused, says whether the main and/or secondary storages
+ * are the problem and why — without naming or describing any storage; for
  * anything else falls back to the server's message, or to `fallback`.
  */
 export function describeApiError(error: unknown, fallback = "The operation failed."): string {
@@ -95,7 +120,7 @@ export function describeApiError(error: unknown, fallback = "The operation faile
 
   const storage = asStorageTargetsUnavailable(detail);
   if (storage) {
-    const sentences = storage.targets.map(describeFailedTarget);
+    const sentences = groupFailures(storage.targets).map(describeGroup);
     if (sentences.length === 0) sentences.push("A storage of this drive is not available.");
     sentences.push(
       storage.rolledBack
