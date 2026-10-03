@@ -1,5 +1,6 @@
 import { globalOptions } from "@/global-options";
 import axios, { AxiosError, AxiosResponse } from "axios";
+import { isStorageUnavailableError } from "./api-error";
 
 if (import.meta.env.MODE === "test" && import.meta.env.TEST_API_MODE === "REST") {
     axios.defaults.baseURL = import.meta.env.MAIN_API_URL;
@@ -30,6 +31,12 @@ export async function patchApiCall<T, D>(url: string, data?: D, signal?: AbortSi
 
 const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
 
+// A 5xx is normally retried (the data-block upload retries up to 1000 times to
+// ride out flaky connections). But when the server answers that one of the drive's
+// storages is down, a short retry covers a blip and a persistent outage must be
+// shown to the user instead of silently retrying for minutes.
+const STORAGE_UNAVAILABLE_MAX_ATTEMPTS = 3;
+
 function waitForOnline() {
     return new Promise(resolve => {
         if (navigator.onLine) return resolve(undefined);
@@ -41,6 +48,7 @@ async function apiCall<T, D>(url: string, method: "GET" | "POST" | "DELETE" | "P
     let res: AxiosResponse<T>;
     let attempt = 0;
     let lastError: unknown;
+    let storageUnavailableAttempts = 0;
     while (attempt <= retryCount) {
         try {
             res = await makeProperAxiosApiCall<T, D>(url, method, responseType, timeout, data, signal);
@@ -48,6 +56,7 @@ async function apiCall<T, D>(url: string, method: "GET" | "POST" | "DELETE" | "P
         } catch (e) {
             lastError = e;
             if (e instanceof AxiosError && !isRetryableError(e)) { throw e; }
+            if (isStorageUnavailableError(e) && ++storageUnavailableAttempts >= STORAGE_UNAVAILABLE_MAX_ATTEMPTS) { throw e; }
             attempt++;
             if (typeof window !== "undefined" && !navigator.onLine) {
                 await waitForOnline();

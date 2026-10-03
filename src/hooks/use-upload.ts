@@ -5,6 +5,7 @@ import { UploadQueueItem, UploadQueueItemStatus } from "@/types/types";
 import { DialogClosedError } from "@/types/errors";
 import { generateImagePreviews, generateVideoPreviews } from "@/lib/preview-gen";
 import { OperationCancellationReason } from "@/engine/service/drive-client";
+import { describeApiError } from "@/engine/api/api-error";
 
 export function useEnqueueFileUpload() {
   const uploadQueue = useFilesStore((state) => state.uploadQueue);
@@ -76,7 +77,8 @@ export function useEnqueueFileUpload() {
           setUploadItemStatus(item.uploadId, "CANCELLED");
           await rm([item.file.name], path);
         } else {
-          setUploadItemStatus(item.uploadId, "ERROR");
+          const errorMessage = describeApiError(error, "Upload failed.");
+          mutateUploadItem(item.uploadId, (uploadItem) => { uploadItem.status = "ERROR"; uploadItem.errorMessage = errorMessage; return uploadItem; });
         }
       }
     }, uploadQueuePromise);

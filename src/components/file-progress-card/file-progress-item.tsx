@@ -61,7 +61,7 @@ export function FileProgressItem({ uploadQueueItem }: FileProgressItemProps) {
     }
 
     return (
-        <div className="h-25 border-b-1 p-2 py-3">
+        <div className="min-h-25 border-b-1 p-2 py-3">
             <table className="w-full">
                 <tbody>
 
@@ -108,6 +108,13 @@ export function FileProgressItem({ uploadQueueItem }: FileProgressItemProps) {
                         <td className="text-sm text-gray-600">upload</td>
                         <td className="font-noto text-sm font-semibold text-right">{transferPercent}%</td>
                     </tr>
+                    {uploadQueueItem.status === "ERROR" && uploadQueueItem.errorMessage &&
+                        <tr>
+                            <td colSpan={4} className="pr-2 pt-1 font-noto text-[12px] leading-snug text-[#EB5757]" title={uploadQueueItem.errorMessage}>
+                                <span className="line-clamp-3">{uploadQueueItem.errorMessage}</span>
+                            </td>
+                        </tr>
+                    }
                 </tbody>
             </table>
         </div>

@@ -25,6 +25,7 @@ export interface UploadQueueItem {
   path: string,
   progressInfo: {[key: string]: ProgressInfo}, // key is 'MAIN' for main file, 'PREVIEW_128' for 128px preview, etc.
   status: UploadQueueItemStatus,
+  errorMessage?: string, // why the upload failed, set together with status "ERROR"
   abortController: AbortController,
   previews?: {[key: number]: Blob},
   thumbnailUrl?: string,
