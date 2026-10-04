@@ -4,6 +4,9 @@ import { OperationCancelledError, ProgressCallback, ProgressInfo } from "@/engin
 import { UploadQueueItem, UploadQueueItemStatus } from "@/types/types";
 import { DialogClosedError } from "@/types/errors";
 import { generateImagePreviews, generateVideoPreviews } from "@/lib/preview-gen";
+import { registry } from "@/extensions/registry";
+import { requestPreview } from "@/extensions/preview";
+import { maxFileBytes } from "@/components/editor-host/editor-host-messages";
 import { OperationCancellationReason } from "@/engine/service/drive-client";
 import { describeApiErrorLines } from "@/engine/api/api-error";
 
@@ -145,6 +148,12 @@ async function generateMediaPreviews(file: File) {
     return generateImagePreviews(file, previewSizes);
   } else if (playableVideoExtensions.includes(ext)) {
     return generateVideoPreviews(file, PREVIEW_SIZES.THUMBNAIL);
+  }
+  // A format that an editor extension can draw a preview of (owload-docs/decisions/0020).
+  const extension = registry.forFileName(file.name)?.extension;
+  if (extension?.preview && file.size > 0 && file.size <= maxFileBytes(extension)) {
+    const png = await requestPreview(extension, new Uint8Array(await file.arrayBuffer()), { size: PREVIEW_SIZES.THUMBNAIL });
+    if (png) return { [PREVIEW_SIZES.THUMBNAIL]: new Blob([new Uint8Array(png)], { type: 'image/png' }) };
   }
   return undefined;
 }

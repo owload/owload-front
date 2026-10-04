@@ -1,13 +1,14 @@
 import { Component, useEffect, useRef, useState, type ReactNode } from "react";
 import { X } from "lucide-react";
-import type { EditorComponent, EditorHandle } from "@owload/editor-sdk";
+import type { EditorComponent, EditorExtension, EditorHandle } from "@owload/editor-sdk";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useFilesStore } from "@/stores/files-store";
-import { useFilesStoreOps } from "@/hooks/use-files-store-ops";
+import { PREVIEW_SIZES, getPreviewFileName, useFilesStoreOps } from "@/hooks/use-files-store-ops";
 import { useSelectedFileObjects } from "@/hooks/use-selected-file-objects";
 import { DialogClosedError } from "@/types/errors";
 import { registry } from "@/extensions/registry";
+import { requestPreview } from "@/extensions/preview";
 import { lossyNote, tooLargeMessage, type LossyFindings } from "./editor-host-messages";
 
 /**
@@ -107,13 +108,27 @@ export function EditorHost() {
         setPhase((p) => (p.status === "ready" && p.data ? { ...p, data: null } : p));
     }, [phase.status]);
 
+    const uploadPreview = async (extension: EditorExtension, fileId: string, bytes: Uint8Array, path: string) => {
+        try {
+            const png = await requestPreview(extension, bytes);
+            if (!png) return;
+            const name = getPreviewFileName(fileId, PREVIEW_SIZES.THUMBNAIL);
+            await saveFile(new File([new Uint8Array(png)], name, { type: "image/png" }), path);
+        } catch {
+            // No thumbnail is not an error worth showing: the document itself is saved.
+        }
+    };
+
     const handleSave = async (bytes: Uint8Array) => {
         setSaving(true);
         try {
             const upload = new File([new Uint8Array(bytes)], name!);
-            const newFileId = await saveFile(upload, pwd()!);
+            const path = pwd()!;
+            const newFileId = await saveFile(upload, path);
             selectIds([newFileId]);
             setNoteDismissed(true);
+            // The new version has a new id, so it needs its own thumbnail. Best effort, in the background.
+            void uploadPreview(entry!.extension, newFileId, bytes, path);
         } catch (e) {
             if (e instanceof DialogClosedError) return;
             throw e; // the editor shows it and keeps the document dirty
