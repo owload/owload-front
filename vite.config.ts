@@ -29,5 +29,7 @@ export default defineConfig({
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
+    // One React for the host and @owload/xlsx-editor.
+    dedupe: ["react", "react-dom"],
   },
 })

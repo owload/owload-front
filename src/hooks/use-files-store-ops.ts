@@ -26,7 +26,8 @@ function getExtension(name: string) {
 export const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'tiff', 'svg'];
 export const playableVideoExtensions: string[] = ['mp4', 'mov'];
 export const textExtensions: string[] = ['txt'];
-export const openableExtensions = [...imageExtensions, ...playableVideoExtensions, ...textExtensions];
+export const spreadsheetExtensions: string[] = ['xlsx'];
+export const openableExtensions = [...imageExtensions, ...playableVideoExtensions, ...textExtensions, ...spreadsheetExtensions];
 
 export const SYSTEM_PREFIX = "$$$sy$s$stem!_";
 export const PATH_SYMBOL_REAPLACEMENT = "$"; // replace all / with this symbol in file names
@@ -74,6 +75,7 @@ export function useFilesStoreOps() {
 
     const setMediaPreviewOpen = useFilesStore((state) => state.setMediaPreviewOpen);
     const setTextEditorOpen = useFilesStore((state) => state.setTextEditorOpen);
+    const setSpreadsheetEditorOpen = useFilesStore((state) => state.setSpreadsheetEditorOpen);
     const navigateDir = useNavigateDir();
     const getNavigateDirUrl = useGetNavigateDirUrl();
     const requestPassword = useRequestPassword();
@@ -188,6 +190,8 @@ export function useFilesStoreOps() {
             selectIds([node.id]);
             if (textExtensions.includes(getExtension(node.name))) {
                 setTextEditorOpen(true);
+            } else if (spreadsheetExtensions.includes(getExtension(node.name))) {
+                setSpreadsheetEditorOpen(true);
             } else {
                 setMediaPreviewOpen(true);
             }
@@ -537,7 +541,7 @@ export function useFilesStoreOps() {
         }
         if (fileObject.type === FsObjectType.DIR) {
             navigateDir(fileObject.id);
-        } else if (imageExtensions.includes(fileObject.extension!) || playableVideoExtensions.includes(fileObject.extension!) || textExtensions.includes(fileObject.extension!)) {
+        } else if (imageExtensions.includes(fileObject.extension!) || playableVideoExtensions.includes(fileObject.extension!) || textExtensions.includes(fileObject.extension!) || spreadsheetExtensions.includes(fileObject.extension!)) {
             navigateDir(fileObject.id);
         } else {
             throw new Error("Operation declared supported, but not implemented");

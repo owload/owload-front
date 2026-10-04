@@ -2,7 +2,7 @@ import { PropsWithChildren } from "react";
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuShortcut, ContextMenuTrigger } from "../ui/context-menu";
 import { useFilesStoreOps } from "@/hooks/use-files-store-ops";
 import { useFilesStore } from "@/stores/files-store";
-import { useCreateFolderDialog, useCreateTextFileDialog } from "@/hooks/use-dialogs";
+import { useCreateFolderDialog, useCreateSpreadsheetDialog, useCreateTextFileDialog } from "@/hooks/use-dialogs";
 import { useActivateMobileSelectMode, useDeactivateMobileSelectMode } from "@/hooks/use-mobile-select-mode";
 import { useUploadFile } from "@/hooks/use-upload-file";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -12,6 +12,7 @@ export function FilesAreaContextMenu({ children }: PropsWithChildren) {
     const isMobile = useIsMobile();
     const openCreateFolderDialog = useCreateFolderDialog();
     const openCreateTextFileDialog = useCreateTextFileDialog();
+    const openCreateSpreadsheetDialog = useCreateSpreadsheetDialog();
     const { pwd, commitMoveOrCopy } = useFilesStoreOps();
     const filesToMoveOrCopy = useFilesStore((state) => state.filesToMoveOrCopy);
     const uploadFile = useUploadFile();
@@ -55,6 +56,9 @@ export function FilesAreaContextMenu({ children }: PropsWithChildren) {
                 </ContextMenuItem>
                 <ContextMenuItem inset onClick={openCreateTextFileDialog}>
                     New text file
+                </ContextMenuItem>
+                <ContextMenuItem inset onClick={openCreateSpreadsheetDialog}>
+                    New spreadsheet
                 </ContextMenuItem>
                 <ContextMenuItem inset onClick={handleUploadClick}>
                     Upload file

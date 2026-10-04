@@ -41,6 +41,8 @@ npm run tauri        # Tauri desktop dev (requires Rust)
 npx tsc --noEmit     # type-check only, no output
 ```
 
+`npm install` / `npm ci` builds `@owload/xlsx-editor` from its GitHub repository (pinned to an exact commit in `package.json`; see `../owload-docs/decisions/0018-xlsx-editing-via-external-package.md`), which needs Node ≥ 20 and access to GitHub. Never point it at a branch; bump the pin deliberately and review the package diff first.
+
 Run a single test file: `npm test -- src/engine/service/test/fs-state.test.ts`
 
 ## Environment / Runtime Config

@@ -28,6 +28,10 @@ export function useCreateTextFileDialog() {
   return useDialog<VoidDialogProps, void>("CREATE_TEXT_FILE");
 }
 
+export function useCreateSpreadsheetDialog() {
+  return useDialog<VoidDialogProps, void>("CREATE_SPREADSHEET");
+}
+
 export function useConfirmDelete(): (dialogProps: ConfirmDeleteDialogProps) => Promise<void> {
   return useDialog<ConfirmDeleteDialogProps, void>("CONFIRM_DELETE");
 }

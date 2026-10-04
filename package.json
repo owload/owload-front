@@ -14,6 +14,7 @@
     "tauri:build": "tauri build"
   },
   "dependencies": {
+    "@owload/xlsx-editor": "github:owload/xlsx-editor#3ede203152fa09ff89290c3cc56526a7ed890a5e",
     "@radix-ui/react-avatar": "^1.1.3",
     "@radix-ui/react-checkbox": "^1.3.2",
     "@radix-ui/react-context-menu": "^2.2.6",

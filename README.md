@@ -21,7 +21,7 @@ Plaintext data and symmetric keys never leave the client. A compromised server c
 
 ## Requirements
 
-- Node.js ≥ 18
+- Node.js ≥ 20 (the `@owload/xlsx-editor` dependency is built from GitHub during `npm install` and needs it)
 - npm ≥ 9
 - Rust ≥ 1.77.2 (for desktop build only)
 - Keycloak server configured as the identity provider
