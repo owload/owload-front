@@ -151,7 +151,7 @@ async function generateMediaPreviews(file: File) {
   }
   // A format that an editor extension can draw a preview of (owload-docs/decisions/0020).
   const extension = registry.forFileName(file.name)?.extension;
-  if (extension?.preview && file.size > 0 && file.size <= maxFileBytes(extension)) {
+  if (extension?.preview && file.size <= maxFileBytes(extension)) {
     const png = await requestPreview(extension, new Uint8Array(await file.arrayBuffer()), { size: PREVIEW_SIZES.THUMBNAIL });
     if (png) return { [PREVIEW_SIZES.THUMBNAIL]: new Blob([new Uint8Array(png)], { type: 'image/png' }) };
   }

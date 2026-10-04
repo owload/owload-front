@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import type { EditorExtension } from '@owload/editor-sdk';
-import { requestPreview } from '../preview';
+import { hasThumbnail, needsPreviewBackfill, requestPreview } from '../preview';
 
 // A 1x1 PNG (complete: signature, IHDR, IDAT, IEND).
 const PNG_1x1 = Uint8Array.from(atob('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGP4z8DwHwAFAAH/iZk9HQAAAABJRU5ErkJggg=='), (c) => c.charCodeAt(0));
@@ -26,9 +26,15 @@ describe('requestPreview', () => {
     expect(preview).toHaveBeenCalledWith(expect.any(Uint8Array), { size: 360 });
   });
 
-  test('has no preview for an extension without one, or for empty data', async () => {
+  test('has no preview for an extension without one', async () => {
     expect(await requestPreview(ext(), data)).toBeNull();
-    expect(await requestPreview(ext(async () => PNG_1x1), new Uint8Array())).toBeNull();
+  });
+
+  test('asks the extension about an empty file too: an empty page is its call', async () => {
+    const preview = vi.fn(async () => PNG_1x1);
+    expect(await requestPreview(ext(preview), new Uint8Array())).toBe(PNG_1x1);
+    expect(preview).toHaveBeenCalledOnce();
+    expect(await requestPreview(ext(async () => null), new Uint8Array())).toBeNull();
   });
 
   test('has no preview when the extension has nothing to show', async () => {
@@ -70,3 +76,35 @@ describe('requestPreview', () => {
     expect(logged).toContain('Error');
   });
 });
+
+describe('needsPreviewBackfill', () => {
+  const withPreview = ext(async () => PNG_1x1);
+  const thumb = '$$$sy$s$stem!_thumb_360_abc';
+  const file = { finished: true, byteLength: 100 };
+
+  test('is true for a complete document without a thumbnail, when the extension can draw one', () => {
+    expect(needsPreviewBackfill(withPreview, file, [{ name: 'a.doc' }], thumb)).toBe(true);
+  });
+
+  test('is false when the folder already has the thumbnail, finished or not', () => {
+    expect(needsPreviewBackfill(withPreview, file, [{ name: 'a.doc' }, { name: thumb }], thumb)).toBe(false);
+    expect(hasThumbnail([{ name: thumb }], thumb)).toBe(true);
+    expect(hasThumbnail([{ name: 'other' }], thumb)).toBe(false);
+  });
+
+  test('is true for an empty file too', () => {
+    expect(needsPreviewBackfill(withPreview, { finished: true, byteLength: 0 }, [], thumb)).toBe(true);
+  });
+
+  test('is false for an extension without a preview, an unfinished file, or one over the size limit', () => {
+    expect(needsPreviewBackfill(ext(), file, [], thumb)).toBe(false);
+    expect(needsPreviewBackfill(withPreview, { finished: false, byteLength: 100 }, [], thumb)).toBe(false);
+    expect(needsPreviewBackfill(ext(async () => PNG_1x1, { maxFileBytes: 50 }), file, [], thumb)).toBe(false);
+    expect(needsPreviewBackfill(withPreview, undefined, [], thumb)).toBe(false);
+  });
+
+  test('treats a file whose "finished" is not known as complete', () => {
+    expect(needsPreviewBackfill(withPreview, { byteLength: 100 }, [], thumb)).toBe(true);
+  });
+});
+

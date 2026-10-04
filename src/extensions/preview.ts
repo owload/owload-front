@@ -19,7 +19,8 @@ export async function requestPreview(
     data: Uint8Array,
     { size = THUMBNAIL_SIZE, timeoutMs = PREVIEW_TIMEOUT_MS, maxBytes = MAX_PREVIEW_BYTES }: PreviewLimits = {},
 ): Promise<Uint8Array | null> {
-    if (!extension.preview || data.byteLength === 0 || data.byteLength > maxFileBytes(extension)) return null;
+    // An empty file is passed on too: whether it has something to show (an empty page) is the extension's call.
+    if (!extension.preview || data.byteLength > maxFileBytes(extension)) return null;
     let timer: ReturnType<typeof setTimeout> | undefined;
     try {
         const timeout = new Promise<"timeout">((resolve) => { timer = setTimeout(() => resolve("timeout"), timeoutMs); });
@@ -44,3 +45,25 @@ export async function requestPreview(
         clearTimeout(timer);
     }
 }
+
+/** True if the folder already has the thumbnail file (finished or still uploading), so nothing is made twice. */
+export function hasThumbnail(files: { name: string }[], thumbnailName: string): boolean {
+    return files.some((f) => f.name === thumbnailName);
+}
+
+/**
+ * Whether opening a document should make the thumbnail it lacks (owload-docs/decisions/0023): the extension
+ * can draw one, the file is complete (empty is fine) and within the size limit, and the folder has no thumbnail for it
+ * (it was uploaded before previews existed, or the preview failed at the time).
+ */
+export function needsPreviewBackfill(
+    extension: EditorExtension,
+    file: { finished?: boolean; byteLength?: number } | undefined,
+    files: { name: string }[],
+    thumbnailName: string,
+): boolean {
+    if (!extension.preview || !file || file.finished === false) return false;
+    if ((file.byteLength ?? 0) > maxFileBytes(extension)) return false;
+    return !hasThumbnail(files, thumbnailName);
+}
+

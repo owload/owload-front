@@ -8,7 +8,7 @@ import { PREVIEW_SIZES, getPreviewFileName, useFilesStoreOps } from "@/hooks/use
 import { useSelectedFileObjects } from "@/hooks/use-selected-file-objects";
 import { DialogClosedError } from "@/types/errors";
 import { registry } from "@/extensions/registry";
-import { requestPreview } from "@/extensions/preview";
+import { needsPreviewBackfill, requestPreview } from "@/extensions/preview";
 import { tooLargeMessage } from "./editor-host-messages";
 
 /**
@@ -23,6 +23,8 @@ import { tooLargeMessage } from "./editor-host-messages";
  * A document that is being created (newEditorFile) is not in the drive yet: it is uploaded by the
  * first Save, so closing without saving leaves no empty file behind.
  */
+
+const backfillingIds = new Set<string>();
 
 type Phase =
     | { status: "loading" }
@@ -70,6 +72,8 @@ export function EditorHost() {
     const [saving, setSaving] = useState(false);
     const [confirmClose, setConfirmClose] = useState(false);
     const editorRef = useRef<EditorHandle>(null);
+    // The id of the document as it is now: a save gives it a new one.
+    const currentIdRef = useRef(file?.id);
 
     useEffect(() => {
         if (!entry || !name) return;
@@ -87,6 +91,11 @@ export function EditorHost() {
                 hasData ? getFileData(file!) : Promise.resolve(null),
                 entry.loadStyles?.(),
             ]);
+            // A document that lacks its thumbnail (uploaded before previews existed, or the preview failed
+            // then) gets it now, from the bytes that are already decrypted (decisions/0023).
+            if (file && needsPreviewBackfill(extension, file, useFilesStore.getState().fileObjects, getPreviewFileName(file.id, PREVIEW_SIZES.THUMBNAIL))) {
+                void backfillPreview(extension, file.id, bytes ?? new Uint8Array(0)); // an empty file has no bytes to read
+            }
             if (cancelled) return;
             setPhase({ status: "ready", Editor: module.default, data: bytes });
         })().catch((e) => {
@@ -102,12 +111,27 @@ export function EditorHost() {
         setPhase((p) => (p.status === "ready" && p.data ? { ...p, data: null } : p));
     }, [phase.status]);
 
+    // Files whose thumbnail is being made right now, so opening a document twice does not make two.
+    const backfilling = backfillingIds;
+    const backfillPreview = async (extension: EditorExtension, fileId: string, bytes: Uint8Array) => {
+        if (backfilling.has(fileId)) return;
+        backfilling.add(fileId);
+        try {
+            await uploadPreview(extension, fileId, bytes, pwd()!);
+        } finally {
+            backfilling.delete(fileId);
+        }
+    };
+
     const uploadPreview = async (extension: EditorExtension, fileId: string, bytes: Uint8Array, path: string) => {
         try {
             const png = await requestPreview(extension, bytes);
             if (!png) return;
             const name = getPreviewFileName(fileId, PREVIEW_SIZES.THUMBNAIL);
             await saveFile(new File([new Uint8Array(png)], name, { type: "image/png" }), path);
+            // Uploading refreshes the file list, which drops the selection; closing the editor goes back from
+            // the selected file, so while the editor is still open the document is selected again.
+            if (useFilesStore.getState().editorOpen && currentIdRef.current) selectIds([currentIdRef.current]);
         } catch {
             // No thumbnail is not an error worth showing: the document itself is saved.
         }
@@ -120,6 +144,7 @@ export function EditorHost() {
             const path = pwd()!;
             const newFileId = await saveFile(upload, path);
             selectIds([newFileId]);
+            currentIdRef.current = newFileId;
             // The new version has a new id, so it needs its own thumbnail. Best effort, in the background.
             void uploadPreview(entry!.extension, newFileId, bytes, path);
         } catch (e) {
