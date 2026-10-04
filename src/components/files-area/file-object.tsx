@@ -11,6 +11,7 @@ import { Checkbox } from "../ui/checkbox";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useIsMobileSelectModeOn } from "@/hooks/use-mobile-select-mode";
 import { ExtensionBadge } from "./extension-badge";
+import { registry } from "@/extensions/registry";
 
 interface FileObjectProps {
     fileObject: FileProperties
@@ -193,7 +194,11 @@ function FileObject({ fileObject, thumbnail, className, onPointerDown, onClick, 
                 {!thumbnail && <FileObjectIcon {...fileObject} />}
                 {thumbnail && (
                     <div>
-                        <img src={thumbnail} style={{ minWidth: `${size}px`, minHeight: `${size}px`, maxWidth: `${size*2}px`, maxHeight: `${size*2}px`}} className={"rounded-md overflow-hidden"} />
+                        {/* The preview of a document (drawn by its editor extension) fills the tile and starts at its top-left
+                            corner, where the editor puts the content; a photo keeps its centered, enlarged look. */}
+                        {registry.forFileName(fileObject.name)
+                            ? <img src={thumbnail} style={{ width: `${size}px`, height: `${size}px` }} className={"rounded-md overflow-hidden object-cover object-left-top"} />
+                            : <img src={thumbnail} style={{ minWidth: `${size}px`, minHeight: `${size}px`, maxWidth: `${size*2}px`, maxHeight: `${size*2}px`}} className={"rounded-md overflow-hidden"} />}
                         <div style={{ width: `${size}px`, height: `${size}px` }} className={cn("absolute left-0 top-0 rounded-xl",
                             {
                                 "hover:bg-primary/5": !fileObject.selected,
