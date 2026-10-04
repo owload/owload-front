@@ -2,7 +2,7 @@ import { getRandomNonce } from "@/engine/core/enc";
 import { uint8ArrayToBase64 } from "@/engine/core/stream-utils";
 import { UserId } from "../../user-backend";
 import { getTestUserId } from "./test-user-info";
-import { CustomTargetDeletionDecision, DriveBackend, DriveId, DriveInfo, DriveStorageTarget, Privilege, S3Preset, StorageTargetInput } from "../../drive-backend";
+import { CustomTargetDeletionDecision, CustomStorageConfig, DriveBackend, RestoreResult, RestoreScanResult, DriveId, DriveInfo, DriveStorageTarget, Privilege, S3Preset, StorageTargetInput } from "../../drive-backend";
 
 export class MockDriveBackend implements DriveBackend {
     private readonly drives = new Map<DriveId, DriveInfo>();
@@ -23,6 +23,8 @@ export class MockDriveBackend implements DriveBackend {
     async testCustomConfig(_config: import('../../drive-backend').CustomStorageConfig): Promise<{ ok: boolean; error?: string }> { return { ok: true }; }
     async testStorageTarget(_driveId: DriveId, _targetId: string): Promise<{ ok: boolean; error?: string }> { return { ok: true }; }
     async testPreset(_presetId: string): Promise<{ ok: boolean; error?: string }> { return { ok: true }; }
+    async scanRestorableDrives(_config: CustomStorageConfig): Promise<RestoreScanResult> { return { drives: [], truncated: false }; }
+    async restoreDrives(_config: CustomStorageConfig, _driveIds: DriveId[]): Promise<RestoreResult[]> { return []; }
 
     async createDrive(title: string, _storageTarget?: StorageTargetInput): Promise<DriveInfo> {
         const newDriveId = this.idSequence.toString();

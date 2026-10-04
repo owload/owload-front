@@ -60,6 +60,24 @@ export function asStorageTargetsUnavailable(detail: unknown): StorageTargetsUnav
   return null;
 }
 
+/**
+ * Body of a call made with a storage connection the user typed in (restoring
+ * drives) when that storage could not be read (HTTP 502). Carries a readable
+ * message and one of the fixed reasons, never the connection itself.
+ */
+export const STORAGE_CONNECTION_FAILED = "STORAGE_CONNECTION_FAILED";
+
+export function asStorageConnectionFailed(detail: unknown): { message: string; reason: StorageFailureReason | string } | null {
+  if (
+    detail && typeof detail === "object" &&
+    (detail as { code?: unknown }).code === STORAGE_CONNECTION_FAILED &&
+    typeof (detail as { message?: unknown }).message === "string"
+  ) {
+    return detail as { message: string; reason: string };
+  }
+  return null;
+}
+
 export function isStorageUnavailableError(error: unknown): boolean {
   return asStorageTargetsUnavailable(readErrorDetail(error)) !== null;
 }
@@ -134,6 +152,9 @@ export function describeApiErrorLines(error: unknown, fallback = "The operation 
     );
     return sentences;
   }
+
+  const connection = asStorageConnectionFailed(detail);
+  if (connection) return [connection.message];
 
   if (typeof detail === "string" && detail.trim()) return [detail];
 

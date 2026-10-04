@@ -149,3 +149,19 @@ describe('readErrorDetail / isStorageUnavailableError', () => {
     expect(isStorageUnavailableError(axiosError(502, { detail: 'Bad gateway' }))).toBe(false);
   });
 });
+
+describe('a storage that could not be read with the connection the user typed in', () => {
+  const detail = {
+    code: 'STORAGE_CONNECTION_FAILED',
+    message: 'The storage refused the access key and secret key.',
+    reason: 'ACCESS_DENIED',
+  };
+
+  test('shows the server message as is', () => {
+    expect(describeApiErrorLines(axiosError(502, { detail }), 'fallback')).toEqual([detail.message]);
+  });
+
+  test('ignores a body of that code without a message', () => {
+    expect(describeApiErrorLines(axiosError(502, { detail: { code: 'STORAGE_CONNECTION_FAILED' } }), 'fallback')).toEqual(['fallback']);
+  });
+});

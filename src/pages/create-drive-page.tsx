@@ -6,6 +6,8 @@ import { useFilesStore } from "@/stores/files-store";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Input } from "@/components/ui/input";
+import { RestoreDrivesDialog } from "@/components/storage/restore-drives-dialog";
+import { ArchiveRestore } from "lucide-react";
 
 export function CreateDrivePage() {
   const { initialize, setDriveDescription } = useFilesStoreOps();
@@ -22,6 +24,7 @@ export function CreateDrivePage() {
   const [master, setMaster] = useState<TargetConfig>(emptyTarget());
   const [slaves, setSlaves] = useState<TargetConfig[]>([]);
 
+  const [restoreOpen, setRestoreOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
 
@@ -112,7 +115,14 @@ export function CreateDrivePage() {
 
   return (
     <div className="absolute top-14 bottom-0 inset-x-0 pl-10 pt-8 overflow-y-auto">
-      <h1 className="font-montserrat text-3xl font-bold">Create new drive</h1>
+      <div className="flex items-center justify-between gap-4 max-w-lg pr-3">
+        <h1 className="font-montserrat text-3xl font-bold">Create new drive</h1>
+        {/* A rescue path for drives that already exist on a storage; secondary to creating one. */}
+        <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => setRestoreOpen(true)}>
+          <ArchiveRestore /> Restore from storage
+        </Button>
+      </div>
+      <RestoreDrivesDialog open={restoreOpen} onOpenChange={setRestoreOpen} onRestored={() => navigate('/')} />
       <main className="mt-5 max-w-lg space-y-6 pb-10">
 
         <section className="space-y-3">

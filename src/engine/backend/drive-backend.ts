@@ -60,6 +60,33 @@ export interface CustomTargetDeletionDecision {
   deleteData: boolean;
 }
 
+/** A drive found in a bucket the user connected, see POST /drives/restore/scan. */
+export type FoundDriveStatus = 'RESTORABLE' | 'ALREADY_EXISTS' | 'DAMAGED';
+
+export interface FoundDrive {
+  driveId: DriveId;
+  title: string | null;
+  createdTimestamp: number | null;
+  opsBytes: number | null;
+  status: FoundDriveStatus;
+  /** Why a DAMAGED drive cannot be restored: META_MISSING, META_INVALID, OPS_GAP, OPS_CORRUPT, OPS_TOO_LARGE. */
+  reason: string | null;
+}
+
+export interface RestoreScanResult {
+  drives: FoundDrive[];
+  /** The bucket holds more drives than one scan lists. */
+  truncated: boolean;
+}
+
+export type RestoreResultStatus = 'RESTORED' | 'ALREADY_EXISTS' | 'DAMAGED' | 'NOT_FOUND' | 'FAILED';
+
+export interface RestoreResult {
+  driveId: DriveId;
+  status: RestoreResultStatus;
+  reason: string | null;
+}
+
 export abstract class DriveBackend {
   abstract createDrive(title: string, storageTarget?: StorageTargetInput): Promise<DriveInfo>;
   abstract getDriveInfo(driveId: DriveId): Promise<DriveInfo>;
@@ -73,6 +100,8 @@ export abstract class DriveBackend {
   abstract testCustomConfig(config: CustomStorageConfig): Promise<{ ok: boolean; error?: string }>;
   abstract testStorageTarget(driveId: DriveId, targetId: string): Promise<{ ok: boolean; error?: string }>;
   abstract testPreset(presetId: string): Promise<{ ok: boolean; error?: string }>;
+  abstract scanRestorableDrives(config: CustomStorageConfig): Promise<RestoreScanResult>;
+  abstract restoreDrives(config: CustomStorageConfig, driveIds: DriveId[]): Promise<RestoreResult[]>;
 }
 
 export class RestDriveBackend implements DriveBackend {
@@ -124,5 +153,14 @@ export class RestDriveBackend implements DriveBackend {
 
   testPreset(presetId: string): Promise<{ ok: boolean; error?: string }> {
     return postApiCall(`/s3-presets/${presetId}/test-connection`);
+  }
+
+  scanRestorableDrives(config: CustomStorageConfig): Promise<RestoreScanResult> {
+    return postApiCall(`/drives/restore/scan`, { customConfig: config });
+  }
+
+  async restoreDrives(config: CustomStorageConfig, driveIds: DriveId[]): Promise<RestoreResult[]> {
+    const response: { results: RestoreResult[] } = await postApiCall(`/drives/restore`, { customConfig: config, driveIds });
+    return response.results;
   }
 }
