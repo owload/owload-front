@@ -15,7 +15,7 @@
   },
   "dependencies": {
     "@owload/editor-sdk": "github:owload/editor-sdk#0189b049d0d16fab26fd576687a22b37e481c515",
-    "@owload/text-editor": "github:owload/text-editor#c0345d9b25f8a4ff8b560adb4b00cc5bc926ff9f",
+    "@owload/text-editor": "github:owload/text-editor#384c25641aaac50e4b4494b3078699b4b1d38929",
     "@owload/xlsx-editor": "github:owload/xlsx-editor#b32dcce667fdc3baa10414ea58051b96d72b8861",
     "@radix-ui/react-avatar": "^1.1.3",
     "@radix-ui/react-checkbox": "^1.3.2",
