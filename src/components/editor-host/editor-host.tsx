@@ -9,15 +9,16 @@ import { useSelectedFileObjects } from "@/hooks/use-selected-file-objects";
 import { DialogClosedError } from "@/types/errors";
 import { registry } from "@/extensions/registry";
 import { requestPreview } from "@/extensions/preview";
-import { lossyNote, tooLargeMessage, type LossyFindings } from "./editor-host-messages";
+import { tooLargeMessage } from "./editor-host-messages";
 
 /**
  * Opens a file of the drive in the editor extension that handles its type (owload-docs/decisions/0019).
- * The host owns everything around the editor: this window, loading, the size
- * check, the unsaved-changes dialog, the upload (always a REPLACE) and the note about what saving
- * could drop. The extension edits and draws its own title bar, including the close control, which
- * calls onClose (decisions/0021); the host decides whether the window may close. The editor makes
- * no network request and its copy/paste stays inside it (internalClipboardOnly).
+ * The host owns everything around the editor: this window, loading, the size check, the unsaved-changes
+ * dialog and the upload (always a REPLACE). The extension edits and draws its own title bar, including
+ * the close control, which calls onClose (decisions/0021); the host decides whether the window may close.
+ * Anything an editor knows about its own format, such as what saving would drop, it tells the user itself
+ * (decisions/0022). The editor makes no network request and its copy/paste stays inside it
+ * (internalClipboardOnly).
  *
  * A document that is being created (newEditorFile) is not in the drive yet: it is uploaded by the
  * first Save, so closing without saving leaves no empty file behind.
@@ -63,11 +64,8 @@ export function EditorHost() {
         return { file, name, entry };
     });
     const { file, name, entry } = opened;
-    const isNew = newEditorFile !== null;
 
     const [phase, setPhase] = useState<Phase>({ status: "loading" });
-    const [findings, setFindings] = useState<LossyFindings>(null);
-    const [noteDismissed, setNoteDismissed] = useState(false);
     const [dirty, setDirty] = useState(false);
     const [saving, setSaving] = useState(false);
     const [confirmClose, setConfirmClose] = useState(false);
@@ -91,11 +89,6 @@ export function EditorHost() {
             ]);
             if (cancelled) return;
             setPhase({ status: "ready", Editor: module.default, data: bytes });
-            if (bytes && extension.inspect) {
-                extension.inspect(bytes)
-                    .then((result) => { if (!cancelled) setFindings(result.unsupported); })
-                    .catch(() => { if (!cancelled) setFindings("unknown"); });
-            }
         })().catch((e) => {
             if (!cancelled) setPhase({ status: "error", message: e instanceof Error ? e.message : String(e) });
         });
@@ -127,7 +120,6 @@ export function EditorHost() {
             const path = pwd()!;
             const newFileId = await saveFile(upload, path);
             selectIds([newFileId]);
-            setNoteDismissed(true);
             // The new version has a new id, so it needs its own thumbnail. Best effort, in the background.
             void uploadPreview(entry!.extension, newFileId, bytes, path);
         } catch (e) {
@@ -166,7 +158,6 @@ export function EditorHost() {
     };
 
     if (!name) return null;
-    const note = noteDismissed || isNew ? null : lossyNote(findings);
 
     return (
         <>
@@ -184,12 +175,6 @@ export function EditorHost() {
                 </DialogContent>
             </Dialog>
             <div className="fixed inset-0 z-150 bg-white flex flex-col">
-                {note && (
-                    <div role="note" className="flex items-start gap-3 bg-amber-50 text-amber-900 text-xs px-4 py-2 border-b border-amber-200 shrink-0">
-                        <span className="flex-1">{note}</span>
-                        <button className="underline shrink-0 cursor-pointer" onClick={() => setNoteDismissed(true)}>Got it</button>
-                    </div>
-                )}
                 {phase.status !== "ready" && (
                     // No editor is on screen yet (or at all), so there is no title bar of its own to close from.
                     <div className="flex justify-end p-2 shrink-0">

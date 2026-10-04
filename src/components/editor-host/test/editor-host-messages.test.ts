@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import type { EditorExtension } from '@owload/editor-sdk';
-import { GENERIC_LOSSY_NOTE, lossyNote, maxFileBytes, newFileName, tooLargeMessage } from '../editor-host-messages';
+import { maxFileBytes, newFileName, tooLargeMessage } from '../editor-host-messages';
 
 const ext = (over: Partial<EditorExtension> = {}): EditorExtension => ({
   apiVersion: 1,
@@ -10,22 +10,6 @@ const ext = (over: Partial<EditorExtension> = {}): EditorExtension => ({
   createNew: { label: 'spreadsheet', defaultExtension: 'xlsx' },
   load: async () => ({ default: () => null }),
   ...over,
-});
-
-describe('lossyNote', () => {
-  test('names what would be dropped and where the old version is', () => {
-    const note = lossyNote([{ id: 'charts', label: 'Charts' }, { id: 'images', label: 'Images' }]);
-    expect(note).toBe("Saving this file here will drop: charts, images. The previous version stays in the file's history.");
-  });
-
-  test('says nothing when nothing is lost or the extension cannot tell', () => {
-    expect(lossyNote([])).toBeNull();
-    expect(lossyNote(null)).toBeNull();
-  });
-
-  test('falls back to a generic note when inspecting the file failed', () => {
-    expect(lossyNote('unknown')).toBe(GENERIC_LOSSY_NOTE);
-  });
 });
 
 describe('size limit', () => {

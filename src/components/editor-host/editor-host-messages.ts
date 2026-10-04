@@ -1,21 +1,7 @@
-import { DEFAULT_MAX_FILE_BYTES, type EditorExtension, type UnsupportedFeature } from "@owload/editor-sdk";
+import { DEFAULT_MAX_FILE_BYTES, type EditorExtension } from "@owload/editor-sdk";
 import { fileExtensionOf } from "@/extensions/registry-core";
 
 /** Wording and small pure helpers of the editor host, kept apart so they can be tested in Node. */
-
-const HISTORY = "The previous version stays in the file's history.";
-
-export const GENERIC_LOSSY_NOTE =
-  `This editor might not keep every feature of the file when you save. ${HISTORY}`;
-
-/** What `inspect` found: "unknown" if it could not look at the file. null when nothing is lost. */
-export type LossyFindings = UnsupportedFeature[] | "unknown" | null;
-
-export function lossyNote(findings: LossyFindings): string | null {
-  if (findings === "unknown") return GENERIC_LOSSY_NOTE;
-  if (!findings || findings.length === 0) return null;
-  return `Saving this file here will drop: ${findings.map((f) => f.label.toLowerCase()).join(", ")}. ${HISTORY}`;
-}
 
 export function maxFileBytes(extension: EditorExtension): number {
   return extension.maxFileBytes ?? DEFAULT_MAX_FILE_BYTES;
