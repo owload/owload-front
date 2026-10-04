@@ -14,9 +14,9 @@
     "tauri:build": "tauri build"
   },
   "dependencies": {
-    "@owload/editor-sdk": "github:owload/editor-sdk#0189b049d0d16fab26fd576687a22b37e481c515",
-    "@owload/text-editor": "github:owload/text-editor#384c25641aaac50e4b4494b3078699b4b1d38929",
-    "@owload/xlsx-editor": "github:owload/xlsx-editor#b32dcce667fdc3baa10414ea58051b96d72b8861",
+    "@owload/editor-sdk": "github:owload/editor-sdk#0e4f3b8fc407069efa44ef3045a797444b81aeb4",
+    "@owload/text-editor": "github:owload/text-editor#bfbe99d03df538ab2b6e3b45484866767e2fa0c1",
+    "@owload/xlsx-editor": "github:owload/xlsx-editor#c11c4f5e31a59c4efb38f67ee31d7add31203f43",
     "@radix-ui/react-avatar": "^1.1.3",
     "@radix-ui/react-checkbox": "^1.3.2",
     "@radix-ui/react-context-menu": "^2.2.6",

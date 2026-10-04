@@ -13,10 +13,11 @@ import { lossyNote, tooLargeMessage, type LossyFindings } from "./editor-host-me
 
 /**
  * Opens a file of the drive in the editor extension that handles its type (owload-docs/decisions/0019).
- * The host owns everything around the editor: this window and its close button, loading, the size
+ * The host owns everything around the editor: this window, loading, the size
  * check, the unsaved-changes dialog, the upload (always a REPLACE) and the note about what saving
- * could drop. The extension only edits. The editor makes no network request and its copy/paste stays
- * inside it (internalClipboardOnly).
+ * could drop. The extension edits and draws its own title bar, including the close control, which
+ * calls onClose (decisions/0021); the host decides whether the window may close. The editor makes
+ * no network request and its copy/paste stays inside it (internalClipboardOnly).
  *
  * A document that is being created (newEditorFile) is not in the drive yet: it is uploaded by the
  * first Save, so closing without saving leaves no empty file behind.
@@ -182,43 +183,43 @@ export function EditorHost() {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
-            <div className="fixed inset-0 z-150 bg-black/80 flex items-center justify-center">
-                <button
-                    aria-label="Close"
-                    onClick={saving ? undefined : handleClose}
-                    className={saving ? "absolute top-3 right-4 text-gray-500" : "absolute top-3 right-4 cursor-pointer text-gray-300 hover:text-white"}
-                >
-                    <X size={22} />
-                </button>
-                <div className="bg-white rounded-lg shadow-xl overflow-hidden flex flex-col w-[min(96vw,1500px)] h-[91vh]">
-                    {note && (
-                        <div role="note" className="flex items-start gap-3 bg-amber-50 text-amber-900 text-xs px-4 py-2 border-b border-amber-200 shrink-0">
-                            <span className="flex-1">{note}</span>
-                            <button className="underline shrink-0 cursor-pointer" onClick={() => setNoteDismissed(true)}>Got it</button>
-                        </div>
-                    )}
-                    <div className="flex-1 min-h-0">
-                        {!entry && <div className="p-4 text-red-500 text-sm">No editor is installed for this file type.</div>}
-                        {entry && phase.status === "loading" && (
-                            <div className="flex items-center justify-center h-full text-gray-400 text-sm">Loading…</div>
-                        )}
-                        {entry && phase.status === "error" && (
-                            <div className="p-4 text-red-500 text-sm">{phase.message}</div>
-                        )}
-                        {entry && phase.status === "ready" && (
-                            <EditorErrorBoundary onClose={doClose}>
-                                <phase.Editor
-                                    key={file?.id ?? name}
-                                    ref={editorRef}
-                                    data={phase.data}
-                                    fileName={name}
-                                    internalClipboardOnly
-                                    onSave={handleSave}
-                                    onDirtyChange={setDirty}
-                                />
-                            </EditorErrorBoundary>
-                        )}
+            <div className="fixed inset-0 z-150 bg-white flex flex-col">
+                {note && (
+                    <div role="note" className="flex items-start gap-3 bg-amber-50 text-amber-900 text-xs px-4 py-2 border-b border-amber-200 shrink-0">
+                        <span className="flex-1">{note}</span>
+                        <button className="underline shrink-0 cursor-pointer" onClick={() => setNoteDismissed(true)}>Got it</button>
                     </div>
+                )}
+                {phase.status !== "ready" && (
+                    // No editor is on screen yet (or at all), so there is no title bar of its own to close from.
+                    <div className="flex justify-end p-2 shrink-0">
+                        <button aria-label="Close" onClick={doClose} className="cursor-pointer text-gray-500 hover:text-gray-900">
+                            <X size={22} />
+                        </button>
+                    </div>
+                )}
+                <div className="flex-1 min-h-0">
+                    {!entry && <div className="p-4 text-red-500 text-sm">No editor is installed for this file type.</div>}
+                    {entry && phase.status === "loading" && (
+                        <div className="flex items-center justify-center h-full text-gray-400 text-sm">Loading…</div>
+                    )}
+                    {entry && phase.status === "error" && (
+                        <div className="p-4 text-red-500 text-sm">{phase.message}</div>
+                    )}
+                    {entry && phase.status === "ready" && (
+                        <EditorErrorBoundary onClose={doClose}>
+                            <phase.Editor
+                                key={file?.id ?? name}
+                                ref={editorRef}
+                                data={phase.data}
+                                fileName={name}
+                                internalClipboardOnly
+                                onSave={handleSave}
+                                onDirtyChange={setDirty}
+                                onClose={handleClose}
+                            />
+                        </EditorErrorBoundary>
+                    )}
                 </div>
             </div>
         </>
