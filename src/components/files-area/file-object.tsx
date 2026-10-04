@@ -185,7 +185,8 @@ function FileObject({ fileObject, thumbnail, className, onPointerDown, onClick, 
 
                 {mobileFileSelectModeOn && <Checkbox className="absolute top-1 left-1" checked={fileObject.selected} />}
 
-                {textBasedFile && (
+                {/* The fake page of a document is only a stand-in until it has a real preview. */}
+                {textBasedFile && !thumbnail && (
                     <>
                         <p className="text-[2pt] p-4 whitespace-pre-line">{loremIpsum}</p>
                     </>
