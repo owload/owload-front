@@ -6,7 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Full text: `../owload-docs/CONTRIBUTING.md`. In short:
 
-- Work comes from tasks in `../owload-docs/epics/`. A task is committed **at the same time in `owload-docs`, `owload-back` and `owload-front`** (docs always get the task status / architecture update); commit messages reference the same task.
+- **Never commit or push on your own — only when the owner explicitly says so** (each time; a past instruction does not carry over). Until then leave the work uncommitted in the working tree.
+- Work comes from tasks in `../owload-docs/epics/`. When asked, a task is committed **at the same time in `owload-docs`, `owload-back` and `owload-front`** (docs always get the task status / architecture update); commit messages reference the same task.
 - **Before every push, in every repository, check the diff:**
   - (a) no sensitive data — secrets, tokens/JWTs, keys, `.env` values, real hostnames/IPs, personal data or machine-specific paths;
   - (b) security does not get worse — the server must never receive, store or log the password, `K_master` or any derived key, plaintext content/names/paths, or anything outside the API contract (`../owload-docs/architecture/backend.md`); crypto changes need an ADR.
