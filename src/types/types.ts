@@ -37,7 +37,7 @@ export interface UserInfo {
   name: string;
 }
 
-export type FsOpsDialogType = "RENAME" | "CREATE_FOLDER" | "CREATE_TEXT_FILE" | "CREATE_SPREADSHEET" | "REQUEST_PASSWORD" | "REQUEST_DRIVE_DESCRIPTION" | "REQUEST_MV_OPERATION_MODE" | "CONFIRM_DELETE" | "FILE_PROPERTIES"
+export type FsOpsDialogType = "RENAME" | "CREATE_FOLDER" | "CREATE_EDITOR_FILE" | "REQUEST_PASSWORD" | "REQUEST_DRIVE_DESCRIPTION" | "REQUEST_MV_OPERATION_MODE" | "CONFIRM_DELETE" | "FILE_PROPERTIES"
 
 export interface RequestPasswordDialogProps {
   driveName: string
@@ -82,11 +82,15 @@ export interface RenameDialogProps {
   originalName: string
 }
 
+export interface CreateEditorFileDialogProps {
+  extensionId: string
+}
+
 export interface VoidDialogProps {
 
 }
 
-export type FsOpsDialogPropsType = RequestPasswordDialogProps | RequestDescriptionDialogProps | RequestMvOperationModeDialogProps | RenameDialogProps | VoidDialogProps | ConfirmDeleteDialogProps | FilePropertiesDialogProps;
+export type FsOpsDialogPropsType = RequestPasswordDialogProps | RequestDescriptionDialogProps | RequestMvOperationModeDialogProps | RenameDialogProps | CreateEditorFileDialogProps | VoidDialogProps | ConfirmDeleteDialogProps | FilePropertiesDialogProps;
 
 export interface DialogCallbacks {
   // dialogId is used to identify whether it's the same dialog.

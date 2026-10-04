@@ -17,7 +17,8 @@ export function DriveExplorerPage() {
   const setPasswordRetryFlag = useFilesStore((state) => state.setPasswordRetryFlag);
 
   const setMediaPreviewOpen = useFilesStore((state) => state.setMediaPreviewOpen);
-  const setTextEditorOpen = useFilesStore((state) => state.setTextEditorOpen);
+  const setEditorOpen = useFilesStore((state) => state.setEditorOpen);
+  const setNewEditorFile = useFilesStore((state) => state.setNewEditorFile);
   const drivesInitialized = useFilesStore((state) => state.drivesInitialized);
 
   const { driveId, dirId } = useParams();
@@ -77,7 +78,8 @@ export function DriveExplorerPage() {
       return;
     }
     setMediaPreviewOpen(false);
-    setTextEditorOpen(false);
+    setEditorOpen(false);
+    setNewEditorFile(null);
     if (dirId) {
       cdByDirId(dirId).then(found => {
         if (!found) {

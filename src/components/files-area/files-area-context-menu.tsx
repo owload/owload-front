@@ -2,17 +2,17 @@ import { PropsWithChildren } from "react";
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuShortcut, ContextMenuTrigger } from "../ui/context-menu";
 import { useFilesStoreOps } from "@/hooks/use-files-store-ops";
 import { useFilesStore } from "@/stores/files-store";
-import { useCreateFolderDialog, useCreateSpreadsheetDialog, useCreateTextFileDialog } from "@/hooks/use-dialogs";
+import { useCreateEditorFileDialog, useCreateFolderDialog } from "@/hooks/use-dialogs";
 import { useActivateMobileSelectMode, useDeactivateMobileSelectMode } from "@/hooks/use-mobile-select-mode";
 import { useUploadFile } from "@/hooks/use-upload-file";
 import { useIsMobile } from "@/hooks/use-mobile";
 import ContextMenuHandler from "./selectable-area/context-menu-handler";
+import { registry } from "@/extensions/registry";
 
 export function FilesAreaContextMenu({ children }: PropsWithChildren) {
     const isMobile = useIsMobile();
     const openCreateFolderDialog = useCreateFolderDialog();
-    const openCreateTextFileDialog = useCreateTextFileDialog();
-    const openCreateSpreadsheetDialog = useCreateSpreadsheetDialog();
+    const openCreateEditorFileDialog = useCreateEditorFileDialog();
     const { pwd, commitMoveOrCopy } = useFilesStoreOps();
     const filesToMoveOrCopy = useFilesStore((state) => state.filesToMoveOrCopy);
     const uploadFile = useUploadFile();
@@ -54,12 +54,11 @@ export function FilesAreaContextMenu({ children }: PropsWithChildren) {
                     Create folder
                     <ContextMenuShortcut>⌘N</ContextMenuShortcut>
                 </ContextMenuItem>
-                <ContextMenuItem inset onClick={openCreateTextFileDialog}>
-                    New text file
-                </ContextMenuItem>
-                <ContextMenuItem inset onClick={openCreateSpreadsheetDialog}>
-                    New spreadsheet
-                </ContextMenuItem>
+                {registry.creatable().map(({ extension }) => (
+                    <ContextMenuItem key={extension.id} inset onClick={() => openCreateEditorFileDialog({ extensionId: extension.id })}>
+                        New {extension.createNew!.label}
+                    </ContextMenuItem>
+                ))}
                 <ContextMenuItem inset onClick={handleUploadClick}>
                     Upload file
                     <ContextMenuShortcut>⌘U</ContextMenuShortcut>

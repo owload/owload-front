@@ -4,13 +4,17 @@ import { DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../u
 import { Input } from "../ui/input";
 import { useFsCloseDialogModal } from "@/hooks/use-dialogs";
 import { useFilesStore } from "@/stores/files-store";
-import { newSpreadsheetFileName } from "@/components/spreadsheet-editor/spreadsheet-messages";
+import { registry } from "@/extensions/registry";
+import { newFileName } from "@/components/editor-host/editor-host-messages";
+import type { CreateEditorFileDialogProps } from "@/types/types";
 
-export function CreateSpreadsheetDialog() {
+/** "New <label>" of an editor extension: asks for a name, then opens the editor on a blank document. */
+export function CreateEditorFileDialog({ extensionId }: CreateEditorFileDialogProps) {
+    const entry = registry.byId(extensionId);
     const [fileName, setFileName] = useState('');
     const [error, setError] = useState<string | null>(null);
-    const setNewSpreadsheetName = useFilesStore((state) => state.setNewSpreadsheetName);
-    const setSpreadsheetEditorOpen = useFilesStore((state) => state.setSpreadsheetEditorOpen);
+    const setNewEditorFile = useFilesStore((state) => state.setNewEditorFile);
+    const setEditorOpen = useFilesStore((state) => state.setEditorOpen);
     const closeDialog = useFsCloseDialogModal();
     const inputRef = useRef<HTMLInputElement>(null);
 
@@ -18,26 +22,29 @@ export function CreateSpreadsheetDialog() {
         setTimeout(() => { inputRef.current?.focus(); }, 0);
     }, []);
 
+    if (!entry || !entry.extension.createNew) return null;
+    const { extension } = entry;
+
     function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
         const existing = useFilesStore.getState().fileObjects.map((f) => f.name);
-        const result = newSpreadsheetFileName(fileName, existing);
+        const result = newFileName(fileName, extension, existing);
         if (result.error !== undefined) {
             setError(result.error);
             return;
         }
         // The file is uploaded by the first Save in the editor, so cancelling leaves nothing behind.
         useFilesStore.getState().deselectAll();
-        setNewSpreadsheetName(result.name);
-        setSpreadsheetEditorOpen(true);
+        setNewEditorFile({ name: result.name, extensionId: extension.id });
+        setEditorOpen(true);
         closeDialog();
     }
 
     return (
         <DialogHeader>
-            <DialogTitle>New spreadsheet</DialogTitle>
+            <DialogTitle>New {extension.createNew!.label}</DialogTitle>
             <form onSubmit={handleSubmit}>
-                <DialogDescription>File name (.xlsx will be added if missing)</DialogDescription>
+                <DialogDescription>File name (.{extension.createNew!.defaultExtension} will be added if missing)</DialogDescription>
                 <Input
                     ref={inputRef}
                     value={fileName}

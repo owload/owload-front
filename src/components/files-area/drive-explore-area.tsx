@@ -2,8 +2,7 @@ import { FilesArea } from '@/components/files-area/files-area';
 import { PathBreadcrumbs } from '@/components/files-area/path-breadcrumbs';
 import { SelectArea } from '@/components/files-area/selectable-area';
 import { MediaPreview } from '@/components/media-preview/media-preview';
-import { TextEditor } from '@/components/text-editor/text-editor';
-import { SpreadsheetEditor } from '@/components/spreadsheet-editor/spreadsheet-editor';
+import { EditorHost } from '@/components/editor-host/editor-host';
 import { DragAndDropArea } from '@/components/files-area/drag-and-drop-area';
 import { Toolbox } from '@/components/toolbox/toolbox';
 import { ToolboxBottom } from '@/components/toolbox-bottom/toolbox-bottom';
@@ -25,8 +24,7 @@ export function DriveExplorerArea() {
     const removeSelected = useFilesStore((state) => state.removeSelected);
     const removeSelectedWithShift = useFilesStore((state) => state.removeSelectedWithShift);
     const mediaPreviewOpen = useFilesStore((state) => state.mediaPreviewOpen);
-    const textEditorOpen = useFilesStore((state) => state.textEditorOpen);
-    const spreadsheetEditorOpen = useFilesStore((state) => state.spreadsheetEditorOpen);
+    const editorOpen = useFilesStore((state) => state.editorOpen);
     const isSelected = useIsSelectedFileObject();
     const mobileFileSelectModeOn = useIsMobileSelectModeOn();
     const isReadyForActions = filesInitialized && driveStats?.description;
@@ -41,7 +39,7 @@ export function DriveExplorerArea() {
                 {isReadyForActions && <Toolbox className="order-2" />}
             </div>
             <FilesArea />
-            {!mediaPreviewOpen && !textEditorOpen && !spreadsheetEditorOpen && isReadyForActions && <ToolboxBottom className="fixed bottom-4 right-2 sm:right-4" />}
+            {!mediaPreviewOpen && !editorOpen && isReadyForActions && <ToolboxBottom className="fixed bottom-4 right-2 sm:right-4" />}
         </main>
     );
 
@@ -64,7 +62,6 @@ export function DriveExplorerArea() {
             ) : mainContent}
         </div>
         {mediaPreviewOpen && <MediaPreview />}
-        {textEditorOpen && <TextEditor />}
-        {spreadsheetEditorOpen && <SpreadsheetEditor />}
+        {editorOpen && <EditorHost />}
     </>);
 }

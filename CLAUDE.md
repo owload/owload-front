@@ -41,9 +41,13 @@ npm run tauri        # Tauri desktop dev (requires Rust)
 npx tsc --noEmit     # type-check only, no output
 ```
 
-`npm install` / `npm ci` builds `@owload/xlsx-editor` from its GitHub repository (pinned to an exact commit in `package.json`; see `../owload-docs/decisions/0018-xlsx-editing-via-external-package.md`), which needs Node ≥ 20 and access to GitHub. Never point it at a branch; bump the pin deliberately and review the package diff first.
+`npm install` / `npm ci` builds the editor extensions (`@owload/xlsx-editor`, `@owload/text-editor`) and `@owload/editor-sdk` from their GitHub repositories (pinned to exact commits or tags in `package.json`; see `../owload-docs/decisions/0018-xlsx-editing-via-external-package.md` and `0019-editor-extensions.md`), which needs Node ≥ 20 and access to GitHub. Never point them at a branch; bump a pin deliberately and review the package diff first.
 
 Run a single test file: `npm test -- src/engine/service/test/fs-state.test.ts`
+
+## Editor extensions
+
+Files are opened and edited by **extensions** (separate packages, one contract: `@owload/editor-sdk`; docs in `../owload-docs/architecture/extensions.md`). `src/extensions/registry.ts` is the explicit list; `src/components/editor-host/editor-host.tsx` is the one window for all of them (loading, size check, unsaved-changes dialog, upload as `REPLACE`, note about what saving may drop). To add a format: add the pinned dependency and one entry in the registry — nothing else in the client should need a change. The extension sources live in `../extensions/*` (their own repositories); change them there, not here.
 
 ## Environment / Runtime Config
 
