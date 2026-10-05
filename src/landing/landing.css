@@ -1,0 +1,126 @@
+/*
+ * The "Sunny" design language (owload-docs/decisions/0024) as the landing page uses it. The values are tokens:
+ * components use them through Tailwind, e.g. bg-(--lp-yellow), and never repeat the literals.
+ */
+@layer base {
+  .lp {
+    --lp-yellow: #ffd93d;
+    --lp-yellow-edge: #edbf1a;
+    --lp-ink: #2a2820;
+    --lp-ink-2: #3a372c;
+    --lp-ink-3: #5e5a49;
+    --lp-on-dark: #d8d4c2;
+    --lp-dim: #a5a08a;
+    --lp-muted: #6b6754;
+    --lp-text-yellow: #4a4320;
+    --lp-text-white: #4a4636;
+    --lp-line: #ede8d5;
+    --lp-line-2: #d9d5c5;
+    --lp-line-3: #cfcabb;
+    --lp-field: #f4f2ea;
+    --lp-placeholder: #7a5600;
+    --lp-placeholder-edge: #a87400;
+    --lp-green: #1e7b45;
+    --lp-green-bg: #ddefe3;
+    --lp-blue: #1f5fbf;
+    --lp-red: #c0362c;
+    --lp-orange: #b5521b;
+    --lp-violet: #7a3fc4;
+
+    font-family: "Nunito", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 17px;
+    line-height: 1.5;
+    color: var(--lp-ink);
+    background: #fff;
+  }
+
+  .lp *,
+  .lp *::before,
+  .lp *::after {
+    box-sizing: border-box;
+  }
+
+  /* In the base layer, so that a Tailwind class (utilities layer) on a link or a button wins over these defaults. */
+  :where(.lp) a {
+    color: inherit;
+    text-decoration: none;
+  }
+  :where(.lp) a:hover {
+    text-decoration: underline;
+  }
+  :where(.lp) button {
+    font: inherit;
+    color: inherit;
+  }
+  .lp :focus-visible {
+    outline: 3px solid var(--lp-ink);
+    outline-offset: 2px;
+  }
+  .lp .lp-on-dark :focus-visible,
+  .lp .lp-dark :focus-visible {
+    outline-color: var(--lp-yellow);
+  }
+}
+
+/*
+ * Motion of the interactive elements. Buttons and filled links ("lp-btn") change their fill on hover (the colour
+ * is set on the element) and press in on click. They never move or cast a shadow. Navigation and text links
+ * ("lp-link") get a soft background and an underline that
+ * draws itself in. Hover effects only where there is a real hover, movement only when the user has not asked for
+ * less of it. Elements that are not clickable (the strip under the buttons) carry neither class.
+ */
+@layer components {
+  .lp .lp-btn,
+  .lp .lp-link {
+    text-decoration: none;
+    transition-property: background-color, transform, color;
+    transition-duration: 0.2s;
+    transition-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+
+  .lp .lp-link {
+    position: relative;
+  }
+  .lp .lp-link::after {
+    content: "";
+    position: absolute;
+    inset-inline: 14px;
+    bottom: 7px;
+    height: 2px;
+    border-radius: 2px;
+    background: currentColor;
+    transform: scaleX(0);
+    transform-origin: right;
+    transition: transform 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+
+  .lp .lp-btn:active {
+    transform: scale(0.97);
+    transition-duration: 0.06s;
+  }
+
+  .lp .lp-link:focus-visible::after {
+    transform: scaleX(1);
+    transform-origin: left;
+  }
+
+  @media (hover: hover) {
+    .lp .lp-link:hover {
+      background-color: color-mix(in srgb, currentColor 9%, transparent);
+    }
+    .lp .lp-link:hover::after {
+      transform: scaleX(1);
+      transform-origin: left;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .lp .lp-btn,
+    .lp .lp-link::after {
+      transition-property: background-color, color;
+    }
+    .lp .lp-btn:active {
+      transform: none;
+    }
+  }
+}
