@@ -44,7 +44,7 @@ export function DrivesPage() {
     const noDrives = drivesInitialized && drives.length === 0;
 
     return (
-        <div className="absolute inset-0 overflow-y-auto">
+        <div className="drives-theme absolute inset-0 overflow-y-auto">
             {noDrives
                 ? <EmptyDrivesHero />
                 : <DrivesHero
@@ -63,13 +63,13 @@ export function DrivesPage() {
                         initializedComponent={<>
                             {openDrives.map(({ driveInfo, kind }) => <OpenDriveCard key={driveInfo.id} driveInfo={driveInfo} kind={kind} />)}
                             {openDrives.length === 0 && (
-                                <div className="flex items-center gap-3 rounded-[20px] bg-sunny-ink p-5 font-semibold text-white shadow-[0_24px_40px_-24px_rgba(26,26,25,0.55)] md:p-6 md:shadow-[0_28px_48px_-28px_rgba(26,26,25,0.55)]">
-                                    <Lock aria-hidden="true" className="size-[18px] text-sunny-yellow" strokeWidth={1.8} />
+                                <div className="flex items-center gap-3 rounded-[20px] bg-sunny-yellow p-5 font-semibold text-sunny-ink shadow-[0_24px_40px_-24px_rgba(26,26,25,0.55)] md:p-6 md:shadow-[0_28px_48px_-28px_rgba(26,26,25,0.55)]">
+                                    <Lock aria-hidden="true" className="size-[18px]" strokeWidth={1.8} />
                                     No drive is open.
                                 </div>
                             )}
                             {closedDrives.length > 0 && <>
-                                <h2 className="m-0 mt-5 self-start rounded-lg bg-sunny-yellow px-3 py-1 text-[13px] font-extrabold uppercase tracking-widest">Closed · {closedDrives.length}</h2>
+                                <h2 className="m-0 mt-5 self-start rounded-lg bg-sunny-ink px-3 py-1 text-[13px] font-extrabold uppercase tracking-widest text-sunny-yellow">Closed · {closedDrives.length}</h2>
                                 <div className="flex flex-col gap-2">
                                     {closedDrives.map(({ driveInfo }) => <ClosedDriveRow key={driveInfo.id} driveInfo={driveInfo} />)}
                                 </div>

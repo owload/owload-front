@@ -9,8 +9,8 @@
    * The "Sunny" tokens (owload-docs/decisions/0024, 0025). They are defined here once; the landing page aliases them
    * (src/landing/landing.css) and the shadcn variables below are mapped onto them.
    */
-  --sunny-yellow: #ffd93d;
-  --sunny-yellow-edge: #edbf1a;
+  --sunny-yellow: #f4dc72;
+  --sunny-yellow-edge: #ecd56e;
   --sunny-yellow-soft: #fff8d6;
   --sunny-yellow-pale: #fdf1c2;
   --sunny-ink: #1b1b1a;
@@ -62,16 +62,35 @@
   --chart-5: hsl(27 87% 67%);
   --radius: 0.75rem;
   /* The side panel is dark; everything else is light (decision 0025). */
-  --sidebar: var(--sunny-ink);
+  --sidebar: #1f1d18;
   --sidebar-foreground: var(--sunny-on-dark);
   --sidebar-primary: var(--sunny-yellow);
   --sidebar-primary-foreground: var(--sunny-ink);
-  --sidebar-accent: var(--sunny-ink-raised);
+  --sidebar-accent: #322f27;
   --sidebar-accent-foreground: #ffffff;
-  --sidebar-border: var(--sunny-ink-raised);
+  --sidebar-border: #322f27;
   --sidebar-ring: var(--sunny-yellow);
   --text-sm: 0.875rem;
   --text-base: 1rem;
+}
+
+/*
+ * The drives screen has its own shades (decision 0025): a warmer dark band and a softer yellow than the rest of the
+ * application, so that the screen reads apart from the side panel. Only the "sunny-*" utilities follow it; the
+ * shadcn variables keep their values.
+ */
+.drives-theme {
+  /* the dark band at the top of the screen */
+  --drives-band: #2a2822;
+  --drives-band-raised: #3a372e;
+  --sunny-ink: #2a2822;
+  --sunny-ink-raised: #3a372e;
+  --sunny-ink-track: #555141;
+  --sunny-on-dark: #c9c5b7;
+  --sunny-muted: #6f6c61;
+  --sunny-text-on-yellow: #4a4633;
+  --sunny-line: #efecde;
+  --sunny-field: #f4f2ec;
 }
 
 @theme inline {

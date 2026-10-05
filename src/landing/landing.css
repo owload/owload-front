@@ -1,12 +1,12 @@
 /*
  * The "Sunny" design language (owload-docs/decisions/0024) as the landing page uses it. The values are the tokens
- * of src/index.css, under the landing's own names; components use them through Tailwind, e.g. bg-(--lp-yellow),
- * and never repeat the literals.
+ * of src/index.css, under the landing's own names, except the yellow: the landing has a livelier one than the
+ * application. Components use them through Tailwind, e.g. bg-(--lp-yellow), and never repeat the literals.
  */
 @layer base {
   .lp {
-    --lp-yellow: var(--sunny-yellow);
-    --lp-yellow-edge: var(--sunny-yellow-edge);
+    --lp-yellow: #fadb58;
+    --lp-yellow-edge: #edca44;
     --lp-ink: var(--sunny-ink);
     --lp-ink-2: var(--sunny-ink-raised);
     --lp-ink-3: var(--sunny-ink-track);

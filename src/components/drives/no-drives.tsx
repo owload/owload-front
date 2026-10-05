@@ -10,16 +10,16 @@ export function NoDrives() {
     const step = "size-[18px]";
     return (
         <>
-            <section className="flex flex-col gap-4 rounded-[20px] bg-sunny-ink p-5 text-white shadow-[0_24px_40px_-24px_rgba(26,26,25,0.55)] md:flex-row md:flex-wrap md:items-center md:gap-x-8 md:gap-y-6 md:p-7 md:shadow-[0_28px_48px_-28px_rgba(26,26,25,0.55)]">
-                <div className="flex size-[52px] flex-none items-center justify-center rounded-[14px] bg-sunny-yellow text-sunny-ink md:size-16 md:rounded-2xl">
+            <section className="flex flex-col gap-4 rounded-[20px] bg-sunny-yellow p-5 text-sunny-ink shadow-[0_24px_40px_-24px_rgba(26,26,25,0.55)] md:flex-row md:flex-wrap md:items-center md:gap-x-8 md:gap-y-6 md:p-7 md:shadow-[0_28px_48px_-28px_rgba(26,26,25,0.55)]">
+                <div className="flex size-[52px] flex-none items-center justify-center rounded-[14px] bg-sunny-ink text-sunny-yellow md:size-16 md:rounded-2xl">
                     <Lock aria-hidden="true" className="size-6 md:size-7" strokeWidth={1.8} />
                 </div>
                 <div className="min-w-0 md:flex-[1_1_360px]">
-                    <div className="text-[13px] font-bold uppercase tracking-[0.08em] text-sunny-yellow">Get started</div>
+                    <div className="text-[13px] font-bold uppercase tracking-[0.08em]">Get started</div>
                     <h2 className="m-0 mt-1 text-2xl font-bold leading-[1.2] tracking-[-0.02em] md:text-[26px]">You have no drives yet</h2>
-                    <p className="m-0 mt-2 max-w-[560px] text-sunny-on-dark">A drive is an encrypted space for your files. Open it to work with them, close it to hide everything again.</p>
+                    <p className="m-0 mt-2 max-w-[560px] text-sunny-text-on-yellow">A drive is an encrypted space for your files. Open it to work with them, close it to hide everything again.</p>
                 </div>
-                <Link to="/create" className="flex h-[52px] items-center justify-center gap-2.5 rounded-xl bg-sunny-yellow px-[26px] text-base font-bold text-sunny-ink hover:bg-sunny-yellow-edge md:h-14 md:rounded-[14px] md:text-[17px]">
+                <Link to="/create" className="flex h-[52px] items-center justify-center gap-2.5 rounded-xl bg-sunny-ink px-[26px] text-base font-bold text-sunny-yellow hover:bg-sunny-ink-raised md:h-14 md:rounded-[14px] md:text-[17px]">
                     New drive
                     <ArrowRight aria-hidden="true" className="size-5" strokeWidth={1.8} />
                 </Link>

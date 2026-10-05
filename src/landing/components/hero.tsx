@@ -5,7 +5,6 @@ import { AppMockup } from "./app-mockup";
 import { SOURCE_CODE_URL } from "./data";
 import { LandingHeader } from "./landing-header";
 import { Highlight, Rings } from "./placeholder";
-import { ReleaseChecks } from "./release-checks";
 import { ServersCard } from "./servers-card";
 
 export function Hero() {
@@ -39,7 +38,6 @@ export function Hero() {
           </button>
           <a href="#pricing" className="lp-btn flex min-h-14 items-center rounded-[14px] bg-white px-7 hover:bg-(--lp-field)">Choose version</a>
         </div>
-        <ReleaseChecks />
         <div className="relative mt-[30px] w-full max-[720px]:mt-0">
           <ServersCard />
           <AppMockup />

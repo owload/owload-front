@@ -171,11 +171,11 @@ function FileObject({ fileObject, thumbnail, className, onPointerDown, onClick, 
                 style={{ width: `${size}px`, height: `${size}px` }}
                 className={
                     cn(
-                        "group relative rounded-xl flex items-center justify-center hover:border-[#FFDA15] border-1 group-hover:duration-200 overflow-hidden",
+                        "group relative rounded-xl flex items-center justify-center hover:border-primary border-1 group-hover:duration-200 overflow-hidden",
                         {
                             'group-hover:bg-[#EAEDF4]': !(fileObject.type === FsObjectType.FILE && !fileObject.finished) && !fileObject.selected && !fileObject.selectedForCut && !dragOverStyleApplied,
                             'bg-[#EFF0F5]': !(fileObject.type === FsObjectType.FILE && !fileObject.finished) && !fileObject.selected && !dragOverStyleApplied,
-                            'bg-[#FFF2AC]': !(fileObject.type === FsObjectType.FILE && !fileObject.finished) && fileObject.selected && !dragOverStyleApplied,
+                            'bg-sunny-yellow-soft': !(fileObject.type === FsObjectType.FILE && !fileObject.finished) && fileObject.selected && !dragOverStyleApplied,
                             'bg-gray-300': dragOverStyleApplied,
                             'opacity-45': fileObject.selectedForCut,
                             'bg-[#EFF0F5] animate-pulse group-hover:duration-2000': fileObject.type === FsObjectType.FILE && !fileObject.finished
@@ -219,7 +219,7 @@ function FileObject({ fileObject, thumbnail, className, onPointerDown, onClick, 
 function FileObjectIcon(fileObject: FileProperties) {
 
     if (fileObject.type === FsObjectType.DIR) {
-        return <Folder size={40} fill="#FFDA15" strokeWidth={0} />;
+        return <Folder size={40} fill="var(--sunny-yellow)" strokeWidth={0} />;
     }
     if (textBasedExtensions.includes(fileObject.extension || '')) {
         return null;

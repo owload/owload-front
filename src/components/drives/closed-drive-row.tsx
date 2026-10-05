@@ -4,20 +4,20 @@ import { DriveIcon } from "./drive-icon";
 import { PLACEHOLDER_LAST_OPENED, PLACEHOLDER_TOTAL_SIZE } from "./drive-placeholders";
 import { useDriveActions } from "./use-drive-actions";
 
-const iconButton = "flex size-11 flex-none cursor-pointer items-center justify-center rounded-[10px] text-sunny-ink outline-ring hover:bg-secondary focus-visible:outline-2 focus-visible:outline-offset-2";
+const iconButton = "flex size-11 flex-none cursor-pointer items-center justify-center rounded-[10px] text-sunny-ink outline-sunny-ink hover:bg-sunny-field focus-visible:outline-2 focus-visible:outline-offset-2";
 
 /** A closed drive: one row of the list below the open ones. */
 export function ClosedDriveRow({ driveInfo }: { driveInfo: DriveInfo }) {
     const { browse, settings, logs } = useDriveActions(driveInfo);
     return (
-        <article className="flex flex-col gap-2.5 rounded-[14px] border border-sunny-line bg-card p-3 md:flex-row md:flex-wrap md:items-center md:gap-x-5 md:gap-y-2.5 md:py-2.5 md:pl-3.5 md:pr-3">
+        <article className="flex flex-col gap-2.5 rounded-[14px] border border-sunny-line bg-white p-3 md:flex-row md:flex-wrap md:items-center md:gap-x-5 md:gap-y-2.5 md:py-2.5 md:pl-3.5 md:pr-3">
             <div className="flex min-w-0 items-center gap-3 md:flex-[1_1_240px] md:gap-3.5">
-                <div className="flex size-11 flex-none items-center justify-center rounded-[10px] bg-secondary">
+                <div className="flex size-11 flex-none items-center justify-center rounded-[10px] bg-sunny-field">
                     <DriveIcon driveInfo={driveInfo} className="size-5" />
                 </div>
                 <div className="min-w-0 flex-1">
                     <h3 className="m-0 truncate text-base font-semibold leading-[1.3]">{driveInfo.title}</h3>
-                    <div className="truncate text-[13px] text-muted-foreground">Last opened {PLACEHOLDER_LAST_OPENED}</div>
+                    <div className="truncate text-[13px] text-sunny-muted">Last opened {PLACEHOLDER_LAST_OPENED}</div>
                 </div>
                 <div className="flex-none self-start font-medium md:hidden">{PLACEHOLDER_TOTAL_SIZE}</div>
             </div>

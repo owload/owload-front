@@ -5,11 +5,11 @@ import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 /** The apps button and the account menu, at the right end of the header of every screen. */
-export function AccountControls({ onYellow = false }: { onYellow?: boolean }) {
+export function AccountControls({ onDark = false }: { onDark?: boolean }) {
     const logout = useLogout();
     return (
         <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" aria-label="Apps" className={onYellow ? "size-12 hover:bg-sunny-ink/10" : "2xs:hidden xs:inline-flex"}>
+            <Button variant="ghost" size="icon" aria-label="Apps" className={onDark ? "size-12 text-white hover:bg-white/10 hover:text-white" : "2xs:hidden xs:inline-flex"}>
                 <Grip aria-hidden="true" className="size-5" />
             </Button>
             <DropdownMenu>
