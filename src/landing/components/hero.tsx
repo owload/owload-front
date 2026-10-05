@@ -19,15 +19,25 @@ export function Hero() {
       </div>
       <LandingHeader />
       <section className="relative mx-auto flex w-full max-w-[1120px] flex-col items-center gap-[22px] px-[clamp(20px,4vw,40px)] pt-4 text-center">
-        <a href={SOURCE_CODE_URL} target="_blank" rel="noopener noreferrer" className="lp-btn flex min-h-11 items-center gap-2.5 rounded-full bg-(--lp-ink) pl-3 pr-4 text-[15px] font-bold text-white hover:bg-(--lp-ink-2)">
-          <span className="flex size-7 items-center justify-center rounded-full bg-(--lp-yellow) text-(--lp-ink)">
-            <CodeIcon size={16} strokeWidth={2.4} aria-hidden="true" />
-          </span>
-          <span className="max-[720px]:hidden">Public source code</span>
-          <span aria-hidden="true" className="h-[18px] w-px bg-(--lp-ink-3) max-[720px]:hidden" />
-          <span className="whitespace-nowrap text-(--lp-yellow)">Inspect the code</span>
-          <ArrowRight size={16} strokeWidth={2.4} className="text-(--lp-yellow)" aria-hidden="true" />
-        </a>
+        <div className="-mx-[min(24px,2vw)] flex flex-wrap items-center justify-center gap-x-2.5 gap-y-2">
+          <a href={SOURCE_CODE_URL} target="_blank" rel="noopener noreferrer" className="lp-btn flex min-h-11 items-center gap-2.5 rounded-full bg-(--lp-ink) pl-3 pr-4 text-[15px] font-bold text-white hover:bg-(--lp-ink-2)">
+            <span className="flex size-7 items-center justify-center rounded-full bg-(--lp-yellow) text-(--lp-ink)">
+              <CodeIcon size={16} strokeWidth={2.4} aria-hidden="true" />
+            </span>
+            <span className="max-[720px]:hidden">Public source code</span>
+            <span aria-hidden="true" className="h-[18px] w-px bg-(--lp-ink-3) max-[720px]:hidden" />
+            <span className="whitespace-nowrap text-(--lp-yellow)">Inspect the code</span>
+            <ArrowRight size={16} strokeWidth={2.4} className="text-(--lp-yellow)" aria-hidden="true" />
+          </a>
+          <div className="flex min-h-11 flex-wrap items-center justify-center gap-x-2 gap-y-1 rounded-[22px] bg-white/60 py-1.5 pl-2 pr-4 text-[15px] font-bold">
+            <span className="flex h-7 items-center whitespace-nowrap rounded-full bg-(--lp-ink) px-[11px] font-extrabold text-(--lp-yellow)">Before every release</span>
+            <Step icon={<SparklesIcon size={17} strokeWidth={2.2} aria-hidden="true" />}>AI code review</Step>
+            <Chevron />
+            <Step icon={<TargetIcon size={17} strokeWidth={2.2} aria-hidden="true" />}>AI break-in attempts</Step>
+            <Chevron />
+            <Step icon={<UserCheckIcon size={17} strokeWidth={2.2} aria-hidden="true" />}>Human review</Step>
+          </div>
+        </div>
         <h1 className="m-0 max-w-[900px] text-[clamp(38px,4.8vw,60px)] font-extrabold leading-[1.06] tracking-[-0.02em] text-balance">
           Cloud file storage with encryption <Highlight>you can verify</Highlight>
         </h1>
@@ -37,14 +47,6 @@ export function Hero() {
             <ArrowRight size={20} strokeWidth={2.4} />
           </button>
           <a href="#pricing" className="lp-btn flex min-h-14 items-center rounded-[14px] bg-white px-7 hover:bg-(--lp-field)">Choose version</a>
-        </div>
-        <div className="flex min-h-11 flex-wrap items-center justify-center gap-x-2.5 gap-y-1.5 rounded-[22px] bg-white/60 py-2 pl-2 pr-4 text-[15px] font-bold">
-          <span className="flex h-7 items-center whitespace-nowrap rounded-full bg-(--lp-ink) px-3 font-extrabold text-(--lp-yellow)">Before every release</span>
-          <Step icon={<SparklesIcon size={18} strokeWidth={2.2} aria-hidden="true" />}>AI code review</Step>
-          <Chevron />
-          <Step icon={<TargetIcon size={18} strokeWidth={2.2} aria-hidden="true" />}>AI break-in attempts</Step>
-          <Chevron />
-          <Step icon={<UserCheckIcon size={18} strokeWidth={2.2} aria-hidden="true" />}>Human review</Step>
         </div>
         <ServersCard />
         <div className="relative mt-[30px] w-full">
@@ -58,7 +60,7 @@ export function Hero() {
 
 function Step({ icon, children }: { icon: React.ReactNode; children: string }) {
   return (
-    <span className="flex items-center gap-[7px] whitespace-nowrap">
+    <span className="flex items-center gap-1.5 whitespace-nowrap">
       {icon}
       <span>{children}</span>
     </span>
@@ -68,7 +70,7 @@ function Step({ icon, children }: { icon: React.ReactNode; children: string }) {
 function Chevron() {
   return (
     <span aria-hidden="true" className="flex text-(--lp-text-yellow) max-[720px]:hidden">
-      <ChevronRight size={16} strokeWidth={2.6} />
+      <ChevronRight size={14} strokeWidth={2.6} />
     </span>
   );
 }
