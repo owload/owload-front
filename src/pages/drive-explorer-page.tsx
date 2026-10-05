@@ -109,7 +109,7 @@ export function DriveExplorerPage() {
   return (
     <>
       {fileNotFound && (
-        <div className="absolute top-14 inset-x-0 z-50 flex items-center gap-3 bg-amber-50 border-b border-amber-200 px-4 py-2 text-sm text-amber-800">
+        <div className="absolute top-18 inset-x-0 z-50 flex items-center gap-3 bg-amber-50 border-b border-amber-200 px-4 py-2 text-sm text-amber-800">
           <span>This file no longer exists.</span>
           {notFoundNodeId && (
             <button

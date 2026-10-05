@@ -19,7 +19,7 @@ export function AppMockup() {
     <div
       role="img"
       aria-label="Owload file manager showing encrypted documents, spreadsheets, presentations and photos"
-      className="flex overflow-hidden rounded-[20px] bg-white text-left shadow-[0_30px_70px_rgba(42,40,32,0.28)]"
+      className="flex overflow-hidden rounded-[20px] bg-white text-left shadow-[0_30px_70px_rgba(26,26,25,0.28)]"
     >
       <div className="lp-dark flex flex-none basis-[212px] flex-col gap-4 bg-(--lp-ink) px-3.5 py-[18px] text-[14px] font-semibold text-white max-[720px]:hidden">
         <Logo height={26} className="my-0.5 ml-1 self-start brightness-0 invert" />

@@ -33,7 +33,7 @@ export function DriveSwitcher({ className }: { className?: string }) {
   const driveClient = useFilesStore((state) => state.driveClient);
   const currentDriveId = driveClient?.getDriveId() ?? (mode === 'drive-inside' ? urlDriveId : undefined);
   const currentDriveInfo = currentDriveId ? drives.find(d => d.id === currentDriveId) : null;
-  const currentDriveDescription = currentDriveId ? driveStats[currentDriveId]?.description : null;
+  const openDrivesCount = useFilesStore((state) => Object.keys(state.driveKeys).length);
 
   const drivesToShow = [...drives].sort((a, b) => {
     const aStats = driveStats[a.id];
@@ -57,38 +57,39 @@ export function DriveSwitcher({ className }: { className?: string }) {
           <DropdownMenuTrigger asChild>
             <SidebarMenuButton
               size="lg"
-              className="py-7 data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+              className="h-auto gap-3 rounded-[14px] bg-sidebar-accent p-2 hover:bg-sidebar-accent/80 data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
             >
               <DebouncedSkeleton
                 contentInitialized={!!initialized}
                 initializedComponent={<>
                   {currentDriveId && currentDriveInfo != null && <>
-                    <div className="flex aspect-square size-11 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-                      <DriveIcon driveInfo={currentDriveInfo} />
+                    <div className="flex size-11 flex-none items-center justify-center rounded-[10px] bg-sidebar-primary text-sidebar-primary-foreground">
+                      <DriveIcon driveInfo={currentDriveInfo} className="size-5" />
                     </div>
-                    <div className="grid flex-1 text-left leading-tight">
-                      <span className="truncate font-semibold">
+                    <div className="grid min-w-0 flex-1 text-left leading-tight">
+                      <span className="truncate font-bold text-white">
                         {currentDriveInfo.title}
                       </span>
-                      <span className="truncate text-xs">{currentDriveDescription}</span>
+                      <span className="truncate text-[13px] font-normal text-sunny-on-dark">Open</span>
                     </div>
                   </>}
                   {!currentDriveId && <>
-                    <div className="flex aspect-square size-11 items-center justify-center rounded-lg bg-gray-200 text-sidebar-primary-foreground">
-                      <Scan />
+                    <div className="flex size-11 flex-none items-center justify-center rounded-[10px] border border-sunny-ink-line text-white">
+                      <Scan className="size-5" />
                     </div>
-                    <div className="grid flex-1 text-left leading-tight">
-                      <span className="truncate font-semibold">
+                    <div className="grid min-w-0 flex-1 text-left leading-tight">
+                      <span className="truncate font-bold text-white">
                         Select drive
                       </span>
+                      <span className="truncate text-[13px] font-normal text-sunny-on-dark">{openDrivesCount} of {drives.length} open</span>
                     </div>
                   </>}
                 </>}
                 skeletonComponent={<>
-                  <Skeleton className="h-11 w-full bg-skeleton" />
+                  <Skeleton className="h-11 w-full bg-sunny-ink-track" />
                 </>}
               />
-              <ChevronsUpDown className="ml-auto" />
+              <ChevronsUpDown className="ml-auto mr-1.5 text-sunny-on-dark" />
             </SidebarMenuButton>
           </DropdownMenuTrigger>
           <DropdownMenuContent

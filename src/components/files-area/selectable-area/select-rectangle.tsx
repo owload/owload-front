@@ -10,7 +10,7 @@ export default function SelectRectangle({ initialPos, finalPos, show }: SelectRe
 
     return (
         <div
-            className="absolute z-15 border-1 border-[#989584] bg-[#bcb9a6] opacity-40"
+            className="absolute z-15 border-1 border-[#989894] bg-[#bcbcb8] opacity-40"
             style={{
                 left: Math.min(initialPos.x, finalPos.x),
                 top: Math.min(initialPos.y, finalPos.y),

@@ -1,18 +1,14 @@
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Grip, LogOut, Search } from "lucide-react";
+import { LockKeyhole, Search } from "lucide-react";
 import { Input } from "./ui/input";
-import { Separator } from "./ui/separator";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "./ui/button";
-import { useLogout } from "@/auth-context-provider";
 import { useOpenDrivesCount } from "@/hooks/use-open-drives-count";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "./ui/dropdown-menu";
+import { AccountControls } from "./drives/account-controls";
 import { useCloseAllDrives } from "@/hooks/use-close-drives";
 
 export function NavBar() {
     const navigate = useNavigate();
     const location = useLocation();
-    const logout = useLogout();
     const getOpenDrivesCount = useOpenDrivesCount();
     const openDrivesCount = getOpenDrivesCount();
     const closeAllDrives = useCloseAllDrives();
@@ -26,45 +22,31 @@ export function NavBar() {
         }
     }
 
-    const handleLogoutClick = () => {
-        logout();
+    // The drives page draws its own header, on its yellow band.
+    if (location.pathname === "/") {
+        return null;
     }
+
     return (
-        <div className="fixed left-0 right-0 bg-white z-25 flex items-center border-b-1">
-            <div className="flex-10">
-                <Link to="/">
-                    <img src='/owl.svg' className="2xs:inline-block md:hidden ml-4 my-3 h-8 inline-block"></img>
-                    <img src='/logo-full.svg' className="2xs:hidden md:inline-block ml-4 my-3 h-8 inline-block"></img>
-                </Link>
-                <Separator orientation='vertical' className="2xs:hidden md:inline-block ml-38 h-5 inline-block" />
-                <Search className="2xs:ml-2 xs:ml-5 text-gray-400 inline-block" />
-                <Input className="2xs:hidden sm:inline-block ml-3 sm:w-55 md:w-[33%] md:w-min-45 lg:w-70 border-gray-400" placeholder="Search" />
+        <header className="absolute inset-x-0 top-0 z-25 flex h-[73px] items-center gap-3 border-b border-border bg-background px-[clamp(16px,2.2vw,28px)]">
+            <Link to="/" aria-label="Owload home" className="flex min-h-11 items-center md:hidden">
+                <img src='/owl.svg' alt="" className="h-8" />
+            </Link>
+            <div className="relative hidden max-w-[440px] flex-1 items-center sm:flex">
+                <label htmlFor="app-search" className="sr-only">Search files</label>
+                <Search aria-hidden="true" className="pointer-events-none absolute left-3.5 size-[18px] text-muted-foreground" />
+                <Input id="app-search" type="search" placeholder="Search" className="h-11 border-transparent bg-secondary pl-10" />
             </div>
 
-            <div className="flex-3 flex justify-end 2xs:pr-5 lg:pr-10 items-center">
-
-                <Button disabled={openDrivesCount === 0} variant={"black"} size={"sm"} className="2xs:mr-2 2xs:text-[8pt] 2xs:px-2 xs:mr-5 xs:text-xs xs:px-4 lg:mr-20" onClick={handleCloseAllDrivesClick}>
-                    {openDrivesCount > 0 ? <>Close all drives ({openDrivesCount})</> : <>No drives open</>}
+            <div className="ml-auto flex items-center gap-2">
+                <Button disabled={openDrivesCount === 0} variant="outline" className="gap-2 pl-3.5 pr-2 font-bold has-[>svg]:pl-3.5 has-[>svg]:pr-2" onClick={handleCloseAllDrivesClick}>
+                    <LockKeyhole aria-hidden="true" className="size-[18px]" />
+                    <span className="2xs:hidden xs:inline">{openDrivesCount > 0 ? "Close all drives" : "No drives open"}</span>
+                    <span className="flex h-7 min-w-7 items-center justify-center rounded-lg bg-sunny-ink px-2 text-[13px] text-sunny-yellow">{openDrivesCount}</span>
                 </Button>
 
-                <Grip className="2xs:hidden xs:inline-block mr-4" />
-                <DropdownMenu>
-                    <DropdownMenuTrigger className="cursor-pointer focus:outline-none focus:ring-[2px] focus:ring-offset-2 focus:ring-primary rounded-full">
-                        <Avatar>
-                            <AvatarImage src="/ava.jpg" />
-                            <AvatarFallback>CN</AvatarFallback>
-                        </Avatar>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent>
-                        <DropdownMenuLabel>My Account</DropdownMenuLabel>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem className="w-50" onClick={handleLogoutClick}>
-                            <LogOut className="h-4 w-4" />
-                            Logout
-                        </DropdownMenuItem>
-                    </DropdownMenuContent>
-                </DropdownMenu>
+                <AccountControls />
             </div>
-        </div>
+        </header>
     );
 }

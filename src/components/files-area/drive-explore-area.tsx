@@ -44,7 +44,7 @@ export function DriveExplorerArea() {
     );
 
     return (<>
-        <div className='absolute top-14 bottom-0 inset-x-0'>
+        <div className='absolute top-18 bottom-0 inset-x-0'>
             {isReadyForActions ? (
                 <DragAndDropArea>
                     <SelectArea

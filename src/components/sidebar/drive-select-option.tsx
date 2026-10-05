@@ -13,8 +13,8 @@ export function DriveSelectOption({ driveInfo }: { driveInfo: DriveInfo }) {
         <>
             <div className={cn("flex size-6 items-center justify-center rounded-sm border",
                 {
-                    "bg-gray-100": !driveOpen,
-                    "bg-[#f5d9d0]": passwordIsWrong,
+                    "bg-secondary": !driveOpen,
+                    "bg-destructive/15": passwordIsWrong,
                     "bg-primary": driveOpen && !passwordIsWrong
                 }
             )}>

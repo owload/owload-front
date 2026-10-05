@@ -4,7 +4,7 @@ import { SectionTag } from "./placeholder";
 
 /** A stack of three rotated file cards, as in the "Office files" panel. */
 function OfficeStack() {
-  const card = "relative w-[46%] flex-none aspect-4/3 overflow-hidden rounded-xl bg-white shadow-[0_12px_28px_rgba(42,40,32,0.22)]";
+  const card = "relative w-[46%] flex-none aspect-4/3 overflow-hidden rounded-xl bg-white shadow-[0_12px_28px_rgba(26,26,25,0.22)]";
   return (
     <div className="mt-auto flex items-end justify-center pb-2 pt-7" aria-hidden="true">
       <div className={`${card} z-[1] -rotate-[7deg]`}><SheetThumb /><TypeBadge kind="XLSX" /></div>

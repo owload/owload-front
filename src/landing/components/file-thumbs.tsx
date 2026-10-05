@@ -33,7 +33,7 @@ const SHEET_ROWS = [
 /** A spreadsheet: a green header row and lines of cells. */
 export function SheetThumb() {
   return (
-    <div aria-hidden="true" className="absolute inset-0 grid grid-cols-[0.5fr_1.6fr_1fr_1fr] auto-rows-fr gap-px bg-[#e3dfcf]">
+    <div aria-hidden="true" className="absolute inset-0 grid grid-cols-[0.5fr_1.6fr_1fr_1fr] auto-rows-fr gap-px bg-[#e2e2dd]">
       {[60, 70, 50, 60].map((w, i) => (
         <div key={"h" + i} className="flex items-center bg-(--lp-green-bg) px-[5px]">
           <div className="h-[3px] rounded-[3px] bg-(--lp-green)" style={{ width: `${w}%` }} />

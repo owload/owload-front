@@ -1,31 +1,32 @@
 /*
- * The "Sunny" design language (owload-docs/decisions/0024) as the landing page uses it. The values are tokens:
- * components use them through Tailwind, e.g. bg-(--lp-yellow), and never repeat the literals.
+ * The "Sunny" design language (owload-docs/decisions/0024) as the landing page uses it. The values are the tokens
+ * of src/index.css, under the landing's own names; components use them through Tailwind, e.g. bg-(--lp-yellow),
+ * and never repeat the literals.
  */
 @layer base {
   .lp {
-    --lp-yellow: #ffd93d;
-    --lp-yellow-edge: #edbf1a;
-    --lp-ink: #2a2820;
-    --lp-ink-2: #3a372c;
-    --lp-ink-3: #5e5a49;
-    --lp-on-dark: #d8d4c2;
-    --lp-dim: #a5a08a;
-    --lp-muted: #6b6754;
-    --lp-text-yellow: #4a4320;
-    --lp-text-white: #4a4636;
-    --lp-line: #ede8d5;
-    --lp-line-2: #d9d5c5;
-    --lp-line-3: #cfcabb;
-    --lp-field: #f4f2ea;
-    --lp-placeholder: #7a5600;
-    --lp-placeholder-edge: #a87400;
-    --lp-green: #1e7b45;
-    --lp-green-bg: #ddefe3;
-    --lp-blue: #1f5fbf;
-    --lp-red: #c0362c;
-    --lp-orange: #b5521b;
-    --lp-violet: #7a3fc4;
+    --lp-yellow: var(--sunny-yellow);
+    --lp-yellow-edge: var(--sunny-yellow-edge);
+    --lp-ink: var(--sunny-ink);
+    --lp-ink-2: var(--sunny-ink-raised);
+    --lp-ink-3: var(--sunny-ink-track);
+    --lp-on-dark: var(--sunny-on-dark);
+    --lp-dim: #a3a39d;
+    --lp-muted: var(--sunny-muted);
+    --lp-text-yellow: var(--sunny-text-on-yellow);
+    --lp-text-white: var(--sunny-text-on-white);
+    --lp-line: var(--sunny-line);
+    --lp-line-2: #d8d8d3;
+    --lp-line-3: #cecec8;
+    --lp-field: var(--sunny-field);
+    --lp-placeholder: var(--sunny-placeholder);
+    --lp-placeholder-edge: var(--sunny-placeholder-edge);
+    --lp-green: var(--sunny-green);
+    --lp-green-bg: var(--sunny-green-bg);
+    --lp-blue: var(--sunny-blue);
+    --lp-red: var(--sunny-red);
+    --lp-orange: var(--sunny-orange);
+    --lp-violet: var(--sunny-violet);
 
     font-family: "Nunito", "Helvetica Neue", Helvetica, Arial, sans-serif;
     font-size: 17px;

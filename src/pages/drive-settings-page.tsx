@@ -213,7 +213,7 @@ export function DriveSettingsPage() {
   );
 
   return (
-    <div className="absolute top-14 bottom-0 inset-x-0 pl-10 pt-8 overflow-y-auto">
+    <div className="absolute top-18 bottom-0 inset-x-0 pl-10 pt-8 overflow-y-auto">
       <h1 className="font-montserrat text-3xl font-bold">Drive Settings</h1>
       <main className="mt-5 max-w-lg space-y-6 pb-10">
 

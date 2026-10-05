@@ -114,7 +114,7 @@ export function CreateDrivePage() {
   }
 
   return (
-    <div className="absolute top-14 bottom-0 inset-x-0 pl-10 pt-8 overflow-y-auto">
+    <div className="absolute top-18 bottom-0 inset-x-0 pl-10 pt-8 overflow-y-auto">
       <div className="flex items-center justify-between gap-4 max-w-lg pr-3">
         <h1 className="font-montserrat text-3xl font-bold">Create new drive</h1>
         {/* A rescue path for drives that already exist on a storage; secondary to creating one. */}
