@@ -1,10 +1,11 @@
-import { ArrowRight, ChevronRight } from "lucide-react";
-import { CodeIcon, SparklesIcon, TargetIcon, UserCheckIcon } from "./design-icons";
+import { ArrowRight } from "lucide-react";
+import { CodeIcon } from "./design-icons";
 import { useRegister } from "@/auth-context-provider";
 import { AppMockup } from "./app-mockup";
 import { SOURCE_CODE_URL } from "./data";
 import { LandingHeader } from "./landing-header";
 import { Highlight, Rings } from "./placeholder";
+import { ReleaseChecks } from "./release-checks";
 import { ServersCard } from "./servers-card";
 
 export function Hero() {
@@ -38,37 +39,13 @@ export function Hero() {
           </button>
           <a href="#pricing" className="lp-btn flex min-h-14 items-center rounded-[14px] bg-white px-7 hover:bg-(--lp-field)">Choose version</a>
         </div>
-        <div className="flex min-h-11 flex-wrap items-center justify-center gap-x-2.5 gap-y-1.5 rounded-[22px] bg-white/60 py-2 pl-2 pr-4 text-[15px] font-bold">
-          <span className="flex h-7 items-center whitespace-nowrap rounded-full bg-(--lp-ink) px-3 font-extrabold text-(--lp-yellow)">Before every release</span>
-          <Step icon={<SparklesIcon size={18} strokeWidth={2.2} aria-hidden="true" />}>AI code review</Step>
-          <Chevron />
-          <Step icon={<TargetIcon size={18} strokeWidth={2.2} aria-hidden="true" />}>AI break-in attempts</Step>
-          <Chevron />
-          <Step icon={<UserCheckIcon size={18} strokeWidth={2.2} aria-hidden="true" />}>Human review</Step>
-        </div>
-        <ServersCard />
-        <div className="relative mt-[30px] w-full">
+        <ReleaseChecks />
+        <div className="relative mt-[30px] w-full max-[720px]:mt-0">
+          <ServersCard />
           <AppMockup />
           <ServersCard floating />
         </div>
       </section>
     </div>
-  );
-}
-
-function Step({ icon, children }: { icon: React.ReactNode; children: string }) {
-  return (
-    <span className="flex items-center gap-[7px] whitespace-nowrap">
-      {icon}
-      <span>{children}</span>
-    </span>
-  );
-}
-
-function Chevron() {
-  return (
-    <span aria-hidden="true" className="flex text-(--lp-text-yellow) max-[720px]:hidden">
-      <ChevronRight size={16} strokeWidth={2.6} />
-    </span>
   );
 }

@@ -4,12 +4,12 @@ const Y = ({ children }: { children: string }) => <span className="text-(--lp-ye
 
 /**
  * "What our servers get": a sample of the ciphertext the server stores. Floating over the product mock-up on wide
- * screens, a plain block under the buttons on narrow ones.
+ * screens, a plain block right above the mock-up on narrow ones.
  */
 export function ServersCard({ floating }: { floating?: boolean }) {
   const shell = floating
     ? "absolute -right-2 -top-[34px] flex w-[300px] rotate-2 flex-col gap-2.5 rounded-2xl bg-(--lp-ink) p-4 text-left text-white shadow-[0_16px_36px_rgba(42,40,32,0.34)] max-[720px]:hidden"
-    : "mt-2 hidden w-full flex-col gap-2.5 rounded-2xl bg-(--lp-ink) p-4 text-left text-white max-[720px]:flex";
+    : "mb-3 hidden w-full flex-col gap-2.5 rounded-2xl bg-(--lp-ink) p-4 text-left text-white max-[720px]:flex";
   return (
     <div className={`lp-dark ${shell}`}>
       <div className="flex items-center gap-2 text-[14px] font-extrabold">
