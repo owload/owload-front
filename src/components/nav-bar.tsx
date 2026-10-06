@@ -22,8 +22,8 @@ export function NavBar() {
         }
     }
 
-    // The drives page draws its own header, on its yellow band.
-    if (location.pathname === "/") {
+    // The drives pages draw their own header.
+    if (location.pathname === "/" || location.pathname === "/create") {
         return null;
     }
 

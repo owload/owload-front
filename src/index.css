@@ -85,6 +85,7 @@
   --sunny-text-on-yellow: #4a452b;
   --sunny-line: #e3e1d8;
   --sunny-field: #f2f2ef;
+  --input: #8f8d84;
 }
 
 @theme inline {
@@ -148,6 +149,8 @@
   --color-sunny-field: var(--sunny-field);
   --color-sunny-folder: var(--sunny-folder);
   --color-sunny-green: var(--sunny-green);
+  --color-sunny-placeholder: var(--sunny-placeholder);
+  --color-sunny-placeholder-edge: var(--sunny-placeholder-edge);
   --color-sunny-green-bg: var(--sunny-green-bg);
   --color-sunny-blue: var(--sunny-blue);
   --color-sunny-red: var(--sunny-red);

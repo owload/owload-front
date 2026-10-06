@@ -25,11 +25,14 @@ export function PathBreadcrumbs() {
     const { pwdWithId } = useFilesStoreOps();
     const pathItems = pwdWithId();
     const mediaBreakpoint = useMediaBreakpoint();
-    const driveDescription = useFilesStore.getState().driveClient?.getDescription() || "";
+    // The first step of the path is the drive, named by its title (the description says what is in it, and is shown elsewhere).
+    const driveClient = useFilesStore((state) => state.driveClient);
+    const driveTitle = useFilesStore((state) => state.drives.find((d) => d.id === driveClient?.getDriveId())?.title);
+    const driveName = driveTitle || driveClient?.getDescription() || "";
 
     const pathComponetnsLenght = 1 + pathItems.length;
-    const driveDescriptionSymbolsLength = Math.min(driveDescription.length, nameTruncateLen);
-    const symbolsLength = driveDescriptionSymbolsLength
+    const driveNameSymbolsLength = Math.min(driveName.length, nameTruncateLen);
+    const symbolsLength = driveNameSymbolsLength
         + pathItems.reduce((acc: number, cur) => {
             const l = cur.pathComponent.length;
             return acc + Math.min(l, nameTruncateLen);
@@ -38,7 +41,7 @@ export function PathBreadcrumbs() {
     const hideBreadcrumbs = (mediaBreakpoint !== undefined && totalSymbolLength > maxSymbolsCapacity[mediaBreakpoint]);
 
     // The drive is the first step of the path; the open folder (or the drive itself at the root) is the title.
-    const steps = [{ dirId: ROOT_NODE_ID as string, label: driveDescription }, ...pathItems.map((pi) => ({ dirId: pi.dirId as string, label: pi.pathComponent }))];
+    const steps = [{ dirId: ROOT_NODE_ID as string, label: driveName }, ...pathItems.map((pi) => ({ dirId: pi.dirId as string, label: pi.pathComponent }))];
     const current = steps[steps.length - 1];
     const parents = steps.slice(0, -1);
     // With little room only the drive stays in front of the title; the folders between are replaced by an ellipsis.
