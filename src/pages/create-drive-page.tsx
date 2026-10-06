@@ -11,7 +11,7 @@ import { ArchiveRestore, ArrowLeft, Lock, Plus } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Rings, TopRow } from "@/components/drives/page-top";
 import { AccessSection } from "@/components/drives/new-drive/access-section";
-import { Field, FormSection, PasswordInput, PasswordStrengthMeter, RepeatCheck, useFieldId } from "@/components/drives/new-drive/form-parts";
+import { Field, FieldError, FormSection, PasswordInput, PasswordStrengthMeter, RepeatCheck, useFieldId } from "@/components/drives/new-drive/form-parts";
 
 export function CreateDrivePage() {
   const { initialize, setDriveDescription } = useFilesStoreOps();
@@ -22,6 +22,8 @@ export function CreateDrivePage() {
   const [description, setDescription] = useState('');
   const [password, setPassword] = useState('');
   const [repeatPassword, setRepeatPassword] = useState('');
+  // set by the first try to create the drive: from then on the fields left empty are marked
+  const [submitted, setSubmitted] = useState(false);
 
   const [allPresets, setAllPresets] = useState<S3Preset[]>([]);
   const [presetsError, setPresetsError] = useState<string | null>(null);
@@ -70,7 +72,8 @@ export function CreateDrivePage() {
   }
 
   async function handleCreate() {
-    if (!title || !description || !password) { setCreateError("Please fill in all fields"); return; }
+    setSubmitted(true);
+    if (!title.trim() || !description.trim() || !password) { setCreateError(null); return; }
     if (password !== repeatPassword) { setCreateError("The passwords don’t match"); return; }
 
     if (master.mode === 'custom' && !isCustomValid(master.custom)) {
@@ -150,13 +153,16 @@ export function CreateDrivePage() {
             <div className="grid grid-cols-[repeat(auto-fit,minmax(min(380px,100%),1fr))] items-start gap-5">
               <FormSection number={1} title="General info">
                 <Field label="Drive name" htmlFor={nameId}>
-                  <Input id={nameId} autoComplete="off" value={title} onChange={e => setTitle(e.target.value)} />
+                  <Input id={nameId} autoComplete="off" value={title} onChange={e => setTitle(e.target.value)} aria-invalid={(submitted && !title.trim()) || undefined} />
+                  {submitted && !title.trim() && <FieldError>Enter a name for the drive</FieldError>}
                 </Field>
                 <Field label="Description" htmlFor={descriptionId}>
-                  <Input id={descriptionId} autoComplete="off" value={description} onChange={e => setDescription(e.target.value)} />
+                  <Input id={descriptionId} autoComplete="off" value={description} onChange={e => setDescription(e.target.value)} aria-invalid={(submitted && !description.trim()) || undefined} />
+                  {submitted && !description.trim() && <FieldError>Enter a description</FieldError>}
                 </Field>
                 <Field label="Password" htmlFor={passwordId}>
-                  <PasswordInput id={passwordId} label="password" value={password} onChange={setPassword} />
+                  <PasswordInput id={passwordId} label="password" value={password} onChange={setPassword} invalid={submitted && !password} />
+                  {submitted && !password && <FieldError>Enter a password</FieldError>}
                   <PasswordStrengthMeter password={password} />
                 </Field>
                 <Field label="Repeat password" htmlFor={repeatId}>

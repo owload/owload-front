@@ -1,4 +1,4 @@
-import { ChevronsUpDown, LayoutGrid, Plus, Scan } from "lucide-react"
+import { ChevronsUpDown, LayoutGrid, Lock, Plus, Scan } from "lucide-react"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -34,6 +34,8 @@ export function DriveSwitcher({ className }: { className?: string }) {
   const currentDriveId = driveClient?.getDriveId() ?? (mode === 'drive-inside' ? urlDriveId : undefined);
   const currentDriveInfo = currentDriveId ? drives.find(d => d.id === currentDriveId) : null;
   const openDrivesCount = useFilesStore((state) => Object.keys(state.driveKeys).length);
+  // The password of the open drive was wrong: its keys decrypt nothing (it has no description).
+  const currentLocked = currentDriveId != null && driveStats[currentDriveId] != null && !driveStats[currentDriveId].description;
 
   const drivesToShow = [...drives].sort((a, b) => {
     const aStats = driveStats[a.id];
@@ -63,14 +65,14 @@ export function DriveSwitcher({ className }: { className?: string }) {
                 contentInitialized={!!initialized}
                 initializedComponent={<>
                   {currentDriveId && currentDriveInfo != null && <>
-                    <div className="flex size-9 flex-none items-center justify-center rounded-[9px] bg-sidebar-primary text-sidebar-primary-foreground">
+                    <div className={cn("flex size-9 flex-none items-center justify-center rounded-[9px]", currentLocked ? "border border-sunny-ink-line text-white" : "bg-sidebar-primary text-sidebar-primary-foreground")}>
                       <DriveIcon driveInfo={currentDriveInfo} className="size-[18px]" />
                     </div>
                     <div className="grid min-w-0 flex-1 text-left leading-tight">
                       <span className="truncate font-semibold text-white">
                         {currentDriveInfo.title}
                       </span>
-                      <span className="truncate text-xs font-normal text-sunny-on-dark">Open</span>
+                      <span className="flex items-center gap-[5px] truncate text-xs font-normal text-sunny-on-dark">{currentLocked && <Lock aria-hidden="true" className="size-[11px]" strokeWidth={2.2} />}{currentLocked ? "Locked" : "Open"}</span>
                     </div>
                   </>}
                   {!currentDriveId && <>

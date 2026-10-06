@@ -28,17 +28,27 @@ export function Field({ label, htmlFor, children }: { label: string, htmlFor: st
     );
 }
 
+/** The message under a field that is not valid. */
+export function FieldError({ children }: { children: string }) {
+    return (
+        <p role="alert" className="m-0 flex items-center gap-1.5 text-xs font-semibold text-[#b3261e]">
+            <TriangleAlert aria-hidden="true" className="size-[13px]" strokeWidth={2.6} />
+            <span>{children}</span>
+        </p>
+    );
+}
+
 /** A marker for a text the design leaves open (decision 0024, point 5). */
 export function OpenText({ children }: { children: string }) {
     return <span className="rounded-md border border-dashed border-sunny-placeholder-edge px-1.5 py-px text-sunny-placeholder [box-decoration-break:clone]">{children}</span>;
 }
 
 /** A password field with a button that shows what was typed. */
-export function PasswordInput({ id, value, onChange, label, invalid, autoComplete = "new-password" }: { id: string, value: string, onChange: (value: string) => void, label: string, invalid?: boolean, autoComplete?: string }) {
+export function PasswordInput({ id, value, onChange, label, invalid, autoComplete = "new-password", autoFocus, className }: { id: string, value: string, onChange: (value: string) => void, label: string, invalid?: boolean, autoComplete?: string, autoFocus?: boolean, className?: string }) {
     const [shown, setShown] = useState(false);
     return (
         <div className="relative flex">
-            <Input id={id} type={shown ? "text" : "password"} value={value} onChange={(e) => onChange(e.target.value)} autoComplete={autoComplete} aria-invalid={invalid || undefined} className="rounded-[10px] pr-11 text-sm" />
+            <Input id={id} type={shown ? "text" : "password"} value={value} onChange={(e) => onChange(e.target.value)} autoComplete={autoComplete} autoFocus={autoFocus} aria-invalid={invalid || undefined} className={cn("rounded-[10px] pr-11 text-sm", className)} />
             <button type="button" aria-label={`${shown ? "Hide" : "Show"} ${label}`} aria-pressed={shown} onClick={() => setShown(!shown)} className="absolute right-0.5 top-0.5 flex size-10 cursor-pointer items-center justify-center rounded-lg text-sunny-muted outline-sunny-ink hover:text-sunny-ink focus-visible:outline-2">
                 {shown ? <EyeOff aria-hidden="true" className="size-[17px]" /> : <Eye aria-hidden="true" className="size-[17px]" />}
             </button>

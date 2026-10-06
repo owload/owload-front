@@ -8,14 +8,16 @@ import { PathBreadcrumbs } from "./path-breadcrumbs";
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 
 /** The head of the files screen: the path, a line telling what is in the folder, and the view switch. */
-export function DirectoryHeader({ showPath, showViewSwitch }: { showPath: boolean, showViewSwitch: boolean }) {
+export function DirectoryHeader({ showPath, showViewSwitch, locked = false }: { showPath: boolean, showViewSwitch: boolean, locked?: boolean }) {
     const fileObjects = useFilesStore((state) => state.fileObjects);
     const visible = fileObjects.filter((fileObject) => !fileObject.name.startsWith(SYSTEM_PREFIX));
     const folders = visible.filter((fileObject) => fileObject.type === FsObjectType.DIR).length;
     const files = visible.length - folders;
     const selected = visible.filter((fileObject) => fileObject.selected).length;
 
-    const summary = visible.length === 0
+    const summary = locked
+        ? "Locked"
+        : visible.length === 0
         ? "No files yet"
         : [
             [folders > 0 && plural(folders, "folder", "folders"), files > 0 && plural(files, "file", "files")].filter(Boolean).join(", "),
