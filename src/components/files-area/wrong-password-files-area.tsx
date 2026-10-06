@@ -34,7 +34,7 @@ export function WrongPasswordFilesArea() {
     }
 
     return (
-        <div className='absolute min-h-115 inset-x-0 top-15 bottom-0 flex items-center justify-center px-1 pb-50 xl:pr-20'>
+        <div className='absolute min-h-115 inset-x-0 top-26 bottom-0 flex items-center justify-center px-1 pb-50 xl:pr-20'>
             <div>
                 <center>
                     <div className="bg-[#f5d9d0] pt-15 2xs:px-3 lg:px-15 pb-5 rounded-2xl border-2 border-red-300 xl:w-150">

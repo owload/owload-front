@@ -63,7 +63,7 @@ export function DrivesPage() {
                         initializedComponent={<>
                             {openDrives.map(({ driveInfo, kind }) => <OpenDriveCard key={driveInfo.id} driveInfo={driveInfo} kind={kind} />)}
                             {openDrives.length === 0 && (
-                                <div className="flex items-center gap-3 rounded-[20px] bg-sunny-yellow p-5 font-semibold text-sunny-ink shadow-[0_24px_40px_-24px_rgba(26,26,25,0.55)] md:p-6 md:shadow-[0_28px_48px_-28px_rgba(26,26,25,0.55)]">
+                                <div className="flex items-center gap-3 rounded-[20px] bg-sunny-yellow-surface p-5 font-semibold text-sunny-ink shadow-[0_24px_40px_-24px_rgba(26,26,25,0.55)] md:p-6 md:shadow-[0_28px_48px_-28px_rgba(26,26,25,0.55)]">
                                     <Lock aria-hidden="true" className="size-[18px]" strokeWidth={1.8} />
                                     No drive is open.
                                 </div>

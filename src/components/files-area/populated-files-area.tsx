@@ -49,8 +49,8 @@ export function PopulatedFilesArea() {
 
     return (
         <div className={cn("absolute inset-x-0 inset-y-0", {
-            "top-12 pt-2 pb-15 overflow-scroll flex flex-wrap justify-center": isMobile,
-            "top-15 pt-10 pl-10 pb-15 overflow-scroll": !isMobile
+            "top-26 pt-2 pb-28 overflow-scroll flex flex-wrap justify-center": isMobile,
+            "top-26 pt-2 pl-[clamp(16px,2.2vw,28px)] pb-28 overflow-scroll": !isMobile
         })}>
             <div style={{ width: isMobile ? mobileSizePx*3 + gapSizePx*3 : 'auto' }} className="pl-3 xs:pl-0">
                 {

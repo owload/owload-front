@@ -1,10 +1,9 @@
 import { FilesArea } from '@/components/files-area/files-area';
-import { PathBreadcrumbs } from '@/components/files-area/path-breadcrumbs';
+import { DirectoryHeader } from '@/components/files-area/directory-header';
 import { SelectArea } from '@/components/files-area/selectable-area';
 import { MediaPreview } from '@/components/media-preview/media-preview';
 import { EditorHost } from '@/components/editor-host/editor-host';
 import { DragAndDropArea } from '@/components/files-area/drag-and-drop-area';
-import { Toolbox } from '@/components/toolbox/toolbox';
 import { ToolboxBottom } from '@/components/toolbox-bottom/toolbox-bottom';
 import { useFilesStore } from '@/stores/files-store';
 import { useIsSelectedFileObject } from '@/hooks/use-is-selected-file-object';
@@ -32,14 +31,9 @@ export function DriveExplorerArea() {
     const mainContent = (
         <main className='group absolute inset-0 select-none'>
             <div className="hidden group-[.dragged]:block absolute z-50 inset-0 bg-gray-300/20 pointer-events-none"></div>
-            <div className="sticky bg-white z-10 flex 2xs:flex-col sm:flex-row sm:items-center px-4 h-10 sm:h-15">
-                <div className='sm:flex-1 flex items-center gap-2 h-full order-1 overflow-hidden'>
-                    {!mobileFileSelectModeOn && <PathBreadcrumbs />}
-                </div>
-                {isReadyForActions && <Toolbox className="order-2" />}
-            </div>
+            <DirectoryHeader showPath={!mobileFileSelectModeOn} showViewSwitch={!!isReadyForActions} />
             <FilesArea />
-            {!mediaPreviewOpen && !editorOpen && isReadyForActions && <ToolboxBottom className="fixed bottom-4 right-2 sm:right-4" />}
+            {!mediaPreviewOpen && !editorOpen && isReadyForActions && <ToolboxBottom className="absolute inset-x-0 bottom-5 z-20" />}
         </main>
     );
 

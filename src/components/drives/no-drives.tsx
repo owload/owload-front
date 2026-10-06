@@ -10,7 +10,7 @@ export function NoDrives() {
     const step = "size-[18px]";
     return (
         <>
-            <section className="flex flex-col gap-4 rounded-[20px] bg-sunny-yellow p-5 text-sunny-ink shadow-[0_24px_40px_-24px_rgba(26,26,25,0.55)] md:flex-row md:flex-wrap md:items-center md:gap-x-8 md:gap-y-6 md:p-7 md:shadow-[0_28px_48px_-28px_rgba(26,26,25,0.55)]">
+            <section className="flex flex-col gap-4 rounded-[20px] bg-sunny-yellow-surface p-5 text-sunny-ink shadow-[0_24px_40px_-24px_rgba(26,26,25,0.55)] md:flex-row md:flex-wrap md:items-center md:gap-x-8 md:gap-y-6 md:p-7 md:shadow-[0_28px_48px_-28px_rgba(26,26,25,0.55)]">
                 <div className="flex size-[52px] flex-none items-center justify-center rounded-[14px] bg-sunny-ink text-sunny-yellow md:size-16 md:rounded-2xl">
                     <Lock aria-hidden="true" className="size-6 md:size-7" strokeWidth={1.8} />
                 </div>

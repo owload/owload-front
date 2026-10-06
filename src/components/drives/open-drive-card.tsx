@@ -13,7 +13,7 @@ export function OpenDriveCard({ driveInfo, kind }: { driveInfo: DriveInfo, kind:
     const { passwordIsWrong, description, browse, close, tryAgain, settings, logs } = useDriveActions(driveInfo);
     const StateIcon = passwordIsWrong ? Lock : LockOpen;
     return (
-        <article className="flex flex-col gap-[18px] rounded-[20px] bg-sunny-yellow p-5 text-sunny-ink shadow-[0_24px_40px_-24px_rgba(26,26,25,0.55)] md:flex-row md:flex-wrap md:items-center md:gap-x-10 md:gap-y-6 md:p-6 md:shadow-[0_28px_48px_-28px_rgba(26,26,25,0.55)]">
+        <article className="flex flex-col gap-[18px] rounded-[20px] bg-sunny-yellow-surface p-5 text-sunny-ink shadow-[0_24px_40px_-24px_rgba(26,26,25,0.55)] md:flex-row md:flex-wrap md:items-center md:gap-x-10 md:gap-y-6 md:p-6 md:shadow-[0_28px_48px_-28px_rgba(26,26,25,0.55)]">
             <div className="flex min-w-0 items-center gap-3.5 md:flex-[1_1_260px] md:gap-4">
                 <div className="flex size-[52px] flex-none items-center justify-center rounded-[14px] bg-sunny-ink text-sunny-yellow md:size-14">
                     <DriveIcon driveInfo={driveInfo} className="size-6 md:size-[26px]" />

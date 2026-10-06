@@ -1,7 +1,6 @@
 import { FsObjectType, ROOT_NODE_ID } from "@/engine";
 import { useCreateFolderDialog, useOpenFileProperties, useRenameDialog } from "@/hooks/use-dialogs";
 import { useFilesStoreOps } from "@/hooks/use-files-store-ops";
-import { useMediaBreakpoint } from "@/hooks/use-media-breakpoint";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useActivateMobileSelectMode, useDeactivateMobileSelectMode, useIsMobileSelectModeOn } from "@/hooks/use-mobile-select-mode";
 import { useNavigateDir } from "@/hooks/use-navigate-dir";
@@ -9,20 +8,9 @@ import { useSelectedFileObjects } from "@/hooks/use-selected-file-objects";
 import { useUploadFile } from "@/hooks/use-upload-file";
 import { cn } from "@/lib/utils";
 import { useFilesStore } from "@/stores/files-store";
-import { ArrowLeft, ClipboardPaste, CloudDownload, CloudUpload, Files, FolderPlus, Info, SquareDashedMousePointer, SquarePen, SquareScissors, Trash, Undo, X } from "lucide-react";
-import { useEffect, useState } from "react";
+import { ArrowLeft, ClipboardPaste, CloudDownload, CloudUpload, Files, FolderPlus, Info, SquareDashedMousePointer, SquarePen, SquareScissors, Trash, X } from "lucide-react";
+import { useState } from "react";
 import { UploadStateButton } from "./upload-state-button";
-
-function useWindowWidth() {
-    const [width, setWidth] = useState(() => window.innerWidth || document.documentElement.clientWidth);
-    useEffect(() => {
-        const update = () => setWidth(window.innerWidth || document.documentElement.clientWidth);
-        update();
-        window.addEventListener('resize', update);
-        return () => window.removeEventListener('resize', update);
-    }, []);
-    return width;
-}
 
 export function ToolboxBottom(props: { className?: string }) {
     const openCreateFolderDialog = useCreateFolderDialog();
@@ -34,7 +22,6 @@ export function ToolboxBottom(props: { className?: string }) {
     const mobileFileSelectModeOn = useIsMobileSelectModeOn();
     const activateMobileSelectMode = useActivateMobileSelectMode();
     const isMobile = useIsMobile();
-    const breakpoint = useMediaBreakpoint();
     const { pwd, rm, commitMoveOrCopy, selectFilesToCopy, selectFilesToMove, downloadSelectedObject } = useFilesStoreOps();
 
     const [rmButtonClickPending, setRmButtonClickPending] = useState(false);
@@ -136,203 +123,77 @@ export function ToolboxBottom(props: { className?: string }) {
             });
     };
 
-    let buttonsCount = 1; // back or cancel
-    if (isAnyFileSelected) {
-        buttonsCount += 3; // copy, cut, delete,
-    } else if (!mobileFileSelectModeOn) {
-        buttonsCount += 2; // create folder, upload
-    }
-    if (isPasteAvailable) {
-        buttonsCount += 1; // paste
-    }
-    if (isDownloadAvailable) {
-        buttonsCount += 1; // download
-    }
-    if (isMobile && !mobileFileSelectModeOn) {
-        buttonsCount += 1; // mobile select mode
-    }
-    if (isSingleFileSelected) {
-        buttonsCount += 1; // rename
-        if (selectedFileObjects[0]?.type !== FsObjectType.DIR) {
-            buttonsCount += 1; // properties (files only)
-        }
-    }
-    if (showUploadStateButton) {
-        buttonsCount++;
-    }
-
-
-    const windowWidth = useWindowWidth();
-    const padding = breakpoint === "2xs" || breakpoint === "xs" ? 2 : 4;
-    const widthCapacity = windowWidth - padding * 4; // 4 is px size of tailwind '1' spacing unit
-    const gap = 1 * 4;
-    const pxButtonWidth = Math.max(Math.min(
-        Math.floor((widthCapacity - gap * (buttonsCount - 1)) / buttonsCount),
-        44), 44);
-    const picSize = 20;
-    const stdClassname = "p-2.5 rounded-full bg-primary text-primary-foreground shadow-sm hover:bg-primary/80 flex items-center justify-center cursor-pointer disabled:opacity-50 disabled:cursor-default disabled:hover:bg-primary";
+    const dockButton = {
+        // a click on the dock must not start or end a selection of the files behind it
+        onMouseDown: (e: React.MouseEvent) => e.stopPropagation(),
+        onPointerDown: (e: React.PointerEvent) => e.stopPropagation(),
+    };
+    const picSize = 18;
+    const hasSelectionActions = isDownloadAvailable || isAnyFileSelected;
 
     return (
-        <div className={cn('flex gap-1 items-end', props.className)}>
-            {isAnyFileSelected && <button
-                type="button"
-                onClick={handleCopyClick}
-                onMouseDown={(e) => e.stopPropagation()}
-                title="Copy"
-                onPointerDown={(e) => e.stopPropagation()}
-                className={stdClassname}
-                style={{ width: pxButtonWidth, height: pxButtonWidth }}
-            >
-                <Files size={picSize} />
-            </button>}
+        <div className={cn('pointer-events-none flex justify-center px-4', props.className)}>
+            <div role="toolbar" aria-label="File actions" className="pointer-events-auto relative flex flex-wrap items-center justify-center gap-1 rounded-[18px] bg-sidebar p-2 text-white shadow-[0_12px_30px_rgba(42,40,34,0.30)]">
+                {!mobileFileSelectModeOn && <>
+                    <DockButton label="Copy" disabled={!isAnyFileSelected} onClick={handleCopyClick} {...dockButton}><Files size={picSize} /></DockButton>
+                    <DockButton label="Cut" disabled={!isAnyFileSelected} onClick={handleCutClick} {...dockButton}><SquareScissors size={picSize} /></DockButton>
+                    <DockButton label="Paste" disabled={!isPasteAvailable || pasteButtonClickPending} onClick={handlePasteClick} {...dockButton}><ClipboardPaste size={picSize} /></DockButton>
+                </>}
+                {mobileFileSelectModeOn && isAnyFileSelected && <>
+                    <DockButton label="Copy" onClick={handleCopyClick} {...dockButton}><Files size={picSize} /></DockButton>
+                    <DockButton label="Cut" onClick={handleCutClick} {...dockButton}><SquareScissors size={picSize} /></DockButton>
+                </>}
 
-            {isAnyFileSelected && <button
-                type="button"
-                onClick={handleCutClick}
-                onMouseDown={(e) => e.stopPropagation()}
-                title="Cut"
-                onPointerDown={(e) => e.stopPropagation()}
-                className={stdClassname}
-                style={{ width: pxButtonWidth, height: pxButtonWidth }}
-            >
-                <SquareScissors size={picSize} />
-            </button>}
+                {hasSelectionActions && <DockDivider />}
+                {isDownloadAvailable && <DockButton iconOnly label="Download" onClick={handleDownloadClick} {...dockButton}><CloudDownload size={picSize} /></DockButton>}
+                {isSingleFileSelected && <DockButton iconOnly label="Rename" onClick={handleRenameClick} {...dockButton}><SquarePen size={picSize} /></DockButton>}
+                {isAnyFileSelected && <DockButton iconOnly label="Delete" disabled={rmButtonClickPending} onClick={handleDeleteClick} {...dockButton}><Trash size={picSize} /></DockButton>}
+                {isSingleFileSelected && selectedFileObjects[0]?.type !== FsObjectType.DIR && <DockButton iconOnly label="Properties" onClick={handlePropertiesClick} {...dockButton}><Info size={picSize} /></DockButton>}
 
-            {isPasteAvailable && <button
-                type="button"
-                onClick={handlePasteClick}
-                onMouseDown={(e) => e.stopPropagation()}
-                title="Paste"
-                onPointerDown={(e) => e.stopPropagation()}
-                disabled={pasteButtonClickPending}
-                className={stdClassname}
-                style={{ width: pxButtonWidth, height: pxButtonWidth }}
-            >
-                <ClipboardPaste size={20} />
-            </button>}
-
-            {isDownloadAvailable && <button
-                type="button"
-                onClick={handleDownloadClick}
-                onMouseDown={(e) => e.stopPropagation()}
-                title="Download"
-                onPointerDown={(e) => e.stopPropagation()}
-                className={stdClassname}
-                style={{ width: pxButtonWidth, height: pxButtonWidth }}
-            >
-                <CloudDownload size={picSize} />
-            </button>}
-
-            {isSingleFileSelected && <button
-                type="button"
-                onClick={handleRenameClick}
-                onMouseDown={(e) => e.stopPropagation()}
-                title="Rename"
-                onPointerDown={(e) => e.stopPropagation()}
-                className={stdClassname}
-                style={{ width: pxButtonWidth, height: pxButtonWidth }}
-            >
-                <SquarePen size={picSize} />
-            </button>}
-
-            {isAnyFileSelected && <button
-                type="button"
-                onClick={handleDeleteClick}
-                onMouseDown={(e) => e.stopPropagation()}
-                title="Delete"
-                disabled={rmButtonClickPending}
-                onPointerDown={(e) => e.stopPropagation()}
-                className={stdClassname}
-                style={{ width: pxButtonWidth, height: pxButtonWidth }}
-            >
-                <Trash size={picSize} />
-            </button>}
-
-            {isSingleFileSelected && selectedFileObjects[0]?.type !== FsObjectType.DIR && <button
-                type="button"
-                onClick={handlePropertiesClick}
-                onMouseDown={(e) => e.stopPropagation()}
-                onPointerDown={(e) => e.stopPropagation()}
-                title="Properties"
-                className={stdClassname}
-                style={{ width: pxButtonWidth, height: pxButtonWidth }}
-            >
-                <Info size={picSize} />
-            </button>}
-
-            {false && <button
-                type="button"
-                onClick={() => { }}
-                onMouseDown={(e) => e.stopPropagation()}
-                title="Undo"
-                className={stdClassname}
-                style={{ width: pxButtonWidth, height: pxButtonWidth }}
-            >
-                <Undo size={picSize} />
-            </button>}
-
-            {!isAnyFileSelected && !mobileFileSelectModeOn && <button
-                type="button"
-                onClick={handleCreateFolderClick}
-                onMouseDown={(e) => e.stopPropagation()}
-                onPointerDown={(e) => e.stopPropagation()}
-                title="Create new folder"
-                className={stdClassname}
-                style={{ width: pxButtonWidth, height: pxButtonWidth }}
-            >
-                <FolderPlus size={picSize} />
-            </button>}
-
-            {!isAnyFileSelected && !mobileFileSelectModeOn && <button
-                type="button"
-                onClick={handleUploadClick}
-                onMouseDown={(e) => e.stopPropagation()}
-                onPointerDown={(e) => e.stopPropagation()}
-                title="Upload files"
-                className={stdClassname}
-                style={{ width: pxButtonWidth, height: pxButtonWidth }}
-            >
-                <CloudUpload size={picSize} />
-            </button>}
-
-            {isMobile && !mobileFileSelectModeOn && <button
-                type="button"
-                onClick={activateMobileSelectMode}
-                onMouseDown={(e) => e.stopPropagation()}
-                onPointerDown={(e) => e.stopPropagation()}
-                title="Select files"
-                className={stdClassname}
-                style={{ width: pxButtonWidth, height: pxButtonWidth }}
-            >
-                <SquareDashedMousePointer size={picSize} />
-            </button>}
-
-            {!mobileFileSelectModeOn && <button
-                type="button"
-                onClick={handleBackClick}
-                onMouseDown={(e) => e.stopPropagation()}
-                onPointerDown={(e) => e.stopPropagation()}
-                title="Back"
-                className={stdClassname}
-                disabled={isRootDir && !mobileFileSelectModeOn}
-                style={{ width: pxButtonWidth, height: pxButtonWidth }}
-            >
-                <ArrowLeft size={picSize} />
-            </button>}
-
-            {mobileFileSelectModeOn && <button
-                type="button"
-                onClick={handleCancelClick}
-                onMouseDown={(e) => e.stopPropagation()}
-                onPointerDown={(e) => e.stopPropagation()}
-                title="Cancel"
-                className={stdClassname}
-                disabled={isRootDir && !mobileFileSelectModeOn}
-                style={{ width: pxButtonWidth, height: pxButtonWidth }}
-            >
-                <X size={picSize} />
-            </button>}
-            {showUploadStateButton && <UploadStateButton size={pxButtonWidth} />}
+                {!mobileFileSelectModeOn && <>
+                    <DockDivider />
+                    <DockButton label="Create folder" onClick={handleCreateFolderClick} {...dockButton}><FolderPlus size={picSize} /></DockButton>
+                    <DockButton label="Upload" onClick={handleUploadClick} {...dockButton}><CloudUpload size={picSize} /></DockButton>
+                </>}
+                {isMobile && !mobileFileSelectModeOn && <DockButton label="Select" onClick={activateMobileSelectMode} {...dockButton}><SquareDashedMousePointer size={picSize} /></DockButton>}
+                {!mobileFileSelectModeOn && <DockButton label="Back" disabled={isRootDir} onClick={handleBackClick} {...dockButton}><ArrowLeft size={picSize} /></DockButton>}
+                {mobileFileSelectModeOn && <DockButton label="Cancel" onClick={handleCancelClick} {...dockButton}><X size={picSize} /></DockButton>}
+                {showUploadStateButton && <>
+                    <DockDivider />
+                    <UploadStateButton size={44} />
+                </>}
+            </div>
         </div>
     );
 };
+
+/** One button of the dock: an icon and its label; the label gives way to the icon alone on a narrow screen, or when asked to (the actions on a selection, to keep the dock short). */
+function DockButton({ label, iconOnly, children, disabled, onClick, onMouseDown, onPointerDown }: {
+    label: string;
+    iconOnly?: boolean;
+    children: React.ReactNode;
+    disabled?: boolean;
+    onClick: () => void;
+    onMouseDown: (e: React.MouseEvent) => void;
+    onPointerDown: (e: React.PointerEvent) => void;
+}) {
+    return (
+        <button
+            type="button"
+            title={label}
+            aria-label={label}
+            disabled={disabled}
+            onClick={onClick}
+            onMouseDown={onMouseDown}
+            onPointerDown={onPointerDown}
+            className="flex h-11 cursor-pointer items-center gap-2 rounded-xl px-3 text-sm font-semibold text-white outline-sunny-yellow hover:bg-white/10 focus-visible:outline-2 disabled:cursor-default disabled:opacity-40 disabled:hover:bg-transparent max-sm:px-2.5 [&>svg]:text-white"
+        >
+            {children}
+            <span className={iconOnly ? "sr-only" : "max-sm:hidden"}>{label}</span>
+        </button>
+    );
+}
+
+function DockDivider() {
+    return <span aria-hidden="true" className="mx-1 h-6 w-px bg-sunny-ink-track" />;
+}

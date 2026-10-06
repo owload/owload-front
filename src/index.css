@@ -9,8 +9,9 @@
    * The "Sunny" tokens (owload-docs/decisions/0024, 0025). They are defined here once; the landing page aliases them
    * (src/landing/landing.css) and the shadcn variables below are mapped onto them.
    */
-  --sunny-yellow: #f4dc72;
-  --sunny-yellow-edge: #ecd56e;
+  --sunny-yellow: #fadb58;
+  --sunny-yellow-edge: #edca44;
+  --sunny-yellow-surface: #f4dc72;
   --sunny-yellow-soft: #fff8d6;
   --sunny-yellow-pale: #fdf1c2;
   --sunny-ink: #1b1b1a;
@@ -62,13 +63,13 @@
   --chart-5: hsl(27 87% 67%);
   --radius: 0.75rem;
   /* The side panel is dark; everything else is light (decision 0025). */
-  --sidebar: #1f1d18;
+  --sidebar: #1d1c19;
   --sidebar-foreground: var(--sunny-on-dark);
   --sidebar-primary: var(--sunny-yellow);
   --sidebar-primary-foreground: var(--sunny-ink);
-  --sidebar-accent: #322f27;
+  --sidebar-accent: #302e28;
   --sidebar-accent-foreground: #ffffff;
-  --sidebar-border: #322f27;
+  --sidebar-border: #302e28;
   --sidebar-ring: var(--sunny-yellow);
   --text-sm: 0.875rem;
   --text-base: 1rem;
@@ -138,6 +139,7 @@
 
   --color-sunny-yellow: var(--sunny-yellow);
   --color-sunny-yellow-edge: var(--sunny-yellow-edge);
+  --color-sunny-yellow-surface: var(--sunny-yellow-surface);
   --color-sunny-yellow-soft: var(--sunny-yellow-soft);
   --color-sunny-yellow-pale: var(--sunny-yellow-pale);
   --color-sunny-ink: var(--sunny-ink);
