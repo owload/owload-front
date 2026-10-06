@@ -57,36 +57,36 @@ export function DriveSwitcher({ className }: { className?: string }) {
           <DropdownMenuTrigger asChild>
             <SidebarMenuButton
               size="lg"
-              className="h-auto gap-3 rounded-[14px] bg-sidebar-accent p-2 hover:bg-sidebar-accent/80 data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+              className="h-auto gap-3 rounded-xl bg-sidebar-accent p-2 hover:bg-sidebar-accent/80 data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
             >
               <DebouncedSkeleton
                 contentInitialized={!!initialized}
                 initializedComponent={<>
                   {currentDriveId && currentDriveInfo != null && <>
-                    <div className="flex size-11 flex-none items-center justify-center rounded-[10px] bg-sidebar-primary text-sidebar-primary-foreground">
-                      <DriveIcon driveInfo={currentDriveInfo} className="size-5" />
+                    <div className="flex size-9 flex-none items-center justify-center rounded-[9px] bg-sidebar-primary text-sidebar-primary-foreground">
+                      <DriveIcon driveInfo={currentDriveInfo} className="size-[18px]" />
                     </div>
                     <div className="grid min-w-0 flex-1 text-left leading-tight">
-                      <span className="truncate font-bold text-white">
+                      <span className="truncate font-semibold text-white">
                         {currentDriveInfo.title}
                       </span>
-                      <span className="truncate text-[13px] font-normal text-sunny-on-dark">Open</span>
+                      <span className="truncate text-xs font-normal text-sunny-on-dark">Open</span>
                     </div>
                   </>}
                   {!currentDriveId && <>
-                    <div className="flex size-11 flex-none items-center justify-center rounded-[10px] border border-sunny-ink-line text-white">
-                      <Scan className="size-5" />
+                    <div className="flex size-9 flex-none items-center justify-center rounded-[9px] border border-sunny-ink-line text-white">
+                      <Scan className="size-[18px]" />
                     </div>
                     <div className="grid min-w-0 flex-1 text-left leading-tight">
-                      <span className="truncate font-bold text-white">
+                      <span className="truncate font-semibold text-white">
                         Select drive
                       </span>
-                      <span className="truncate text-[13px] font-normal text-sunny-on-dark">{openDrivesCount} of {drives.length} open</span>
+                      <span className="truncate text-xs font-normal text-sunny-on-dark">{openDrivesCount} of {drives.length} open</span>
                     </div>
                   </>}
                 </>}
                 skeletonComponent={<>
-                  <Skeleton className="h-11 w-full bg-sunny-ink-track" />
+                  <Skeleton className="h-9 w-full bg-sunny-ink-track" />
                 </>}
               />
               <ChevronsUpDown className="ml-auto mr-1.5 text-sunny-on-dark" />

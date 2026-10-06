@@ -7,26 +7,26 @@ function Step({ icon, children }: { icon: React.ReactNode, children: string }) {
 
 /** What the drives page shows instead of the list when there are no drives. */
 export function NoDrives() {
-    const step = "size-[18px]";
+    const step = "size-[17px]";
     return (
         <>
-            <section className="flex flex-col gap-4 rounded-[20px] bg-sunny-yellow-surface p-5 text-sunny-ink shadow-[0_24px_40px_-24px_rgba(26,26,25,0.55)] md:flex-row md:flex-wrap md:items-center md:gap-x-8 md:gap-y-6 md:p-7 md:shadow-[0_28px_48px_-28px_rgba(26,26,25,0.55)]">
-                <div className="flex size-[52px] flex-none items-center justify-center rounded-[14px] bg-sunny-ink text-sunny-yellow md:size-16 md:rounded-2xl">
-                    <Lock aria-hidden="true" className="size-6 md:size-7" strokeWidth={1.8} />
+            <section className="flex flex-wrap items-center gap-x-8 gap-y-4 rounded-2xl bg-sunny-yellow-surface p-5 text-sunny-ink shadow-[0_14px_32px_rgba(0,0,0,0.14)] md:p-6">
+                <div className="flex size-14 flex-none items-center justify-center rounded-[14px] bg-sunny-ink text-sunny-yellow">
+                    <Lock aria-hidden="true" className="size-6" strokeWidth={1.8} />
                 </div>
-                <div className="min-w-0 md:flex-[1_1_360px]">
-                    <div className="text-[13px] font-bold uppercase tracking-[0.08em]">Get started</div>
-                    <h2 className="m-0 mt-1 text-2xl font-bold leading-[1.2] tracking-[-0.02em] md:text-[26px]">You have no drives yet</h2>
-                    <p className="m-0 mt-2 max-w-[560px] text-sunny-text-on-yellow">A drive is an encrypted space for your files. Open it to work with them, close it to hide everything again.</p>
+                <div className="min-w-0 flex-[1_1_300px]">
+                    <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-sunny-text-on-yellow">Get started</div>
+                    <h2 className="m-0 mt-1 text-[22px] font-semibold leading-[1.25]">You have no drives yet</h2>
+                    <p className="m-0 mt-1.5 max-w-[560px] text-sunny-text-on-yellow">A drive is an encrypted space for your files. Open it to work with them, close it to hide everything again.</p>
                 </div>
-                <Link to="/create" className="flex h-[52px] items-center justify-center gap-2.5 rounded-xl bg-sunny-ink px-[26px] text-base font-bold text-sunny-yellow hover:bg-sunny-ink-raised md:h-14 md:rounded-[14px] md:text-[17px]">
+                <Link to="/create" className="flex h-11 items-center gap-2 rounded-[10px] bg-sunny-ink px-[18px] font-semibold text-sunny-yellow hover:bg-sunny-ink/90">
                     New drive
-                    <ArrowRight aria-hidden="true" className="size-5" strokeWidth={1.8} />
+                    <ArrowRight aria-hidden="true" className="size-4" strokeWidth={2} />
                 </Link>
             </section>
 
-            <section className="flex flex-col items-start gap-3.5 rounded-[20px] bg-sunny-yellow-pale p-4 font-semibold md:flex-row md:flex-wrap md:items-center md:gap-x-4 md:gap-y-2 md:self-start md:rounded-[28px] md:py-1.5 md:pl-1.5 md:pr-[22px]">
-                <h2 className="m-0 rounded-[22px] bg-sunny-ink px-4 py-2 text-[15px] font-bold text-sunny-yellow md:py-[9px]">How it works</h2>
+            <section className="flex flex-col items-start gap-3 rounded-2xl border border-sunny-line bg-white p-4 font-medium md:flex-row md:flex-wrap md:items-center md:gap-x-4 md:gap-y-2 md:self-start md:py-2 md:pl-2 md:pr-5">
+                <h2 className="m-0 rounded-full bg-sunny-field px-4 py-2 font-semibold">How it works</h2>
                 <Step icon={<Plus aria-hidden="true" className={step} strokeWidth={1.8} />}>Create a drive</Step>
                 <ChevronRight aria-hidden="true" className="hidden size-4 md:block" strokeWidth={1.8} />
                 <Step icon={<LockOpen aria-hidden="true" className={step} strokeWidth={1.8} />}>Open it and add files</Step>

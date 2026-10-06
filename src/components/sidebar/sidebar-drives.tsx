@@ -14,17 +14,17 @@ import { SidebarLogo, SidebarStorage } from "./sidebar-parts"
 export function SidebarDrives() {
   return (
     <Sidebar className="z-20">
-      <SidebarContent className="gap-5 px-5 pb-5 pt-6">
+      <SidebarContent className="gap-3.5 px-4 py-[18px]">
         <SidebarLogo />
         <DriveSwitcher />
-        <Button asChild className="h-[52px] w-full gap-2.5 font-bold">
+        <Button asChild className="h-11 w-full justify-start gap-2.5 px-3 text-sm font-semibold">
           <Link to="/create">
             <Plus />
             <span>New drive</span>
           </Link>
         </Button>
 
-        <SidebarMenu aria-label="Sections" className="gap-1">
+        <SidebarMenu aria-label="Sections" className="gap-0.5">
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild isActive>
               <Link to="/">

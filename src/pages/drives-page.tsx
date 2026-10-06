@@ -1,14 +1,12 @@
-import { ClosedDriveRow } from "@/components/drives/closed-drive-row";
+import { DriveCard } from "@/components/drives/drive-card";
 import { DrivesFilter, DrivesHero, EmptyDrivesHero } from "@/components/drives/drives-hero";
 import { getDriveKind } from "@/components/drives/drive-kind";
 import { NoDrives } from "@/components/drives/no-drives";
-import { OpenDriveCard } from "@/components/drives/open-drive-card";
 import { DebouncedSkeleton } from "@/components/ui/debounced-skeleton";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCloseAllDrives } from "@/hooks/use-close-drives";
 import { useCurrentUserId } from "@/hooks/use-current-user-id";
 import { useFilesStore } from "@/stores/files-store";
-import { Lock } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 
@@ -43,8 +41,10 @@ export function DrivesPage() {
     const closedDrives = shown.filter((e) => !e.open);
     const noDrives = drivesInitialized && drives.length === 0;
 
+    const listed = [...openDrives, ...closedDrives];
+
     return (
-        <div className="drives-theme absolute inset-0 overflow-y-auto">
+        <div className="drives-theme absolute inset-0 overflow-y-auto bg-white">
             {noDrives
                 ? <EmptyDrivesHero />
                 : <DrivesHero
@@ -55,30 +55,18 @@ export function DrivesPage() {
                     onFilter={setFilter}
                     onCloseAll={closeAllDrives}
                 />}
-            <main className="relative -mt-14 flex select-none flex-col gap-4 px-5 pb-8 md:-mt-16 md:px-10 md:pb-10">
+            <main className="relative -mt-10 flex select-none flex-col gap-3 px-4 pb-10 md:px-10">
                 {noDrives && <NoDrives />}
                 {!noDrives && (
                     <DebouncedSkeleton
                         contentInitialized={drivesInitialized}
                         initializedComponent={<>
-                            {openDrives.map(({ driveInfo, kind }) => <OpenDriveCard key={driveInfo.id} driveInfo={driveInfo} kind={kind} />)}
-                            {openDrives.length === 0 && (
-                                <div className="flex items-center gap-3 rounded-[20px] bg-sunny-yellow-surface p-5 font-semibold text-sunny-ink shadow-[0_24px_40px_-24px_rgba(26,26,25,0.55)] md:p-6 md:shadow-[0_28px_48px_-28px_rgba(26,26,25,0.55)]">
-                                    <Lock aria-hidden="true" className="size-[18px]" strokeWidth={1.8} />
-                                    No drive is open.
-                                </div>
-                            )}
-                            {closedDrives.length > 0 && <>
-                                <h2 className="m-0 mt-5 self-start rounded-lg bg-sunny-ink px-3 py-1 text-[13px] font-extrabold uppercase tracking-widest text-sunny-yellow">Closed · {closedDrives.length}</h2>
-                                <div className="flex flex-col gap-2">
-                                    {closedDrives.map(({ driveInfo }) => <ClosedDriveRow key={driveInfo.id} driveInfo={driveInfo} />)}
-                                </div>
-                            </>}
+                            {listed.map(({ driveInfo, kind }) => <DriveCard key={driveInfo.id} driveInfo={driveInfo} kind={kind} />)}
+                            {listed.length === 0 && <p className="m-0 rounded-2xl bg-white p-4 text-sunny-muted shadow-[0_6px_18px_rgba(0,0,0,0.06)]">No drives in this group.</p>}
                         </>}
                         skeletonComponent={<>
-                            <Skeleton className="h-40 w-full rounded-[20px]" />
-                            <Skeleton className="h-16 w-full rounded-[14px]" />
-                            <Skeleton className="h-16 w-full rounded-[14px]" />
+                            <Skeleton className="h-[84px] w-full rounded-2xl" />
+                            <Skeleton className="h-[84px] w-full rounded-2xl" />
                         </>}
                     />
                 )}

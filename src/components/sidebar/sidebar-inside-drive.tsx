@@ -53,21 +53,21 @@ export function SidebarInsideDrive() {
 
   return (
     <Sidebar className="z-20">
-      <SidebarContent className="gap-5 px-5 pb-5 pt-6">
+      <SidebarContent className="gap-3.5 px-4 py-[18px]">
         <SidebarLogo />
         <DriveSwitcher />
         {filesInitialized && <div className="flex flex-col gap-2">
-          <Button variant="outline" className="h-[52px] w-full gap-2.5 border-sunny-ink-line bg-transparent text-white hover:bg-sidebar-accent" onClick={openCreateFolderDialog}>
+          <Button variant="outline" className="h-11 w-full gap-2.5 border-sunny-ink-line bg-transparent text-white hover:bg-sidebar-accent" onClick={openCreateFolderDialog}>
             <FolderPlus />
             Create
           </Button>
-          <Button className="h-[52px] w-full gap-2.5 font-bold" onClick={uploadFile}>
+          <Button className="h-11 w-full gap-2 text-sm font-semibold" onClick={uploadFile}>
             <CloudUpload />
             <span>Upload</span>
           </Button>
         </div>}
 
-        <SidebarMenu aria-label="Sections" className="gap-1">
+        <SidebarMenu aria-label="Sections" className="gap-0.5">
           {menuItems.map((item) => (
             <SidebarMenuItem key={item.title}>
               <SidebarMenuButton size={'lg'} asChild isActive={item.active}>

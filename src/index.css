@@ -76,22 +76,15 @@
 }
 
 /*
- * The drives screen has its own shades (decision 0025): a warmer dark band and a softer yellow than the rest of the
- * application, so that the screen reads apart from the side panel. Only the "sunny-*" utilities follow it; the
- * shadcn variables keep their values.
+ * The drives screen has its own neutral shades (decision 0025): the grey of the white artboard, a little cooler than
+ * the rest of the application. Only the "sunny-*" utilities follow it; the shadcn variables keep their values.
  */
 .drives-theme {
-  /* the dark band at the top of the screen */
-  --drives-band: #2a2822;
-  --drives-band-raised: #3a372e;
-  --sunny-ink: #2a2822;
-  --sunny-ink-raised: #3a372e;
-  --sunny-ink-track: #555141;
-  --sunny-on-dark: #c9c5b7;
-  --sunny-muted: #6f6c61;
-  --sunny-text-on-yellow: #4a4633;
-  --sunny-line: #efecde;
-  --sunny-field: #f4f2ec;
+  --sunny-ink: #1d1c19;
+  --sunny-muted: #6b6a63;
+  --sunny-text-on-yellow: #4a452b;
+  --sunny-line: #e3e1d8;
+  --sunny-field: #f2f2ef;
 }
 
 @theme inline {
@@ -178,7 +171,7 @@
   }
   body {
     @apply bg-background text-foreground;
-    font-size: 15px;
+    font-size: 14px;
     line-height: 1.4;
   }
 }
