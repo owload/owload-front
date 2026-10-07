@@ -14,7 +14,6 @@
     "tauri:build": "tauri build"
   },
   "dependencies": {
-    "@owload/avi-viewer": "github:owload/avi-viewer#7e09f53506f000d2324bae4166c96f3e8dde65d0",
     "@owload/editor-sdk": "github:owload/editor-sdk#857d97f13749ff87aff4ea49f5acee96871b0fb0",
     "@owload/text-editor": "github:owload/text-editor#396f12e3ba357014ff7593856bac8dd4dc9bb543",
     "@owload/xlsx-editor": "github:owload/xlsx-editor#a46688f89da8e01239bbdd8f7b09851325f59da5",
