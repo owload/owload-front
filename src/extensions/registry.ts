@@ -1,3 +1,4 @@
+import { extension as avi } from "@owload/avi-viewer/extension";
 import { extension as text } from "@owload/text-editor/extension";
 import { extension as xlsx } from "@owload/xlsx-editor/extension";
 import { buildRegistry } from "./registry-core";
@@ -11,6 +12,7 @@ import { buildRegistry } from "./registry-core";
  * that type is opened.
  */
 export const registry = buildRegistry([
+  { extension: avi, loadStyles: () => import("@owload/avi-viewer/style.css") },
   { extension: text, loadStyles: () => import("@owload/text-editor/style.css") },
   { extension: xlsx, loadStyles: () => import("@owload/xlsx-editor/style.css") },
 ]);
