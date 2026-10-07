@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Camera, Check, Grid2x2, Pencil } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Field, FieldError, useFieldId } from "@/components/drives/new-drive/form-parts";
 import { useUserProfile } from "@/hooks/use-user-profile";
 import { AVATAR_PRESETS, QUICK_PRESETS } from "./avatar-presets";
@@ -33,7 +34,7 @@ interface PersonalInfoCardProps {
  * identity provider.
  */
 export function PersonalInfoCard({ name, email, emailVerified, memberSince, onSaveName }: PersonalInfoCardProps) {
-    const { profile, avatarUrl, setAvatarPreset, uploadAvatar, resetAvatar } = useUserProfile();
+    const { profile, avatarUrl, status, setAvatarPreset, uploadAvatar, resetAvatar } = useUserProfile();
     const initials = useInitials();
     const avatar = profile?.avatar ?? { kind: "default" as const };
     const [editing, setEditing] = useState(false);
@@ -151,7 +152,9 @@ export function PersonalInfoCard({ name, email, emailVerified, memberSince, onSa
                 </div>
             </div>
 
-            {avatar.kind === "default" ? (
+            {status === "pending" ? (
+                <Skeleton className="h-11 w-full rounded-xl" />
+            ) : avatar.kind === "default" ? (
                 <div className="flex flex-col gap-3 rounded-xl border border-dashed border-[#8f8d84] p-3.5">
                     <div className="flex flex-col gap-0.5">
                         <span className="text-sm font-semibold">No photo yet</span>

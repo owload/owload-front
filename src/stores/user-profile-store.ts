@@ -4,6 +4,8 @@ import { RestUserBackend, type UserBasicInfo } from "@/engine/backend/user-backe
 interface UserProfileState {
     /** The profile kept by the backend; undefined until it arrives or if it cannot be fetched. */
     profile?: UserBasicInfo;
+    /** "pending" until the first answer; "failed" when the profile could not be fetched (the pictures then fall back to the initials). */
+    status: "pending" | "ready" | "failed";
     /** An object URL of the picture the user uploaded, when there is one. */
     avatarUrl?: string;
     load: () => Promise<void>;
@@ -38,12 +40,13 @@ export const useUserProfileStore = create<UserProfileState>()((set, get) => {
             avatarUrl = undefined;
             loadedVersion = undefined;
         }
-        set({ profile, avatarUrl });
+        set({ profile, avatarUrl, status: "ready" });
     }
 
     return {
+        status: "pending",
         load() {
-            loading ??= refresh().catch(() => undefined).finally(() => { loading = undefined; });
+            loading ??= refresh().catch(() => { if (!get().profile) set({ status: "failed" }); }).finally(() => { loading = undefined; });
             return loading;
         },
         async saveName(name) {

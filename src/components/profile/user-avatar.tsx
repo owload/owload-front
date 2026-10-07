@@ -23,9 +23,11 @@ export function useInitials(): string {
 
 /** The picture of the signed-in user. Nothing is loaded from an identity provider: it is the user's upload, a chosen preset, or the initials. */
 export function UserAvatar({ className }: { className?: string }) {
-    const { profile, avatarUrl } = useUserProfile();
+    const { profile, avatarUrl, status } = useUserProfile();
     const initials = useInitials();
     const avatar = profile?.avatar;
+    // Until the profile arrives the picture is not known: show an empty circle instead of the initials that would then be replaced.
+    if (status === "pending") return <span aria-hidden="true" className={cn("flex size-10 flex-none animate-pulse rounded-full bg-sunny-line", className)} />;
     return (
         <AvatarView
             preset={avatar?.kind === "preset" ? avatar.preset : undefined}
