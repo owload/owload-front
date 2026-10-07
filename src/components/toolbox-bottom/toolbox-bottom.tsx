@@ -9,7 +9,7 @@ import { useUploadFile } from "@/hooks/use-upload-file";
 import { cn } from "@/lib/utils";
 import { useFilesStore } from "@/stores/files-store";
 import { ArrowLeft, ChevronDown, ChevronUp, ClipboardPaste, CloudDownload, CloudUpload, Files, FolderPlus, Info, SquareDashedMousePointer, SquarePen, SquareScissors, Trash, X } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { TransfersTray } from "../transfers/transfers-tray";
 import { useTotalTransferProgress } from "@/hooks/use-upload-progress";
 
@@ -28,6 +28,35 @@ export function ToolboxBottom(props: { className?: string }) {
     // On a phone the dock starts folded into the "Actions" pill; the user unfolds it.
     const [expanded, setExpanded] = useState(false);
     const collapsed = !expanded;
+    // A swipe down on the phone sheet folds it, a swipe up on the pill opens it again.
+    const [dragY, setDragY] = useState(0);
+    const [dragging, setDragging] = useState(false);
+    const swipe = useRef<{ x: number; y: number; dy: number; vertical: boolean | null } | null>(null);
+    const SWIPE_DISTANCE = 56;
+    const onSwipeStart = (e: React.TouchEvent) => {
+        // the transfers panel above the sheet scrolls by itself
+        if ((e.target as HTMLElement).closest('[role="region"]')) return;
+        swipe.current = { x: e.touches[0].clientX, y: e.touches[0].clientY, dy: 0, vertical: null };
+    };
+    const onSwipeMove = (e: React.TouchEvent) => {
+        const start = swipe.current;
+        if (!start) return;
+        const dx = e.touches[0].clientX - start.x;
+        const dy = e.touches[0].clientY - start.y;
+        if (start.vertical === null && Math.max(Math.abs(dx), Math.abs(dy)) > 8) start.vertical = Math.abs(dy) > Math.abs(dx);
+        start.dy = dy;
+        if (start.vertical) {
+            setDragging(true);
+            setDragY(Math.max(0, dy));
+        }
+    };
+    const onSwipeEnd = () => {
+        const folds = swipe.current?.vertical === true && swipe.current.dy > SWIPE_DISTANCE;
+        swipe.current = null;
+        setDragging(false);
+        setDragY(0);
+        if (folds) setExpanded(false);
+    };
     const transferPercent = useTotalTransferProgress()();
     const [rmButtonClickPending, setRmButtonClickPending] = useState(false);
     const [pasteButtonClickPending, setPasteButtonClickPending] = useState(false);
@@ -174,6 +203,15 @@ export function ToolboxBottom(props: { className?: string }) {
                     aria-label="Show actions"
                     aria-expanded="false"
                     onClick={() => setExpanded(true)}
+                    onTouchStart={(e) => { swipe.current = { x: e.touches[0].clientX, y: e.touches[0].clientY, dy: 0, vertical: null }; }}
+                    onTouchEnd={(e) => {
+                        const start = swipe.current;
+                        swipe.current = null;
+                        if (start && start.y - e.changedTouches[0].clientY > SWIPE_DISTANCE / 2) {
+                            e.preventDefault();
+                            setExpanded(true);
+                        }
+                    }}
                     onPointerDown={(e) => e.stopPropagation()}
                     onMouseDown={(e) => e.stopPropagation()}
                     className="pointer-events-auto flex h-12 cursor-pointer items-center gap-2.5 rounded-full bg-sunny-ink pl-4 pr-4 text-sm font-semibold text-white shadow-[0_10px_24px_rgba(0,0,0,0.26)] outline-sunny-yellow focus-visible:outline-2"
@@ -189,7 +227,16 @@ export function ToolboxBottom(props: { className?: string }) {
     if (isMobile) {
         return (
             <div className={cn('pointer-events-none', props.className, 'bottom-0 px-0')}>
-                <div role="toolbar" aria-label="File actions" className="pointer-events-auto relative flex flex-col gap-0.5 rounded-t-[20px] bg-sidebar px-2 pb-3 pt-1 text-white shadow-[0_-10px_30px_rgba(0,0,0,0.22)]">
+                <div
+                    role="toolbar"
+                    aria-label="File actions"
+                    onTouchStart={onSwipeStart}
+                    onTouchMove={onSwipeMove}
+                    onTouchEnd={onSwipeEnd}
+                    onTouchCancel={onSwipeEnd}
+                    style={{ transform: dragY ? `translateY(${dragY}px)` : undefined, transition: dragging ? "none" : "transform 0.2s ease-out" }}
+                    className="pointer-events-auto relative flex flex-col gap-0.5 rounded-t-[20px] bg-sidebar px-2 pb-3 pt-1 text-white shadow-[0_-10px_30px_rgba(0,0,0,0.22)]"
+                >
                     <div className="flex min-h-11 items-center gap-1 pl-1.5">
                         <div className="flex min-w-0 flex-1 items-center justify-center">
                             {showUploadStateButton
