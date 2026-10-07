@@ -5,7 +5,8 @@ import { getApiCall } from "@/engine/api/api";
 import { buildByteToLogIndex, FileVersionEntry, findFileHistory, isRangeAllocated } from "@/engine/service/ops-log-analysis";
 import { findThumbnailsFor } from "@/hooks/use-files-store-ops";
 import { saveFileToDisk } from "@/lib/utils";
-import { DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { FileText } from "lucide-react";
+import { DialogHead } from "./dialog-parts";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { FsOperationType, UploadStartFsOperation, RmFsOperation, RenameFsOperation, MvFsOperation, CpFsOperation } from "@/engine/service/fs-operation";
 import { FsOperationWrapper } from "@/engine/service/ops-repository";
@@ -32,11 +33,11 @@ function formatBytes(bytes: number): string {
 
 function AllocationBadge({ byteOffset, byteLength, allocatedRanges }: { byteOffset: number; byteLength: number; allocatedRanges: { start: number; end: number }[] | null }) {
   if (byteLength === 0) return null;
-  if (allocatedRanges === null) return <span className="text-xs text-gray-300">checking…</span>;
+  if (allocatedRanges === null) return <span className="text-xs text-muted-foreground">checking…</span>;
   const present = isRangeAllocated(byteOffset, byteLength, allocatedRanges);
   return present
-    ? <span className="text-xs text-green-600">on S3</span>
-    : <span className="text-xs text-red-500">missing</span>;
+    ? <span className="text-xs font-medium text-sunny-green">on S3</span>
+    : <span className="text-xs font-medium text-sunny-red">missing</span>;
 }
 
 function VersionsTab({ data, onDownloadVersion, downloadingVersions }: {
@@ -66,33 +67,33 @@ function VersionsTab({ data, onDownloadVersion, downloadingVersions }: {
   return (
     <div className="space-y-4">
       <div>
-        <div className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Version History</div>
+        <div className="mb-2 text-xs font-semibold text-muted-foreground">Version History</div>
         {versions.length === 0 ? (
-          <div className="text-sm text-gray-400">No versions found in operation log.</div>
+          <div className="text-sm text-muted-foreground">No versions found in operation log.</div>
         ) : (
-          <div className="border rounded divide-y text-sm">
+          <div className="divide-y divide-sunny-line overflow-hidden rounded-xl border border-sunny-line text-sm">
             {versions.map((v, i) => (
               <div key={v.createdOpHash} className="flex items-center gap-3 px-3 py-2">
-                <span className="text-gray-400 text-xs w-5">v{i + 1}</span>
+                <span className="w-5 text-xs text-muted-foreground">v{i + 1}</span>
                 <div className="flex-1 min-w-0">
                   {v.writer ? (
                     <div className="flex flex-wrap gap-2">
                       <span className="font-medium truncate">{v.writer.userId}</span>
-                      <span className="text-gray-400 text-xs">{new Date(v.writer.timestamp).toLocaleString()}</span>
+                      <span className="text-xs text-muted-foreground">{new Date(v.writer.timestamp).toLocaleString()}</span>
                     </div>
                   ) : (
-                    <span className="text-gray-400">—</span>
+                    <span className="text-muted-foreground">—</span>
                   )}
                 </div>
-                <span className="text-gray-500 text-xs whitespace-nowrap">{formatBytes(v.byteLength)}</span>
-                {!v.finishOp && <span className="text-xs text-amber-500">pending</span>}
+                <span className="whitespace-nowrap text-xs text-muted-foreground">{formatBytes(v.byteLength)}</span>
+                {!v.finishOp && <span className="text-xs font-medium text-sunny-orange">pending</span>}
                 <AllocationBadge byteOffset={v.byteOffset} byteLength={v.byteLength} allocatedRanges={allocatedRanges} />
-                {i === versions.length - 1 && <span className="text-xs text-blue-500">current</span>}
+                {i === versions.length - 1 && <span className="text-xs font-medium text-sunny-blue">current</span>}
                 {v.byteLength > 0 && allocatedRanges !== null && isRangeAllocated(v.byteOffset, v.byteLength, allocatedRanges) && v.finishOp && (
                   <button
                     onClick={() => onDownloadVersion(v)}
                     disabled={downloadingVersions.has(v.createdOpHash)}
-                    className="text-xs text-blue-600 hover:underline disabled:opacity-40"
+                    className="text-xs font-semibold text-sunny-blue hover:underline disabled:opacity-40"
                   >
                     {downloadingVersions.has(v.createdOpHash) ? '…' : '↓'}
                   </button>
@@ -105,12 +106,12 @@ function VersionsTab({ data, onDownloadVersion, downloadingVersions }: {
 
       {currentVersionThumbs.length > 0 && (
         <div>
-          <div className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Thumbnails (current version)</div>
-          <div className="border rounded divide-y text-sm">
+          <div className="mb-2 text-xs font-semibold text-muted-foreground">Thumbnails (current version)</div>
+          <div className="divide-y divide-sunny-line overflow-hidden rounded-xl border border-sunny-line text-sm">
             {currentVersionThumbs.map(t => (
               <div key={t.size} className="flex items-center gap-3 px-3 py-2">
-                <span className="text-gray-500 w-16">{t.size}px</span>
-                <span className="flex-1 text-gray-500 text-xs">{formatBytes(t.byteLength)}</span>
+                <span className="w-16 text-muted-foreground">{t.size}px</span>
+                <span className="flex-1 text-xs text-muted-foreground">{formatBytes(t.byteLength)}</span>
                 <AllocationBadge byteOffset={t.byteOffset} byteLength={t.byteLength} allocatedRanges={allocatedRanges} />
               </div>
             ))}
@@ -118,16 +119,16 @@ function VersionsTab({ data, onDownloadVersion, downloadingVersions }: {
         </div>
       )}
 
-      <div className="flex gap-6 border-t pt-3">
+      <div className="flex gap-6 border-t border-sunny-line pt-3">
         <div className="flex-1">
-          <div className="text-xs text-gray-400 mb-1">Current</div>
+          <div className="mb-1 text-xs text-muted-foreground">Current</div>
           <div className="flex items-center gap-1.5">
             <span className="font-semibold text-sm">{currentVersion ? formatBytes(currentVersion.byteLength) : '—'}</span>
             {currentVersion && <AllocationBadge byteOffset={currentVersion.byteOffset} byteLength={currentVersion.byteLength} allocatedRanges={allocatedRanges} />}
           </div>
         </div>
         <div className="flex-1">
-          <div className="text-xs text-gray-400 mb-1">Total allocated</div>
+          <div className="mb-1 text-xs text-muted-foreground">Total allocated</div>
           <span className="font-semibold text-sm">{allocatedRanges === null ? '…' : formatBytes(totalAllocated)}</span>
         </div>
       </div>
@@ -143,14 +144,14 @@ function OpEntry({ opWrapper, actionLog, logLoaded }: { opWrapper: FsOperationWr
   const unverified = logLoaded && !logEntry;
 
   return (
-    <div className={`px-3 py-2 border-b text-sm ${unverified ? "bg-red-50 border-red-300" : "border-gray-200"}`}>
-      <div className="flex flex-wrap gap-3 text-xs text-gray-400 mb-1">
+    <div className={`border-b px-3 py-2.5 text-sm last:border-b-0 ${unverified ? "border-[#e6b8b3] bg-[#fbe9e7]" : "border-sunny-line"}`}>
+      <div className="mb-1 flex flex-wrap gap-3 text-xs text-muted-foreground">
         {logEntry ? (
           <>
             <span>{new Date(logEntry.timestamp).toLocaleString()}</span>
             <span>{logEntry.userId}</span>
           </>
-        ) : logLoaded && <span className="text-red-500 font-medium">unverified</span>}
+        ) : logLoaded && <span className="font-semibold text-sunny-red">unverified</span>}
       </div>
       <div className="text-sm">
         {op.operationType === FsOperationType.START_UPLOAD && (
@@ -185,11 +186,11 @@ function OpLogTab({ data }: { data: HistoryData }) {
   const logLoaded = true;
 
   if (opsForPath.length === 0) {
-    return <div className="text-sm text-gray-400 py-2">No operations found for this path.</div>;
+    return <div className="py-2 text-sm text-muted-foreground">No operations found for this path.</div>;
   }
 
   return (
-    <div className="border rounded overflow-hidden">
+    <div className="overflow-hidden rounded-xl border border-sunny-line">
       {opsForPath.map(w => (
         <OpEntry key={w.startBytePos} opWrapper={w} actionLog={actionLog} logLoaded={logLoaded} />
       ))}
@@ -261,20 +262,18 @@ export function FilePropertiesDialog({ filePath, nodeId }: Props) {
 
   return (
     <>
-      <DialogHeader>
-        <DialogTitle className="truncate">{fileName}</DialogTitle>
-      </DialogHeader>
+      <DialogHead icon={FileText} title={<span className="break-all">{fileName}</span>} subtitle="Versions and operation log" />
 
-      <div className="my-4 min-h-[200px] max-h-[60vh] overflow-y-auto">
+      <div className="mt-4 max-h-[60vh] min-h-[200px] overflow-y-auto">
         {loading && (
-          <div className="flex items-center justify-center h-32 text-gray-400 text-sm">Loading…</div>
+          <div className="flex items-center justify-center h-32 text-sm text-muted-foreground">Loading…</div>
         )}
         {error && (
-          <div className="text-red-500 text-sm">{error}</div>
+          <div className="text-sm text-sunny-red">{error}</div>
         )}
         {!loading && !error && historyData && (
           <Tabs defaultValue="versions">
-            <TabsList className="mb-4">
+            <TabsList className="mb-1">
               <TabsTrigger value="versions">Versions</TabsTrigger>
               <TabsTrigger value="oplog">Op Log</TabsTrigger>
             </TabsList>

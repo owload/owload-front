@@ -1,7 +1,9 @@
-import { useState, useRef, useEffect } from "react";
+import { FilePlus } from "lucide-react";
+import { useId, useState, useRef, useEffect } from "react";
 import { Button } from "../ui/button";
-import { DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../ui/dialog";
+import { DialogFooter } from "../ui/dialog";
 import { Input } from "../ui/input";
+import { DialogHead } from "./dialog-parts";
 import { useFsCloseDialogModal } from "@/hooks/use-dialogs";
 import { useFilesStore } from "@/stores/files-store";
 import { registry } from "@/extensions/registry";
@@ -17,6 +19,7 @@ export function CreateEditorFileDialog({ extensionId }: CreateEditorFileDialogPr
     const setEditorOpen = useFilesStore((state) => state.setEditorOpen);
     const closeDialog = useFsCloseDialogModal();
     const inputRef = useRef<HTMLInputElement>(null);
+    const fieldId = useId();
 
     useEffect(() => {
         setTimeout(() => { inputRef.current?.focus(); }, 0);
@@ -41,22 +44,29 @@ export function CreateEditorFileDialog({ extensionId }: CreateEditorFileDialogPr
     }
 
     return (
-        <DialogHeader>
-            <DialogTitle>New {extension.createNew!.label}</DialogTitle>
-            <form onSubmit={handleSubmit}>
-                <DialogDescription>File name (.{extension.createNew!.defaultExtension} will be added if missing)</DialogDescription>
+        <form onSubmit={handleSubmit} className="m-0 flex flex-col gap-4">
+            <DialogHead icon={FilePlus} title={`New ${extension.createNew!.label}`} subtitle="Saved to the current folder when you save it in the editor" />
+
+            <div className="flex flex-col gap-1.5">
+                <label htmlFor={fieldId} className="text-[13px] font-semibold">File name</label>
                 <Input
+                    id={fieldId}
                     ref={inputRef}
                     value={fileName}
                     onChange={e => { setFileName(e.target.value); setError(null); }}
+                    autoComplete="off"
+                    aria-invalid={error ? true : undefined}
+                    className="h-12"
                 />
-                {error && <p role="alert" className="mt-2 text-sm text-red-500">{error}</p>}
-                <DialogFooter className="mt-4 sm:justify-end">
-                    <Button type="submit" className="py-5" variant="default" disabled={!fileName.trim()}>
-                        Create
-                    </Button>
-                </DialogFooter>
-            </form>
-        </DialogHeader>
+                {error
+                    ? <p role="alert" className="m-0 text-xs leading-normal text-[#b3261e]">{error}</p>
+                    : <p className="m-0 text-xs leading-normal text-muted-foreground">.{extension.createNew!.defaultExtension} will be added if missing.</p>}
+            </div>
+
+            <DialogFooter className="flex-row justify-end gap-2">
+                <Button type="button" variant="ghost" className="h-11 rounded-[10px] px-4" onClick={() => closeDialog()}>Cancel</Button>
+                <Button type="submit" className="h-11 rounded-[10px] px-5" disabled={!fileName.trim()}>Create</Button>
+            </DialogFooter>
+        </form>
     );
 }

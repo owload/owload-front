@@ -6,7 +6,6 @@ import { useEffect, useState } from "react";
 import { PATH_SYMBOL_REAPLACEMENT, SYSTEM_PREFIX, thumbnailFileNamePrefix, useFilesStoreOps } from "@/hooks/use-files-store-ops";
 import { FileProperties } from "@/types/types";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { cn } from "@/lib/utils";
 
 export function PopulatedFilesArea() {
     const isMobile = useIsMobile();
@@ -44,30 +43,31 @@ export function PopulatedFilesArea() {
         return () => { aborted = true; }
     }, [fileObjects]);
 
-    const mobileSizePx = Math.floor(window.innerWidth / 3) - 30;
-    const gapSizePx = 16;
+    useEffect(() => {
+        const onKeyDown = (e: KeyboardEvent) => {
+            if (e.key !== "Escape" || e.defaultPrevented) return;
+            const target = e.target as HTMLElement | null;
+            if (target?.closest?.('input, textarea, [role="dialog"], [contenteditable="true"]')) return;
+            useFilesStore.getState().deselectAll();
+        };
+        window.addEventListener("keydown", onKeyDown);
+        return () => window.removeEventListener("keydown", onKeyDown);
+    }, []);
 
     return (
-        <div className={cn("absolute inset-x-0 inset-y-0", {
-            "top-26 pt-2 pb-28 overflow-scroll flex flex-wrap justify-center": isMobile,
-            "top-26 pt-2 pl-[clamp(16px,2.2vw,28px)] pb-28 overflow-scroll": !isMobile
-        })}>
-            <div style={{ width: isMobile ? mobileSizePx*3 + gapSizePx*3 : 'auto' }} className="pl-3 xs:pl-0">
+        <div className="absolute inset-x-0 inset-y-0 top-26 overflow-auto pb-28 pt-2 px-[clamp(16px,2.2vw,28px)]">
+            <div className="grid grid-cols-2 gap-x-3 gap-y-3.5 sm:grid-cols-[repeat(auto-fill,minmax(200px,1fr))] sm:gap-x-[18px] sm:gap-y-[22px]">
                 {
                     fileObjects
                         .filter((fileObject: FileProperties) => !fileObject.name.startsWith(SYSTEM_PREFIX))
-                        .map((fileObject: FileProperties, index: number) => (
-                            <FileObjectsContextMenu key={index} fileObject={fileObject}>
-                                <SelectableItem id={fileObject.id} key={index}>
+                        .map((fileObject: FileProperties) => (
+                            <FileObjectsContextMenu key={fileObject.id} fileObject={fileObject}>
+                                <SelectableItem id={fileObject.id}>
                                     <FileObject
                                         fileObject={fileObject}
                                         thumbnail={thumbnails.get(fileObject.id)}
-                                        size={isMobile ? mobileSizePx : 160}
                                         draggable={!isMobile}
-                                        className={cn("inline-block mr-5 mb-5", {
-                                            "mr-3 mb-3": isMobile,
-                                            "mr-5 mb-5": !isMobile,
-                                        })}
+                                        className="min-w-0"
                                     />
                                 </SelectableItem>
                             </FileObjectsContextMenu>

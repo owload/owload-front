@@ -6,9 +6,10 @@ export function ExtensionBadge({ extension, className, size }: { extension: stri
     }
     return <div
         className={cn(
-            "rounded-tr-lg rounded-bl-lg text-center font-semibold text-white font-montserrat uppercase",
+            "text-center font-semibold uppercase text-white",
             {
-                "text-xs py-1 w-12": size !== "small",
+                "rounded-bl-[10px] px-2 pb-1 pt-[3px] text-[10px] font-bold leading-[1.4] tracking-[0.06em]": size !== "small",
+                "rounded-tr-lg rounded-bl-lg": size === "small",
                 "text-[7px] px-[3px]": size === "small",
             },
             getColorClassname(extension),
@@ -17,30 +18,35 @@ export function ExtensionBadge({ extension, className, size }: { extension: stri
     >{extension}</div>;
 }
 
-function getColorClassname(extension: string) {
+export function getColorClassname(extension: string) {
     switch (extension) {
         case 'txt':
-            return 'bg-[#0078D7]';
+            return 'bg-[#0f766e]';
         case 'docx':
         case 'doc':
-            return 'bg-[#2B579A]';
+            return 'bg-sunny-blue';
         case 'pdf':
-            return 'bg-[#EB5757]';
+            return 'bg-sunny-red';
         case 'xlsx':
         case 'xls':
-            return 'bg-[#217346]';
+            return 'bg-sunny-green';
+        case 'pptx':
+        case 'ppt':
         case 'mp4':
         case 'avi':
         case 'mkv':
-            return 'bg-[#F2994A]';
+            return 'bg-sunny-orange';
         case 'jpg':
         case 'jpeg':
         case 'png':
-            return 'bg-[#9B51E0]';
+        case 'heic':
+        case 'gif':
+        case 'webp':
+            return 'bg-sunny-violet';
         case 'zip':
         case 'rar':
-            return 'bg-[#A333C8]';
+            return 'bg-sunny-ink-track';
         default:
-            return 'bg-[#6B7280]';
+            return 'bg-sunny-muted';
     }
 }

@@ -11,8 +11,7 @@ export function EmptyFilesArea() {
         <div className="absolute inset-x-0 bottom-0 top-26 flex flex-col items-center justify-center gap-3.5 px-4 pb-56 pt-4 text-center">
             <span aria-hidden="true" className="flex size-[104px] items-center justify-center rounded-[28px] border-[1.5px] border-dashed border-sunny-line-strong bg-sunny-folder">
                 <svg width="56" height="45" viewBox="0 0 80 64" className="block flex-none">
-                    <path d="M4 12a6 6 0 0 1 6-6h17a4 4 0 0 1 3 1.4L35 13h35a6 6 0 0 1 6 6v8H4z" fill="var(--sunny-yellow-edge)" />
-                    <rect x="4" y="19" width="72" height="41" rx="6" fill="var(--sunny-yellow)" />
+                    <path d="M4 12a6 6 0 0 1 6-6h17a4 4 0 0 1 3 1.4L35 13h35a6 6 0 0 1 6 6v35a6 6 0 0 1-6 6H10a6 6 0 0 1-6-6z" fill="#fef5cc" stroke="#e6d38c" strokeWidth="2" strokeLinejoin="round" />
                 </svg>
             </span>
             <div className="flex max-w-[360px] flex-col gap-1.5">

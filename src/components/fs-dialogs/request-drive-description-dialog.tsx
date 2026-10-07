@@ -1,7 +1,8 @@
 import { Layers } from "lucide-react";
 import { useId, useState } from "react";
 import { Button } from "../ui/button";
-import { DialogDescription, DialogFooter, DialogTitle } from "../ui/dialog";
+import { DialogFooter } from "../ui/dialog";
+import { DialogHead } from "./dialog-parts";
 import { Input } from "../ui/input";
 import { DialogCallbacks, RequestDescriptionDialogProps } from "@/types/types";
 import { useFsCloseDialogModal } from "@/hooks/use-dialogs";
@@ -19,15 +20,7 @@ export function RequestDriveDescriptionDialog({ driveName, inputCallback }: Requ
 
     return (
         <form onSubmit={handleSubmit} className="m-0 flex flex-col gap-4">
-            <div className="flex items-start gap-3.5 pr-8">
-                <span aria-hidden="true" className="flex size-11 flex-none items-center justify-center rounded-xl bg-primary text-primary-foreground">
-                    <Layers className="size-5" strokeWidth={2} />
-                </span>
-                <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                    <DialogTitle className="text-xl font-semibold leading-tight">Add a description</DialogTitle>
-                    <DialogDescription className="text-sm">For the drive <b className="font-semibold text-foreground">{driveName}</b></DialogDescription>
-                </div>
-            </div>
+            <DialogHead icon={Layers} title="Add a description" subtitle={<>For the drive <b className="font-semibold text-foreground">{driveName}</b></>} />
 
             <div className="flex flex-col gap-1.5">
                 <label htmlFor={fieldId} className="text-[13px] font-semibold">Description</label>

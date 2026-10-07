@@ -22,6 +22,15 @@ export function SelectableItem({ id, children }: SelectableItemProps) {
     }
 
     function handleNormalPointerDown(e?: React.PointerEvent<HTMLElement>) {
+        // Ctrl or Cmd click adds the item to the selection or takes it out.
+        if (e && !e.shiftKey && (e.ctrlKey || e.metaKey)) {
+            if (isSelected(id)) {
+                removeSelected(id);
+            } else {
+                addSelected(id);
+            }
+            return;
+        }
         if (!e?.shiftKey) {
             if (!isSelected(id)) {
                 deselectAll();

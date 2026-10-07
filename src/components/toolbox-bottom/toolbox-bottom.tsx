@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 import { useFilesStore } from "@/stores/files-store";
 import { ArrowLeft, ClipboardPaste, CloudDownload, CloudUpload, Files, FolderPlus, Info, SquareDashedMousePointer, SquarePen, SquareScissors, Trash, X } from "lucide-react";
 import { useState } from "react";
-import { UploadStateButton } from "./upload-state-button";
+import { TransfersTray } from "../transfers/transfers-tray";
 
 export function ToolboxBottom(props: { className?: string }) {
     const openCreateFolderDialog = useCreateFolderDialog();
@@ -156,11 +156,11 @@ export function ToolboxBottom(props: { className?: string }) {
                     <DockButton label="Upload" onClick={handleUploadClick} {...dockButton}><CloudUpload size={picSize} /></DockButton>
                 </>}
                 {isMobile && !mobileFileSelectModeOn && <DockButton label="Select" onClick={activateMobileSelectMode} {...dockButton}><SquareDashedMousePointer size={picSize} /></DockButton>}
-                {!mobileFileSelectModeOn && <DockButton label="Back" disabled={isRootDir} onClick={handleBackClick} {...dockButton}><ArrowLeft size={picSize} /></DockButton>}
+                {isMobile && !mobileFileSelectModeOn && <DockButton label="Back" disabled={isRootDir} onClick={handleBackClick} {...dockButton}><ArrowLeft size={picSize} /></DockButton>}
                 {mobileFileSelectModeOn && <DockButton label="Cancel" onClick={handleCancelClick} {...dockButton}><X size={picSize} /></DockButton>}
                 {showUploadStateButton && <>
                     <DockDivider />
-                    <UploadStateButton size={44} />
+                    <TransfersTray />
                 </>}
             </div>
         </div>
@@ -186,7 +186,7 @@ function DockButton({ label, iconOnly, children, disabled, onClick, onMouseDown,
             onClick={onClick}
             onMouseDown={onMouseDown}
             onPointerDown={onPointerDown}
-            className="flex h-11 cursor-pointer items-center gap-2 rounded-xl px-3 text-sm font-semibold text-white outline-sunny-yellow hover:bg-white/10 focus-visible:outline-2 disabled:cursor-default disabled:opacity-40 disabled:hover:bg-transparent max-sm:px-2.5 [&>svg]:text-white"
+            className="flex h-11 cursor-pointer items-center gap-2 rounded-xl px-3 text-sm font-semibold text-white outline-sunny-yellow hover:bg-white/10 focus-visible:outline-2 disabled:cursor-default disabled:opacity-40 disabled:hover:bg-transparent max-sm:px-2.5 [&>svg]:text-sunny-yellow"
         >
             {children}
             <span className={iconOnly ? "sr-only" : "max-sm:hidden"}>{label}</span>

@@ -1,15 +1,15 @@
 import { FsObjectType } from "@/engine";
-import { useFilesStoreOps } from "@/hooks/use-files-store-ops";
+import { SYSTEM_PREFIX, useFilesStoreOps } from "@/hooks/use-files-store-ops";
 import { useSelectedFileObjects } from "@/hooks/use-selected-file-objects";
 import { useDragEventUpload } from "@/hooks/use-upload";
-import { cn, joinPath, truncate } from "@/lib/utils";
+import { cn, joinPath } from "@/lib/utils";
 import { useFilesStore } from "@/stores/files-store";
 import { FileProperties } from "@/types/types";
-import { Folder } from "lucide-react";
+import { Lock } from "lucide-react";
 import { PointerEventHandler, useCallback, useMemo, useState } from "react";
-import { Checkbox } from "../ui/checkbox";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useIsMobileSelectModeOn } from "@/hooks/use-mobile-select-mode";
+import { DocumentPreview, hasDocumentPreview } from "./document-preview";
 import { ExtensionBadge } from "./extension-badge";
 import { registry } from "@/extensions/registry";
 
@@ -17,7 +17,6 @@ interface FileObjectProps {
     fileObject: FileProperties
     thumbnail?: string;
     className?: string;
-    size?: number;
     draggable?: boolean;
     onPointerDown?: PointerEventHandler<HTMLDivElement>;
     onClick?: PointerEventHandler<HTMLDivElement>;
@@ -25,19 +24,28 @@ interface FileObjectProps {
     ref?: (node: HTMLElement | null) => void;
 }
 
-const textBasedExtensions = ['txt', 'docx', 'doc', 'xlsx', 'xls', 'pdf'];
-
-function FileObject({ fileObject, thumbnail, className, onPointerDown, onClick, onContextMenu, ref, size = 15, draggable = false }: FileObjectProps) {
+function FileObject({ fileObject, thumbnail, className, onPointerDown, onClick, onContextMenu, ref, draggable = false }: FileObjectProps) {
     const [_, setDragEnterCounter] = useState(0);
     const [dragOverStyleApplied, setDragOverStyleApplied] = useState(false);
     const setDragHappening = useFilesStore(state => state.setDragHappening);
     const selectedFileObjects = useSelectedFileObjects();
-    const textBasedFile = fileObject.type === FsObjectType.FILE && textBasedExtensions.includes(fileObject.extension || '');
+    const isDir = fileObject.type === FsObjectType.DIR;
+    const uploading = fileObject.type === FsObjectType.FILE && !fileObject.finished;
+    const allFileObjects = useFilesStore(state => state.fileObjects);
+    const driveClient = useFilesStore(state => state.driveClient);
+    // How many things lie in a folder (the thumbnails the client keeps beside the files are not counted).
+    const itemCount = useMemo(() => {
+        if (!isDir || !driveClient) return null;
+        try {
+            return driveClient.ls(joinPath(driveClient.pwd(), fileObject.name)).filter(n => !n.name.startsWith(SYSTEM_PREFIX)).length;
+        } catch {
+            return null;
+        }
+    }, [isDir, driveClient, fileObject.name, fileObject.id, allFileObjects]);
     const { downloadSelectedObject, openObject, downloadObject, isOpenAvailable, isDownloadAvailable, pwd, mv } = useFilesStoreOps();
     const dragEventUpload = useDragEventUpload();
     const mobileFileSelectModeOn = useIsMobileSelectModeOn();
     const isMobile = useIsMobile();
-    const nameTruncateLen = Math.floor(size/8);
 
     const dragImg = useMemo(() => {
         const image = new Image();
@@ -149,9 +157,14 @@ function FileObject({ fileObject, thumbnail, className, onPointerDown, onClick, 
         onPointerDown?.(e);
     }
 
+    const selected = !!fileObject.selected;
+    const cut = !!fileObject.selectedForCut;
+
     return (
         <div className={cn(
-            "group",
+            "group relative -m-1.5 flex min-w-0 flex-col gap-2 rounded-[18px] p-1.5 transition-colors duration-150",
+            selected ? "bg-[#fef5cc]" : "hover:bg-[#f2f2ef]",
+            cut && "opacity-45",
             className
         )}
             draggable={draggable}
@@ -167,63 +180,53 @@ function FileObject({ fileObject, thumbnail, className, onPointerDown, onClick, 
             onContextMenu={onContextMenu}
             ref={ref}
         >
-            <div
-                style={{ width: `${size}px`, height: `${size}px` }}
-                className={
-                    cn(
-                        "group relative rounded-xl flex items-center justify-center hover:border-primary border-1 group-hover:duration-200 overflow-hidden",
-                        {
-                            'group-hover:bg-[#EAEDF4]': !(fileObject.type === FsObjectType.FILE && !fileObject.finished) && !fileObject.selected && !fileObject.selectedForCut && !dragOverStyleApplied,
-                            'bg-[#EFF0F5]': !(fileObject.type === FsObjectType.FILE && !fileObject.finished) && !fileObject.selected && !dragOverStyleApplied,
-                            'bg-sunny-yellow-soft': !(fileObject.type === FsObjectType.FILE && !fileObject.finished) && fileObject.selected && !dragOverStyleApplied,
-                            'bg-gray-300': dragOverStyleApplied,
-                            'opacity-45': fileObject.selectedForCut,
-                            'bg-[#EFF0F5] animate-pulse group-hover:duration-2000': fileObject.type === FsObjectType.FILE && !fileObject.finished
-                        }
+            {isDir ? (
+                // A folder is a flat shape with a tab; nothing is drawn inside but the number of items.
+                <div className="relative aspect-[4/3] w-full">
+                    <div className={cn(
+                        "absolute inset-x-0 bottom-0 top-3.5 flex flex-col justify-end rounded-b-[14px] rounded-tr-[14px] border px-3.5 py-3 shadow-[0_1px_3px_rgba(0,0,0,0.08)] transition-colors duration-150",
+                        dragOverStyleApplied ? "bg-sunny-yellow" : "bg-[#fef5cc]",
+                        selected ? "border-sunny-ink" : cut ? "border-dashed border-[#8f8d84] shadow-none" : "border-[#e6d38c] group-hover:border-[#cdb65f]"
                     )}>
-                <ExtensionBadge extension={fileObject.extension || ''} className="absolute top-0 right-0"></ExtensionBadge>
-
-                {mobileFileSelectModeOn && <Checkbox className="absolute top-1 left-1" checked={fileObject.selected} />}
-
-                {/* The fake page of a document is only a stand-in until it has a real preview. */}
-                {textBasedFile && !thumbnail && (
-                    <>
-                        <p className="text-[2pt] p-4 whitespace-pre-line">{loremIpsum}</p>
-                    </>
-                )}
-
-                {!thumbnail && <FileObjectIcon {...fileObject} />}
-                {thumbnail && (
-                    <div>
-                        {/* The preview of a document (drawn by its editor extension) fills the tile and starts at its top-left
-                            corner, where the editor puts the content; a photo keeps its centered, enlarged look. */}
-                        {registry.forFileName(fileObject.name)
-                            ? <img src={thumbnail} style={{ width: `${size}px`, height: `${size}px` }} className={"rounded-md overflow-hidden object-cover object-left-top"} />
-                            : <img src={thumbnail} style={{ minWidth: `${size}px`, minHeight: `${size}px`, maxWidth: `${size*2}px`, maxHeight: `${size*2}px`}} className={"rounded-md overflow-hidden"} />}
-                        <div style={{ width: `${size}px`, height: `${size}px` }} className={cn("absolute left-0 top-0 rounded-xl",
-                            {
-                                "hover:bg-primary/5": !fileObject.selected,
-                                "bg-primary/40": fileObject.selected
-                            }
-                        )}></div>
+                        {itemCount !== null && <span className="text-xs font-semibold text-[#3b3a34]">{itemCount} {itemCount === 1 ? "item" : "items"}</span>}
                     </div>
-                )}
-            </div>
-            <div className="mt-2">
-                <center><p className="text-sm text-gray-800">{truncate(fileObject.name, nameTruncateLen)}</p></center>
+                    <span aria-hidden="true" className={cn(
+                        "absolute left-0 top-0 h-[15px] w-[42%] rounded-t-[10px] border border-b-0 bg-[#fef5cc]",
+                        dragOverStyleApplied && "bg-sunny-yellow",
+                        selected ? "border-sunny-ink" : cut ? "border-dashed border-[#8f8d84]" : "border-[#e6d38c] group-hover:border-[#cdb65f]"
+                    )} />
+                </div>
+            ) : (
+                <div
+                    className={cn(
+                        "relative aspect-[4/3] w-full overflow-hidden rounded-[14px] border bg-white shadow-[0_1px_3px_rgba(0,0,0,0.08)] transition-colors duration-150",
+                        selected ? "border-sunny-ink" : cut ? "border-dashed border-[#8f8d84] shadow-none" : "border-[#d9d7cf] group-hover:border-[#8f8d84]",
+                        { "tile-uploading bg-sunny-field": uploading }
+                    )}>
+                    <ExtensionBadge extension={fileObject.extension || ''} className="absolute right-0 top-0 z-10" />
+
+                    {thumbnail && (
+                        <img
+                            src={thumbnail}
+                            alt=""
+                            draggable={false}
+                            className={cn("absolute inset-0 size-full object-cover", registry.forFileName(fileObject.name) && "object-left-top")}
+                        />
+                    )}
+                    {!thumbnail && !uploading && (hasDocumentPreview(fileObject.extension || '')
+                        ? <DocumentPreview extension={fileObject.extension || ''} />
+                        : <div className="absolute inset-0 flex items-center justify-center"><FileObjectIcon {...fileObject} /></div>)}
+                </div>
+            )}
+            <div className="flex min-h-[22px] min-w-0 items-center gap-1.5 text-sm font-semibold text-foreground">
+                <Lock aria-hidden="true" className="size-[13px] flex-none text-muted-foreground" strokeWidth={2.2} />
+                <span className="truncate" title={fileObject.name}>{fileObject.name}</span>
             </div>
         </div>
     );
 }
 
 function FileObjectIcon(fileObject: FileProperties) {
-
-    if (fileObject.type === FsObjectType.DIR) {
-        return <Folder size={40} fill="var(--sunny-yellow)" strokeWidth={0} />;
-    }
-    if (textBasedExtensions.includes(fileObject.extension || '')) {
-        return null;
-    }
 
     switch (fileObject.extension) {
         case 'mp4':
@@ -244,11 +247,3 @@ function FileObjectIcon(fileObject: FileProperties) {
 }
 
 export default FileObject;
-
-const loremIpsum = `Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.
-
-Contrary to popular belief, Lorem Ipsum is not simply random text. It has roots in a piece of classical Latin literature from 45 BC, making it over 2000 years old. Richard McClintock, a Latin professor at Hampden-Sydney College in Virginia, looked up one of the more obscure Latin words, consectetur, from a Lorem Ipsum passage, and going through the cites of the word in classical literature, discovered the undoubtable source. Lorem Ipsum comes from sections 1.10.32 and 1.10.33 of "de Finibus Bonorum et Malorum" (The Extremes of Good and Evil) by Cicero, written in 45 BC. This book is a treatise on the theory of ethics, very popular during the Renaissance. The first line of Lorem Ipsum, "Lorem ipsum dolor sit amet..", comes from a line in section 1.10.32.
-
-It is a long established fact that a reader will be distracted by the readable content of a page when looking at its layout. The point of using Lorem Ipsum is that it has a more-or-less normal distribution of letters, as opposed to using 'Content here, content here', making it look like readable English. Many desktop publishing packages and web page editors now use Lorem Ipsum as their default model text, and a search for 'lorem ipsum' will uncover many web sites still in their infancy. Various versions have evolved over the years, sometimes by accident, sometimes on purpose (injected humour and the like).
-
-There are many variations of passages of Lorem Ipsum available, but the majority have suffered alteration in some form, by injected humour, or randomised words which don't look even slightly believable. If you are going to use a passage of Lorem Ipsum, you need to be sure there isn't anything embarrassing hidden in the middle of text. All the Lorem Ipsum generators on the Internet tend to repeat predefined chunks as necessary, making this the first true generator on the Internet. It uses a dictionary of over 200 Latin words, combined with a handful of model sentence structures, to generate Lorem Ipsum which looks reasonable. The generated Lorem Ipsum is therefore always free from repetition, injected humour, or non-characteristic words etc.`;

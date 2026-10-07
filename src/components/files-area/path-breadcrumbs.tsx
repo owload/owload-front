@@ -68,7 +68,7 @@ export function PathBreadcrumbs() {
                 </span>
             ))}
             {hasHidden && <span className="flex items-center gap-1.5"><span aria-label="Folders in between" className="font-semibold text-muted-foreground">…</span>{separator}</span>}
-            <h1 className="m-0 text-[length:inherit] font-bold">{truncate(current.label, nameTruncateLen)}</h1>
+            <h1 className="m-0 flex min-h-11 items-center text-[length:inherit] font-bold">{truncate(current.label, nameTruncateLen)}</h1>
         </nav>
     );
 }

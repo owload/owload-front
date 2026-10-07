@@ -178,3 +178,28 @@
     line-height: 1.4;
   }
 }
+
+/*
+ * A file that is still being uploaded: its tile stays calm and a soft yellow light passes over it, slowly and with
+ * a pause at both ends, instead of the whole tile blinking.
+ */
+.tile-uploading {
+  position: relative;
+  overflow: hidden;
+}
+.tile-uploading::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(100deg, transparent 25%, rgba(250, 219, 88, 0.3) 50%, transparent 75%);
+  transform: translateX(-100%);
+  animation: tile-uploading-sweep 2.8s cubic-bezier(0.45, 0, 0.25, 1) infinite;
+}
+@keyframes tile-uploading-sweep {
+  0% { transform: translateX(-100%); }
+  70%, 100% { transform: translateX(100%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tile-uploading::after { animation: none; }
+}
