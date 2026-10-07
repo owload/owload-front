@@ -1,11 +1,10 @@
 import { Grip, LogOut, UserRound } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
-import { useLogout, useUserInfo } from "@/auth-context-provider";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useLogout } from "@/auth-context-provider";
+import { UserAvatar } from "@/components/profile/user-avatar";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
-import { accountInitials, AVATAR_SRC } from "./account-avatar";
 
 /**
  * The apps button and the account menu, at the right end of the header of every screen. On the profile page the photo
@@ -13,7 +12,6 @@ import { accountInitials, AVATAR_SRC } from "./account-avatar";
  */
 export function AccountControls({ alwaysShowApps = false, onDark = false }: { alwaysShowApps?: boolean, onDark?: boolean }) {
     const logout = useLogout();
-    const userInfo = useUserInfo();
     const onProfile = useLocation().pathname === "/profile";
     return (
         <div className="flex items-center gap-2">
@@ -29,10 +27,7 @@ export function AccountControls({ alwaysShowApps = false, onDark = false }: { al
                         onProfile && !onDark && "shadow-[0_0_0_2px_var(--sunny-ink)]",
                     )}
                 >
-                    <Avatar className={cn("size-9", onDark && "size-8", onProfile && onDark && "shadow-[0_0_0_2px_var(--sunny-yellow)]")}>
-                        <AvatarImage src={AVATAR_SRC} />
-                        <AvatarFallback>{accountInitials(userInfo.fullName ?? userInfo.name)}</AvatarFallback>
-                    </Avatar>
+                    <UserAvatar className={cn("size-9", onDark && "size-8", onProfile && onDark && "shadow-[0_0_0_2px_var(--sunny-yellow)]")} />
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                     <DropdownMenuLabel>My Account</DropdownMenuLabel>

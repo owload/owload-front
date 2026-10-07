@@ -42,4 +42,14 @@ export class MockUserBackend implements UserBackend {
         const userBasicInfo: UserBasicInfo = Object.assign(userInfo, { userId, email });
         this.usersMap.set(userId, userBasicInfo);
     }
+
+    async setAvatarPreset(): Promise<void> {}
+
+    async uploadAvatarImage(): Promise<void> {}
+
+    async getAvatarImage(): Promise<Blob> {
+        return new Blob();
+    }
+
+    async resetAvatar(): Promise<void> {}
 }

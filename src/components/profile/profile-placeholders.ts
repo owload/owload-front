@@ -1,5 +1,4 @@
 /** The backend and the identity provider do not report these yet; the page shows fixed values, as the side panel does for the storage. */
-export const PLACEHOLDER_MEMBER_SINCE = "March 2024";
 export const PLACEHOLDER_PASSWORD_CHANGED = "Last changed Mar 4, 2026";
 export const PLACEHOLDER_STORAGE_USED = "1.5 GB";
 export const PLACEHOLDER_STORAGE_TOTAL = "3 GB";

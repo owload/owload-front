@@ -5,7 +5,7 @@ import { PlanCard } from "@/components/profile/plan-card";
 import { ProfileButton } from "@/components/profile/profile-parts";
 import { ProfileTop } from "@/components/profile/profile-top";
 import { SecurityCard } from "@/components/profile/security-card";
-import { accountInitials, AVATAR_SRC } from "@/components/drives/account-avatar";
+import { useUserProfile } from "@/hooks/use-user-profile";
 import { useFilesStore } from "@/stores/files-store";
 
 /** The profile of the signed-in user: personal info, sign-in and security, the plan. */
@@ -13,7 +13,10 @@ export function ProfilePage() {
     const userInfo = useUserInfo();
     const logout = useLogout();
     const drivesCount = useFilesStore((state) => state.drives.length);
-    const initials = accountInitials(userInfo.fullName ?? userInfo.name);
+    const { profile, saveName } = useUserProfile();
+    // The backend keeps the name and the email; until they arrive, the sign-in token's values are shown.
+    const name = (profile ? profile.name : userInfo.fullName) || undefined;
+    const email = profile?.email || userInfo.email;
     const signOut = (
         <ProfileButton size={44} className="px-4" onClick={() => logout()}>
             <LogOut aria-hidden="true" className="size-4" strokeWidth={2.2} />
@@ -29,7 +32,7 @@ export function ProfilePage() {
                     <div className="flex min-w-0 flex-col items-start gap-2">
                         <div className="flex max-w-full items-center gap-1.5 text-[13px] font-semibold text-sunny-text-on-white">
                             <UserRound aria-hidden="true" className="size-3.5 flex-none" strokeWidth={2.2} />
-                            <span className="truncate">Signed in as {userInfo.email ?? userInfo.name}</span>
+                            <span className="truncate">Signed in as {email ?? userInfo.name}</span>
                         </div>
                         <h1 className="m-0 text-[32px] font-semibold leading-[1.2] tracking-[-0.01em] max-md:text-[26px]">Profile</h1>
                     </div>
@@ -38,11 +41,11 @@ export function ProfilePage() {
 
                 <div className="grid grid-cols-[repeat(auto-fit,minmax(min(380px,100%),1fr))] items-start gap-5">
                     <PersonalInfoCard
-                        name={userInfo.fullName}
-                        email={userInfo.email}
+                        name={name}
+                        email={email}
                         emailVerified={userInfo.emailVerified}
-                        avatarSrc={AVATAR_SRC}
-                        initials={initials}
+                        memberSince={profile?.memberSince}
+                        onSaveName={saveName}
                     />
                     <SecurityCard />
                     <div className="flex min-w-0 flex-col gap-5">
