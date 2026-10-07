@@ -27,7 +27,7 @@ export function ImagePreview({ fileToPreview, onLoadedCallback }: ImagePreviewPr
 
     useEffect(() => {
         const LOW_QUALITY_PREVIEW_ENABLED = true;
-        let aborted = {value: false};
+        const aborted = {value: false};
         setImageDataUrl(undefined);
         setReady(false);
 
@@ -36,7 +36,8 @@ export function ImagePreview({ fileToPreview, onLoadedCallback }: ImagePreviewPr
         if (lowQualityFileToPreview && LOW_QUALITY_PREVIEW_ENABLED) {
             loadPreview(lowQualityFileToPreview, aborted)
                 .then(() => {
-                    if (aborted) return;
+                    // `aborted` is an object: testing the object itself is always true and the full image never loaded.
+                    if (aborted.value) return;
                     loadPreview(fileToPreview, aborted);
                 });
         } else {
