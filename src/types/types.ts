@@ -35,6 +35,10 @@ export interface UploadQueueItem {
 export interface UserInfo {
   id: string;
   name: string;
+  /** The rest comes from the sign-in token and is there only when the identity provider sends it. */
+  fullName?: string;
+  email?: string;
+  emailVerified?: boolean;
 }
 
 export type FsOpsDialogType = "RENAME" | "CREATE_FOLDER" | "CREATE_EDITOR_FILE" | "REQUEST_PASSWORD" | "REQUEST_DRIVE_DESCRIPTION" | "REQUEST_MV_OPERATION_MODE" | "CONFIRM_DELETE" | "FILE_PROPERTIES"

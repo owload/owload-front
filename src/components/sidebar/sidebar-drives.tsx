@@ -1,5 +1,5 @@
 import { LayoutGrid, Plus } from "lucide-react"
-import { Link } from "react-router-dom"
+import { Link, useLocation } from "react-router-dom"
 import {
   Sidebar,
   SidebarContent,
@@ -12,6 +12,7 @@ import { DriveSwitcher } from "./drive-switcher"
 import { SidebarLogo, SidebarStorage } from "./sidebar-parts"
 
 export function SidebarDrives() {
+  const isProfilePage = useLocation().pathname === "/profile"
   return (
     <Sidebar className="z-20">
       <SidebarContent className="gap-3.5 px-4 py-[18px]">
@@ -26,7 +27,7 @@ export function SidebarDrives() {
 
         <SidebarMenu aria-label="Sections" className="gap-0.5">
           <SidebarMenuItem>
-            <SidebarMenuButton size="lg" asChild isActive>
+            <SidebarMenuButton size="lg" asChild isActive={!isProfilePage}>
               <Link to="/">
                 <LayoutGrid />
                 <span>My drives</span>

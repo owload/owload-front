@@ -60,7 +60,7 @@ const LEVEL_COLOR = { 1: "bg-[#b3261e]", 2: "bg-sunny-orange", 3: "bg-sunny-gree
 const LEVEL_TEXT = { 1: "text-[#b3261e]", 2: "text-sunny-orange", 3: "text-sunny-green" } as const;
 
 /** Three bars, the word for the level and a hint, under the password. */
-export function PasswordStrengthMeter({ password }: { password: string }) {
+export function PasswordStrengthMeter({ password, okHint = <>Encrypts this drive on your device. <OpenText>[WHAT HAPPENS IF THE PASSWORD IS LOST]</OpenText></> }: { password: string, okHint?: React.ReactNode }) {
     if (!password) return null;
     const { level, label, hint } = estimatePasswordStrength(password);
     return (
@@ -71,9 +71,7 @@ export function PasswordStrengthMeter({ password }: { password: string }) {
                 </div>
                 <span className={cn("min-w-12 flex-none text-right text-xs font-semibold", LEVEL_TEXT[level])}>{label}</span>
             </div>
-            <p className="m-0 text-xs leading-normal text-sunny-muted">
-                {hint || <>Encrypts this drive on your device. <OpenText>[WHAT HAPPENS IF THE PASSWORD IS LOST]</OpenText></>}
-            </p>
+            {(hint || okHint) && <p className="m-0 text-xs leading-normal text-sunny-muted">{hint || okHint}</p>}
         </>
     );
 }

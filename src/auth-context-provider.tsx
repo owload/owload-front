@@ -2,6 +2,7 @@ import { createContext, ReactNode, useContext, useEffect, useRef, useState } fro
 import axios from "axios";
 import { globalOptions } from "@/global-options";
 import { UserInfo } from "./types/types";
+import { userInfoFromClaims } from "./lib/user-info";
 import Keycloak from "keycloak-js";
 
 export const IS_TAURI = '__TAURI_INTERNALS__' in window;
@@ -53,7 +54,7 @@ function setAxiosInterceptor(getToken: () => string, refreshFn?: () => Promise<v
 
 // --- Tauri: ROPC auth provider ---
 
-function parseJwt(token: string): { sub: string; preferred_username: string; exp: number } {
+function parseJwt(token: string): { sub: string; preferred_username: string; exp: number } & Record<string, unknown> {
   const base64 = token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
   return JSON.parse(atob(base64));
 }
@@ -111,7 +112,7 @@ function TauriAuthProvider({ authenticatedChild, anonymousChild }: ProviderProps
       async () => { if (isTokenExpiringSoon(accessTokenRef.current, 120)) await doRefresh(); }
     );
     const parsed = parseJwt(accessToken);
-    setUserInfo({ id: parsed.sub, name: parsed.preferred_username });
+    setUserInfo(userInfoFromClaims(parsed));
     setAuthStatus("AUTHENTICATED");
   }
 
@@ -214,8 +215,8 @@ function WebAuthProvider({ authenticatedChild, anonymousChild }: ProviderProps) 
               }
             }
           );
-          const parsed = keycloak.tokenParsed as { sub: string; preferred_username: string };
-          setUserInfo({ id: parsed.sub, name: parsed.preferred_username });
+          const parsed = keycloak.tokenParsed as { sub: string; preferred_username: string } & Record<string, unknown>;
+          setUserInfo(userInfoFromClaims(parsed));
           setAuthStatus("AUTHENTICATED");
         } else {
           clearKcTokens();
