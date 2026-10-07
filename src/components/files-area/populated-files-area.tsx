@@ -3,12 +3,14 @@ import FileObject from "./file-object";
 import { SelectableItem } from "./selectable-area";
 import { FileObjectsContextMenu } from "./file-objects-context-menu";
 import { useEffect, useState } from "react";
+import { useViewMode } from "@/stores/view-mode-store";
 import { PATH_SYMBOL_REAPLACEMENT, SYSTEM_PREFIX, thumbnailFileNamePrefix, useFilesStoreOps } from "@/hooks/use-files-store-ops";
 import { FileProperties } from "@/types/types";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 export function PopulatedFilesArea() {
     const isMobile = useIsMobile();
+    const viewMode = useViewMode((state) => state.viewMode);
     const fileObjects = useFilesStore((state) => state.fileObjects);
     const { getFileData } = useFilesStoreOps();
     const [thumbnails, setThumbnails] = useState(new Map<string, string>());
@@ -56,7 +58,14 @@ export function PopulatedFilesArea() {
 
     return (
         <div className="absolute inset-x-0 inset-y-0 top-26 overflow-auto pb-28 pt-2 px-[clamp(16px,2.2vw,28px)]">
-            <div className="grid grid-cols-2 gap-x-3 gap-y-3.5 sm:grid-cols-[repeat(auto-fill,minmax(200px,1fr))] sm:gap-x-[18px] sm:gap-y-[22px]">
+            {viewMode === "list" && (
+                <div aria-hidden="true" className="grid h-9 max-sm:hidden grid-cols-[minmax(0,1fr)_110px_44px] items-center gap-x-4 border-b border-sunny-line pl-3 pr-1 text-[13px] font-semibold text-muted-foreground">
+                    <span>Name</span>
+                    <span>Size</span>
+                    <span />
+                </div>
+            )}
+            <div className={viewMode === "list" ? "flex flex-col" : "grid grid-cols-2 gap-x-3 gap-y-3.5 sm:grid-cols-[repeat(auto-fill,minmax(200px,1fr))] sm:gap-x-[18px] sm:gap-y-[22px]"}>
                 {
                     fileObjects
                         .filter((fileObject: FileProperties) => !fileObject.name.startsWith(SYSTEM_PREFIX))
@@ -67,6 +76,7 @@ export function PopulatedFilesArea() {
                                         fileObject={fileObject}
                                         thumbnail={thumbnails.get(fileObject.id)}
                                         draggable={!isMobile}
+                                        view={viewMode}
                                         className="min-w-0"
                                     />
                                 </SelectableItem>

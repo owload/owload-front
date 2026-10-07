@@ -1,8 +1,9 @@
 import { Component, useEffect, useRef, useState, type ReactNode } from "react";
-import { X } from "lucide-react";
+import { TriangleAlert, X } from "lucide-react";
 import type { EditorComponent, EditorExtension, EditorHandle } from "@owload/editor-sdk";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogFooter } from "@/components/ui/dialog";
+import { DialogHead } from "@/components/fs-dialogs/dialog-parts";
 import { useFilesStore } from "@/stores/files-store";
 import { PREVIEW_SIZES, getPreviewFileName, useFilesStoreOps } from "@/hooks/use-files-store-ops";
 import { useSelectedFileObjects } from "@/hooks/use-selected-file-objects";
@@ -41,9 +42,9 @@ class EditorErrorBoundary extends Component<{ children: ReactNode; onClose: () =
     render() {
         if (!this.state.failed) return this.props.children;
         return (
-            <div className="p-6 text-sm text-red-500 space-y-3">
+            <div className="space-y-3 p-6 text-sm text-[#b3261e]">
                 <p>The editor stopped working. Unsaved changes in it cannot be recovered.</p>
-                <Button variant="outline" size="sm" onClick={this.props.onClose}>Close</Button>
+                <Button variant="outline" className="h-11 rounded-[10px] px-4" onClick={this.props.onClose}>Close</Button>
             </div>
         );
     }
@@ -188,33 +189,32 @@ export function EditorHost() {
         <>
             <Dialog open={confirmClose} onOpenChange={(open) => !open && setConfirmClose(false)}>
                 <DialogContent className="z-[200]">
-                    <DialogHeader>
-                        <DialogTitle>Unsaved changes</DialogTitle>
-                    </DialogHeader>
-                    <p className="text-sm text-gray-600">Save before closing?</p>
-                    <DialogFooter className="gap-2">
-                        <Button variant="black" onClick={() => setConfirmClose(false)}>Cancel</Button>
-                        <Button variant="outline" onClick={() => { setConfirmClose(false); doClose(); }}>Discard</Button>
-                        <Button onClick={handleSaveAndClose} disabled={saving}>Save</Button>
-                    </DialogFooter>
+                    <div className="flex flex-col gap-4">
+                        <DialogHead icon={TriangleAlert} tone="warning" title="Unsaved changes" subtitle="Save before closing?" />
+                        <DialogFooter className="flex-row flex-wrap justify-end gap-2">
+                            <Button variant="ghost" className="h-11 rounded-[10px] px-4" onClick={() => setConfirmClose(false)}>Cancel</Button>
+                            <Button variant="outline" className="h-11 rounded-[10px] px-4" onClick={() => { setConfirmClose(false); doClose(); }}>Discard</Button>
+                            <Button className="h-11 rounded-[10px] px-5" onClick={handleSaveAndClose} disabled={saving}>Save</Button>
+                        </DialogFooter>
+                    </div>
                 </DialogContent>
             </Dialog>
             <div className="fixed inset-0 z-150 bg-white flex flex-col">
                 {phase.status !== "ready" && (
                     // No editor is on screen yet (or at all), so there is no title bar of its own to close from.
                     <div className="flex justify-end p-2 shrink-0">
-                        <button aria-label="Close" onClick={doClose} className="cursor-pointer text-gray-500 hover:text-gray-900">
+                        <button aria-label="Close" onClick={doClose} className="cursor-pointer text-muted-foreground hover:text-foreground">
                             <X size={22} />
                         </button>
                     </div>
                 )}
                 <div className="flex-1 min-h-0">
-                    {!entry && <div className="p-4 text-red-500 text-sm">No editor is installed for this file type.</div>}
+                    {!entry && <div className="p-4 text-sm text-[#b3261e]">No editor is installed for this file type.</div>}
                     {entry && phase.status === "loading" && (
-                        <div className="flex items-center justify-center h-full text-gray-400 text-sm">Loading…</div>
+                        <div className="flex items-center justify-center h-full text-sm text-muted-foreground">Loading…</div>
                     )}
                     {entry && phase.status === "error" && (
-                        <div className="p-4 text-red-500 text-sm">{phase.message}</div>
+                        <div className="p-4 text-sm text-[#b3261e]">{phase.message}</div>
                     )}
                     {entry && phase.status === "ready" && (
                         <EditorErrorBoundary onClose={doClose}>

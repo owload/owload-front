@@ -8,6 +8,7 @@ import { useUploadFile } from "@/hooks/use-upload-file";
 import { useIsMobile } from "@/hooks/use-mobile";
 import ContextMenuHandler from "./selectable-area/context-menu-handler";
 import { registry } from "@/extensions/registry";
+import { ClipboardPaste, CloudUpload, FilePlus, FolderPlus } from "lucide-react";
 
 export function FilesAreaContextMenu({ children }: PropsWithChildren) {
     const isMobile = useIsMobile();
@@ -50,23 +51,23 @@ export function FilesAreaContextMenu({ children }: PropsWithChildren) {
                 {children}
             </ContextMenuTrigger>
             <ContextMenuContent className="w-64">
-                <ContextMenuItem inset onClick={openCreateFolderDialog}>
-                    Create folder
+                <ContextMenuItem onClick={openCreateFolderDialog}>
+                    <FolderPlus />Create folder
                     <ContextMenuShortcut>⌘N</ContextMenuShortcut>
                 </ContextMenuItem>
                 {registry.creatable().map(({ extension }) => (
-                    <ContextMenuItem key={extension.id} inset onClick={() => openCreateEditorFileDialog({ extensionId: extension.id })}>
-                        New {extension.createNew!.label}
+                    <ContextMenuItem key={extension.id} onClick={() => openCreateEditorFileDialog({ extensionId: extension.id })}>
+                        <FilePlus />New {extension.createNew!.label}
                     </ContextMenuItem>
                 ))}
-                <ContextMenuItem inset onClick={handleUploadClick}>
-                    Upload file
+                <ContextMenuItem onClick={handleUploadClick}>
+                    <CloudUpload />Upload file
                     <ContextMenuShortcut>⌘U</ContextMenuShortcut>
                 </ContextMenuItem>
                 <ContextMenuItem
-                    inset disabled={!filesToMoveOrCopy?.fileNames?.length}
+                    disabled={!filesToMoveOrCopy?.fileNames?.length}
                     onClick={()=>commitMoveOrCopy(pwd()!)}
-                >Paste</ContextMenuItem>
+                ><ClipboardPaste />Paste</ContextMenuItem>
             </ContextMenuContent>
         </ContextMenu>
     );

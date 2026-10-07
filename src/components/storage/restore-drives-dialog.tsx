@@ -186,7 +186,7 @@ export function RestoreDrivesDialog({ open, onOpenChange, onRestored }: {
                   <span className="block text-sm font-medium">
                     {titleOf(result.driveId)} <span className="font-mono text-xs font-normal text-muted-foreground">{shortDriveId(result.driveId)}</span>
                   </span>
-                  <span className={`block text-xs ${outcome.ok ? "text-green-600" : "text-red-500"}`}>{outcome.text}</span>
+                  <span className={`block text-xs ${outcome.ok ? "text-sunny-green" : "text-[#b3261e]"}`}>{outcome.text}</span>
                 </li>
               );
             })}
@@ -194,7 +194,7 @@ export function RestoreDrivesDialog({ open, onOpenChange, onRestored }: {
         )}
 
         {errorLines.length > 0 && (
-          <div role="alert" className="text-sm text-red-500 space-y-0.5">
+          <div role="alert" className="text-sm text-[#b3261e] space-y-0.5">
             {errorLines.map((line, i) => <p key={i}>{line}</p>)}
           </div>
         )}

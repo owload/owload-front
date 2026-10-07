@@ -23,7 +23,7 @@ export function FilesAreaLoading() {
                         "mr-5 mb-5": !isMobile
                     })}>
                         <Skeleton style={{ width: `${size}px`, height: `${size}px` }} className="mb-2"></Skeleton>
-                        <Skeleton style={{ width: `${size-nameMargin*2}px`, margin: `0px ${nameMargin}px` }} className="h-4 bg-gray-300 rounded"></Skeleton>
+                        <Skeleton style={{ width: `${size-nameMargin*2}px`, margin: `0px ${nameMargin}px` }} className="h-4 rounded"></Skeleton>
                     </div>
                 ))}
             </div>

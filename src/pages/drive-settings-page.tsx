@@ -22,8 +22,8 @@ function targetLabel(t: DriveStorageTarget): string {
 
 function tierBadge(tier: DriveStorageTarget['tier']) {
   return tier === 'cold'
-    ? <span className="text-xs px-1.5 py-0.5 rounded bg-blue-100 text-blue-700">cold</span>
-    : <span className="text-xs px-1.5 py-0.5 rounded bg-orange-100 text-orange-700">hot</span>;
+    ? <span className="text-xs px-2 py-0.5 rounded-md bg-[#e3ecf9] text-sunny-blue">cold</span>
+    : <span className="text-xs px-2 py-0.5 rounded-md bg-[#fbeee4] text-sunny-orange">hot</span>;
 }
 
 function statusBadge(t: DriveStorageTarget) {
@@ -31,16 +31,16 @@ function statusBadge(t: DriveStorageTarget) {
     const progress = t.backfillTotal != null && t.backfillTotal > 0
       ? ` (${t.backfillCopied ?? 0}/${t.backfillTotal})`
       : '';
-    return <span className="text-xs px-1.5 py-0.5 rounded bg-yellow-100 text-yellow-700">backfill in progress{progress}</span>;
+    return <span className="text-xs px-2 py-0.5 rounded-md bg-sunny-yellow-soft text-sunny-placeholder">backfill in progress{progress}</span>;
   }
-  if (t.status === 'REMOVING') return <span className="text-xs px-1.5 py-0.5 rounded bg-red-100 text-red-700">removing</span>;
+  if (t.status === 'REMOVING') return <span className="text-xs px-2 py-0.5 rounded-md bg-[#fbe9e7] text-[#b3261e]">removing</span>;
   return null;
 }
 
 function healthBadge(h: HealthResult | undefined) {
   if (!h || h.state === 'loading') return <span className="text-xs text-muted-foreground">⏳ checking…</span>;
-  if (h.state === 'ok') return <span className="text-xs text-green-600 font-medium">✓ Connected</span>;
-  return <span className="text-xs text-red-500">✗ {h.error ?? 'Connection failed'}</span>;
+  if (h.state === 'ok') return <span className="text-xs text-sunny-green font-semibold">✓ Connected</span>;
+  return <span className="text-xs text-[#b3261e]">✗ {h.error ?? 'Connection failed'}</span>;
 }
 
 function makeMasterDisabledReason(t: DriveStorageTarget): string | null {
@@ -197,7 +197,7 @@ export function DriveSettingsPage() {
   const targetsSkeleton = (
     <div className="space-y-3">
       {[0, 1].map(i => (
-        <div key={i} className="border rounded p-4 space-y-3">
+        <div key={i} className="space-y-3 rounded-xl border border-sunny-line p-4">
           <div className="flex items-center gap-2">
             <Skeleton className="h-5 w-16" />
             <Skeleton className="h-5 w-10" />
@@ -213,14 +213,14 @@ export function DriveSettingsPage() {
   );
 
   return (
-    <div className="absolute top-18 bottom-0 inset-x-0 pl-10 pt-8 overflow-y-auto">
-      <h1 className="font-montserrat text-3xl font-bold">Drive Settings</h1>
-      <main className="mt-5 max-w-lg space-y-6 pb-10">
+    <div className="drives-theme absolute inset-x-0 bottom-0 top-18 overflow-y-auto bg-white px-4 pt-6 md:px-10">
+      <h1 className="m-0 text-[32px] font-semibold leading-[1.2] tracking-[-0.01em] max-md:text-[28px]">Drive settings</h1>
+      <main className="mt-5 flex max-w-2xl flex-col gap-5 pb-10">
 
-        <section className="space-y-4">
-          <div className="font-montserrat text-xl font-bold">Storage targets</div>
+        <section className="space-y-4 rounded-2xl border border-sunny-line bg-white p-5 shadow-[0_6px_18px_rgba(0,0,0,0.06)]">
+          <h2 className="m-0 text-[17px] font-semibold">Storage targets</h2>
 
-          {loadError && <p className="text-sm text-red-500">Failed to load targets: {loadError}</p>}
+          {loadError && <p className="text-sm text-[#b3261e]">Failed to load targets: {loadError}</p>}
 
           <DebouncedSkeleton
             contentInitialized={!loading}
@@ -235,12 +235,12 @@ export function DriveSettingsPage() {
                   {targets.map(t => {
                     const disabledReason = makeMasterDisabledReason(t);
                     return (
-                      <div key={t.id} className="border rounded p-4 space-y-2">
+                      <div key={t.id} className="space-y-2.5 rounded-xl border border-sunny-line p-4">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-xs font-bold px-1.5 py-0.5 rounded bg-gray-100 text-gray-600">{t.role}</span>
+                          <span className="text-xs font-bold px-2 py-0.5 rounded-md bg-sunny-field text-muted-foreground">{t.role}</span>
                           {!t.isCustom && tierBadge(t.tier)}
                           {statusBadge(t)}
-                          <span className="text-sm font-medium">{targetLabel(t)}</span>
+                          <span className="text-sm font-semibold">{targetLabel(t)}</span>
                           {healthBadge(health[t.id])}
                         </div>
                         <div className="flex gap-2 flex-wrap">
@@ -283,13 +283,13 @@ export function DriveSettingsPage() {
                 )}
 
                 {showAddSlave && (
-                  <div className="border rounded p-4 space-y-4">
+                  <div className="space-y-4 rounded-xl border border-sunny-line p-4">
                     <TargetPicker label="New slave" target={newSlave} hotOnly={false} allPresets={allPresets} excludePresetIds={targets.filter(t => t.presetId).map(t => t.presetId!)} onChange={setNewSlave} />
                     {!isTargetReady(newSlave) && newSlave.mode === 'custom' && (
                       <p className="text-xs text-muted-foreground">Test the connection before adding</p>
                     )}
                     {isDuplicateSlave && (
-                      <p className="text-xs text-red-500">This drive already has a storage target pointing at the same location</p>
+                      <p className="text-xs text-[#b3261e]">This drive already has a storage target pointing at the same location</p>
                     )}
                     <div className="flex gap-2">
                       <Button size="sm" onClick={handleAddSlave} disabled={busy || !isTargetReady(newSlave) || isDuplicateSlave}>
@@ -304,8 +304,8 @@ export function DriveSettingsPage() {
           />
         </section>
 
-        <section className="space-y-3 border border-destructive/30 rounded p-4">
-          <div className="font-montserrat text-lg font-bold text-destructive">Danger zone</div>
+        <section className="space-y-3 rounded-2xl border border-[#e6b8b3] bg-[#fdf6f5] p-5">
+          <h2 className="m-0 text-[17px] font-semibold text-[#b3261e]">Danger zone</h2>
           <p className="text-sm text-muted-foreground">
             Permanently delete this drive. This cannot be undone.
           </p>
@@ -327,7 +327,7 @@ export function DriveSettingsPage() {
                 <p className="mt-2 text-destructive font-medium">This action cannot be undone.</p>
                 {deleteTargetError && (
                   <div className="mt-2 space-y-1">
-                    <p className="text-sm text-red-500">{deleteTargetError}</p>
+                    <p className="text-sm text-[#b3261e]">{deleteTargetError}</p>
                     <p className="text-xs text-muted-foreground">
                       If this target's storage is permanently unreachable, you can remove it anyway —
                       its data may be left behind on that storage.
@@ -361,9 +361,9 @@ export function DriveSettingsPage() {
 
                 <div className="space-y-2">
                   {targets.map(t => (
-                    <div key={t.id} className="border rounded p-3 space-y-2">
+                    <div key={t.id} className="space-y-2 rounded-xl border border-sunny-line p-3">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-xs font-bold px-1.5 py-0.5 rounded bg-gray-100 text-gray-600">{t.role}</span>
+                        <span className="text-xs font-bold px-2 py-0.5 rounded-md bg-sunny-field text-muted-foreground">{t.role}</span>
                         <span className="text-sm font-medium text-foreground">{targetLabel(t)}</span>
                       </div>
                       {!t.isCustom ? (
@@ -387,7 +387,7 @@ export function DriveSettingsPage() {
                         </div>
                       )}
                       {t.isCustom && customDecisions[t.id] === undefined && (
-                        <p className="text-xs text-amber-600">Choose what happens to this target's data.</p>
+                        <p className="text-xs text-sunny-orange">Choose what happens to this target's data.</p>
                       )}
                     </div>
                   ))}
@@ -402,7 +402,7 @@ export function DriveSettingsPage() {
 
                 {deleteDriveError && (
                   <div className="space-y-1">
-                    <p className="text-sm text-red-500">{deleteDriveError}</p>
+                    <p className="text-sm text-[#b3261e]">{deleteDriveError}</p>
                     <p className="text-xs text-muted-foreground">
                       If a target's storage is permanently unreachable, you can delete the drive
                       anyway — its data may be left behind on that storage.

@@ -109,18 +109,18 @@ export function DriveExplorerPage() {
   return (
     <>
       {fileNotFound && (
-        <div className="absolute top-18 inset-x-0 z-50 flex items-center gap-3 bg-amber-50 border-b border-amber-200 px-4 py-2 text-sm text-amber-800">
+        <div className="absolute top-18 inset-x-0 z-50 flex items-center gap-3 border-b border-[#f0d3bd] bg-[#fbeee4] px-4 py-2 text-sm font-medium text-sunny-orange">
           <span>This file no longer exists.</span>
           {notFoundNodeId && (
             <button
-              className="underline text-amber-700 hover:text-amber-900"
+              className="underline hover:opacity-80"
               onClick={() => openFileProperties({ nodeId: notFoundNodeId, filePath: '', byteLength: 0 }).catch(() => {})}
             >
               View properties
             </button>
           )}
           <button
-            className="ml-auto text-amber-600 hover:text-amber-900"
+            className="ml-auto hover:opacity-80"
             onClick={() => navigate(location.pathname, { replace: true, state: {} })}
           >✕</button>
         </div>

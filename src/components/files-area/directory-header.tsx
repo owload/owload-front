@@ -34,7 +34,7 @@ export function DirectoryHeader({ showPath, showViewSwitch, locked = false }: { 
                     <span>{summary}</span>
                 </div>
             </div>
-            {showViewSwitch && <Toolbox className="max-sm:hidden" />}
+            {showViewSwitch && <Toolbox />}
         </div>
     );
 }

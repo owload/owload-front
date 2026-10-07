@@ -30,7 +30,7 @@ export function DriveExplorerArea() {
 
     const mainContent = (
         <main className='group absolute inset-0 select-none'>
-            <div className="hidden group-[.dragged]:block absolute z-50 inset-0 bg-gray-300/20 pointer-events-none"></div>
+            <div className="hidden group-[.dragged]:block absolute z-50 inset-0 bg-sunny-yellow/15 pointer-events-none"></div>
             <DirectoryHeader showPath={!mobileFileSelectModeOn} showViewSwitch={!!isReadyForActions} locked={!!filesInitialized && !driveStats?.description} />
             <FilesArea />
             {!mediaPreviewOpen && !editorOpen && isReadyForActions && <ToolboxBottom className="absolute inset-x-0 bottom-5 z-20" />}

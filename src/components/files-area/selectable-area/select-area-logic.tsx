@@ -67,6 +67,10 @@ export function SelectAreaLogic({ children, deselectAll, selectIds }: SelectArea
         if (e.button !== 0 || isMobile) {
             return;
         }
+        // controls inside the area (the view switch, the path, the dock) must keep their own clicks
+        if ((e.target as HTMLElement).closest?.('button, a, input, textarea, select, [role="button"], [role="menuitem"], [role="group"]')) {
+            return;
+        }
         deselectAll();
         const bounds = filesAreaDivRef.current!.getBoundingClientRect();
         const x = e.clientX - bounds.left;

@@ -83,7 +83,7 @@ export function TransfersTray() {
                             ? <Check className="size-3.5" strokeWidth={2.6} aria-hidden="true" />
                             : <ArrowUp className="size-3.5" strokeWidth={2.6} aria-hidden="true" />}
                     </>}
-                <span className="max-sm:hidden">{label}</span>
+                <span>{label}</span>
                 {open ? <ChevronDown className="size-4" strokeWidth={2.4} aria-hidden="true" /> : <ChevronUp className="size-4" strokeWidth={2.4} aria-hidden="true" />}
             </button>
 

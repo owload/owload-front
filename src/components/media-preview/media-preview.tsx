@@ -167,7 +167,7 @@ export function MediaPreview() {
 
     return (
         <div
-            className="fixed flex items-center z-150 inset-0 bg-black/80"
+            className="fixed inset-0 z-150 flex items-center bg-sunny-ink/90"
             ref={overlayDivRef}
         >
             <div
@@ -193,16 +193,18 @@ export function MediaPreview() {
             </div>
 
             {!isMobile && prevFileObject && (
-                <div onClick={handlePrevClick} className="absolute inset-y-0 w-30 hover:bg-black/10 cursor-pointer flex items-center">
-                    <ChevronLeft size={62} className="text-gray-300 m-5" />
-                </div>
+                <button type="button" aria-label="Previous file" onClick={handlePrevClick} className="absolute left-4 top-1/2 flex size-12 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full bg-sunny-ink/80 text-white outline-sunny-yellow hover:bg-sunny-ink focus-visible:outline-2">
+                    <ChevronLeft className="size-6" strokeWidth={2.2} aria-hidden="true" />
+                </button>
             )}
             {!isMobile && nextFileObject && (
-                <div onClick={handleNextClick} className="absolute right-0 inset-y-0 w-30 hover:bg-black/10 cursor-pointer flex items-center">
-                    <ChevronRight size={62} className="text-gray-300 ml-9" />
-                </div>
+                <button type="button" aria-label="Next file" onClick={handleNextClick} className="absolute right-4 top-1/2 flex size-12 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full bg-sunny-ink/80 text-white outline-sunny-yellow hover:bg-sunny-ink focus-visible:outline-2">
+                    <ChevronRight className="size-6" strokeWidth={2.2} aria-hidden="true" />
+                </button>
             )}
-            <X size={43} onClick={handleClose} className="text-gray-300 cursor-pointer absolute top-1 right-1" />
+            <button type="button" aria-label="Close preview" onClick={handleClose} className="absolute right-4 top-4 flex size-11 cursor-pointer items-center justify-center rounded-xl bg-sunny-ink text-sunny-yellow outline-sunny-yellow hover:bg-sunny-ink-raised focus-visible:outline-2">
+                <X className="size-5" strokeWidth={2.4} aria-hidden="true" />
+            </button>
         </div>
     );
 }

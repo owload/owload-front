@@ -5,12 +5,12 @@ import { useDragEventUpload } from "@/hooks/use-upload";
 import { cn, joinPath } from "@/lib/utils";
 import { useFilesStore } from "@/stores/files-store";
 import { FileProperties } from "@/types/types";
-import { Lock } from "lucide-react";
+import { Lock, MoreHorizontal } from "lucide-react";
 import { PointerEventHandler, useCallback, useMemo, useState } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useIsMobileSelectModeOn } from "@/hooks/use-mobile-select-mode";
 import { DocumentPreview, hasDocumentPreview } from "./document-preview";
-import { ExtensionBadge } from "./extension-badge";
+import { ExtensionBadge, getColorClassname } from "./extension-badge";
 import { registry } from "@/extensions/registry";
 
 interface FileObjectProps {
@@ -18,13 +18,14 @@ interface FileObjectProps {
     thumbnail?: string;
     className?: string;
     draggable?: boolean;
+    view?: "grid" | "list";
     onPointerDown?: PointerEventHandler<HTMLDivElement>;
     onClick?: PointerEventHandler<HTMLDivElement>;
     onContextMenu?: PointerEventHandler<HTMLDivElement>;
     ref?: (node: HTMLElement | null) => void;
 }
 
-function FileObject({ fileObject, thumbnail, className, onPointerDown, onClick, onContextMenu, ref, draggable = false }: FileObjectProps) {
+function FileObject({ fileObject, thumbnail, className, onPointerDown, onClick, onContextMenu, ref, draggable = false, view = "grid" }: FileObjectProps) {
     const [_, setDragEnterCounter] = useState(0);
     const [dragOverStyleApplied, setDragOverStyleApplied] = useState(false);
     const setDragHappening = useFilesStore(state => state.setDragHappening);
@@ -160,6 +161,72 @@ function FileObject({ fileObject, thumbnail, className, onPointerDown, onClick, 
     const selected = !!fileObject.selected;
     const cut = !!fileObject.selectedForCut;
 
+    const sizeText = isDir
+        ? (itemCount !== null ? `${itemCount} ${itemCount === 1 ? "item" : "items"}` : "")
+        : uploading ? "Uploading…" : fileObject.byteLength !== undefined ? readableSize(fileObject.byteLength) : "—";
+    const extension = fileObject.extension || "";
+
+    if (view === "list") {
+        return (
+            <div
+                className={cn(
+                    "group grid min-h-[52px] max-sm:min-h-[60px] min-w-0 grid-cols-[minmax(0,1fr)_110px_44px] items-center gap-x-4 rounded-[10px] border-b border-[#eeede7] pl-3 pr-1 transition-colors duration-150 max-sm:grid-cols-[minmax(0,1fr)_44px] max-sm:[&>span:nth-child(2)]:hidden",
+                    selected ? "border-transparent bg-[#fef5cc]" : "hover:border-transparent hover:bg-[#f2f2ef]",
+                    cut && "opacity-45",
+                    dragOverStyleApplied && "bg-sunny-yellow-soft",
+                    className
+                )}
+                draggable={draggable}
+                onDrop={handleDrop}
+                onDoubleClick={handleDoubleClick}
+                onPointerDown={handlePointerDown}
+                onClick={handleClick}
+                onDragStart={handleDragStart}
+                onDragEnd={handleDragEnd}
+                onDragOver={handleDragOver}
+                onDragEnter={handleDragEnter}
+                onDragLeave={handleDragLeave}
+                onContextMenu={onContextMenu}
+                ref={ref}
+            >
+                <div className="flex min-h-11 min-w-0 items-center gap-3 text-sm font-semibold">
+                    {isDir ? (
+                        <span aria-hidden="true" className="flex size-9 flex-none items-center justify-center"><FolderArt size={32} /></span>
+                    ) : thumbnail ? (
+                        <img src={thumbnail} alt="" draggable={false} className={cn("size-9 flex-none rounded-[9px] object-cover", registry.forFileName(fileObject.name) && "object-left-top")} />
+                    ) : (
+                        <span aria-hidden="true" className={cn("flex size-9 flex-none items-center justify-center rounded-[9px] text-[9px] font-bold uppercase tracking-[0.04em] text-white", uploading ? "tile-uploading bg-sunny-field" : getColorClassname(extension))}>
+                            {extension.slice(0, 4) || "file"}
+                        </span>
+                    )}
+                    <span className="flex min-w-0 flex-col">
+                        <span className="flex min-w-0 items-center gap-1.5">
+                            <Lock aria-hidden="true" className="size-[13px] flex-none text-muted-foreground" strokeWidth={2.2} />
+                            <span className="truncate" title={fileObject.name}>{fileObject.name}</span>
+                        </span>
+                        {/* on a phone the size sits under the name; the column is hidden there */}
+                        <span className="hidden text-[13px] font-normal text-muted-foreground max-sm:block">{sizeText}</span>
+                    </span>
+                </div>
+                <span className={cn("whitespace-nowrap text-[13px]", selected ? "text-[#3b3a34]" : "text-muted-foreground")}>{sizeText}</span>
+                <button
+                    type="button"
+                    aria-label={`Actions for ${fileObject.name}`}
+                    aria-haspopup="menu"
+                    onPointerDown={(e) => { e.stopPropagation(); onPointerDown?.(e as unknown as React.PointerEvent<HTMLDivElement>); }}
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        e.currentTarget.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true, clientX: rect.left, clientY: rect.bottom }));
+                    }}
+                    className="flex size-11 cursor-pointer items-center justify-center rounded-[10px] text-muted-foreground outline-ring hover:bg-black/5 focus-visible:outline-2"
+                >
+                    <MoreHorizontal aria-hidden="true" className="size-[18px]" />
+                </button>
+            </div>
+        );
+    }
+
     return (
         <div className={cn(
             "group relative -m-1.5 flex min-w-0 flex-col gap-2 rounded-[18px] p-1.5 transition-colors duration-150",
@@ -224,6 +291,21 @@ function FileObject({ fileObject, thumbnail, className, onPointerDown, onClick, 
             </div>
         </div>
     );
+}
+
+function FolderArt({ size }: { size: number }) {
+    return (
+        <svg width={size} height={Math.round(size * 0.8)} viewBox="0 0 80 64" aria-hidden="true" className="block flex-none">
+            <path d="M4 12a6 6 0 0 1 6-6h17a4 4 0 0 1 3 1.4L35 13h35a6 6 0 0 1 6 6v35a6 6 0 0 1-6 6H10a6 6 0 0 1-6-6z" fill="#fadb58" />
+        </svg>
+    );
+}
+
+export function readableSize(bytes: number) {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+    if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+    return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
 }
 
 function FileObjectIcon(fileObject: FileProperties) {

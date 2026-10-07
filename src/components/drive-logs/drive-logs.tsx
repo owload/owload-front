@@ -58,15 +58,15 @@ function UploadMeta({ startOp, finishOp, logLoaded }: { startOp: EnrichedOp; fin
   const unverified = logLoaded && (!startOp.logEntry || (finishOp && !finishOp.logEntry));
 
   return (
-    <div className="flex flex-wrap gap-3 text-xs text-gray-400 mt-0.5">
+    <div className="flex flex-wrap gap-3 text-xs text-muted-foreground mt-0.5">
       {userId && <span>{userId}</span>}
       {startedAt && <span>started {new Date(startedAt).toLocaleString()}</span>}
       {finishOp
         ? finishedAt
           ? <span>finished {new Date(finishedAt).toLocaleString()}</span>
-          : logLoaded && <span className="text-red-500">finish unverified</span>
-        : <span className="text-amber-500">not finished</span>}
-      {unverified && !userId && <span className="text-red-500">unverified</span>}
+          : logLoaded && <span className="text-[#b3261e]">finish unverified</span>
+        : <span className="text-sunny-orange">not finished</span>}
+      {unverified && !userId && <span className="text-[#b3261e]">unverified</span>}
     </div>
   );
 }
@@ -128,10 +128,10 @@ function computeRedundantRanges(blocks: BlockState[], maxEnd: number): { start: 
 }
 
 const BLOCK_COLORS: Record<BlockState, string> = {
-  effective: "#22c55e",
-  partial: "#f59e0b",
-  redundant: "#ef4444",
-  free: "#d1d5db",
+  effective: "#1e7b45",
+  partial: "#b5521b",
+  redundant: "#c0362c",
+  free: "#d9d8d2",
 };
 
 function BlockBar({ blocks }: { blocks: BlockState[] }) {
@@ -162,7 +162,7 @@ function BlockBar({ blocks }: { blocks: BlockState[] }) {
           />
         ))}
       </div>
-      <div className="text-xs text-gray-500 mt-1">{blocks.length} blocks × 1 MB</div>
+      <div className="text-xs text-muted-foreground mt-1">{blocks.length} blocks × 1 MB</div>
     </div>
   );
 }
@@ -414,7 +414,7 @@ export function DriveLogs() {
               <button
                 onClick={() => setConfirmOpen(true)}
                 disabled={cleaning}
-                className="ml-2 px-2 py-0.5 text-xs border border-red-400 text-red-500 rounded hover:bg-red-50 disabled:opacity-50"
+                className="ml-2 px-2 py-0.5 text-xs border border-[#e6b8b3] text-[#b3261e] rounded-lg hover:bg-[#fbe9e7] disabled:opacity-50"
               >
                 {cleaning ? "Cleaning…" : "Clean up redundant"}
               </button>
@@ -447,7 +447,7 @@ export function DriveLogs() {
             </button>
             <button
               onClick={runCleanup}
-              className="px-4 py-2 text-sm bg-red-500 text-white rounded hover:bg-red-600"
+              className="px-4 py-2 text-sm bg-destructive text-white rounded-[10px] hover:bg-destructive/90"
             >
               Delete
             </button>
@@ -467,18 +467,18 @@ export function DriveLogs() {
 
         <TabsContent value="action-log">
           {actionLog.length === 0 ? (
-            <div className="text-xs text-gray-400 py-4">No entries</div>
+            <div className="text-xs text-muted-foreground py-4">No entries</div>
           ) : (
             actionLog.map((entry) => (
-              <div key={entry.id} className="p-2 border-b border-gray-200 text-sm">
-                <div className="flex gap-4 text-xs text-gray-500 mb-0.5">
+              <div key={entry.id} className="p-2 border-b border-sunny-line text-sm">
+                <div className="flex gap-4 text-xs text-muted-foreground mb-0.5">
                   <span>{new Date(entry.timestamp).toLocaleString()}</span>
                   <span>{entry.userId}</span>
                 </div>
                 <div className="font-mono">
                   {entry.action}
                   {Object.keys(entry.attributes).length > 0 && (
-                    <span className="text-gray-500 ml-2 text-xs">
+                    <span className="text-muted-foreground ml-2 text-xs">
                       {Object.entries(entry.attributes).map(([k, v]) => `${k}=${v}`).join(' ')}
                     </span>
                   )}
@@ -506,16 +506,16 @@ export function DriveLogs() {
               const unverified = logLoaded && (!startOp.logEntry || (finishOp && !finishOp.logEntry));
               const didOverwrite = overwriteSet.has(startOp.startBytePos);
               return (
-                <div key={group.sortKey} className={`p-2 border-b text-sm ${unverified ? "bg-red-50 border-red-300" : "border-gray-300"}`}>
+                <div key={group.sortKey} className={`p-2 border-b text-sm ${unverified ? "bg-[#fbe9e7] border-[#e6b8b3]" : "border-sunny-line"}`}>
                   <div className="flex items-baseline gap-2">
                     <span>{title}</span>
-                    <span className="text-gray-400 text-xs">{formatBytes(byteLength)}</span>
+                    <span className="text-muted-foreground text-xs">{formatBytes(byteLength)}</span>
                     {didOverwrite && <span className="text-xs text-orange-600">overwrites existing</span>}
                     {byteLength > 0 && (dataPresent === null
-                      ? <span className="text-xs text-gray-300">checking…</span>
+                      ? <span className="text-xs text-muted-foreground">checking…</span>
                       : dataPresent
-                        ? <span className="text-xs text-green-600">data on S3</span>
-                        : <span className="text-xs text-red-500">data missing</span>)}
+                        ? <span className="text-xs text-sunny-green">data on S3</span>
+                        : <span className="text-xs text-[#b3261e]">data missing</span>)}
                     {dataPresent && !thumbnailInfo && finishOp && (
                       <button
                         onClick={() => downloadUploadGroup(group)}
@@ -534,19 +534,19 @@ export function DriveLogs() {
             const { op } = group;
             const unverified = logLoaded && !op.logEntry;
             return (
-              <div key={op.startBytePos} className={`p-2 border-b text-sm ${unverified ? "bg-red-50 border-red-300" : "border-gray-300"}`}>
+              <div key={op.startBytePos} className={`p-2 border-b text-sm ${unverified ? "bg-[#fbe9e7] border-[#e6b8b3]" : "border-sunny-line"}`}>
                 <div className="flex flex-wrap gap-4 text-xs mb-1">
-                  <span className="text-gray-500">pos: {op.startBytePos}</span>
-                  <span className={op.valid ? "text-gray-500" : "text-red-500"}>
+                  <span className="text-muted-foreground">pos: {op.startBytePos}</span>
+                  <span className={op.valid ? "text-muted-foreground" : "text-[#b3261e]"}>
                     {op.valid ? "valid" : `invalid: ${op.rejectionReason}`}
                   </span>
                   {op.logEntry ? (
                     <>
-                      <span className="text-gray-400">{new Date(op.logEntry.timestamp).toLocaleString()}</span>
-                      <span className="text-gray-400">{op.logEntry.userId}</span>
+                      <span className="text-muted-foreground">{new Date(op.logEntry.timestamp).toLocaleString()}</span>
+                      <span className="text-muted-foreground">{op.logEntry.userId}</span>
                     </>
                   ) : logLoaded && (
-                    <span className="text-red-500 font-medium">unverified</span>
+                    <span className="text-[#b3261e] font-medium">unverified</span>
                   )}
                 </div>
                 {op.op?.operationType === FsOperationType.DESCRIPTION &&
