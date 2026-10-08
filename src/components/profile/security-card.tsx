@@ -1,69 +1,58 @@
-import { useState } from "react";
-import { KeyRound, Laptop, ShieldCheck, Smartphone } from "lucide-react";
-import { Field, PasswordInput, PasswordStrengthMeter, RepeatCheck, useFieldId } from "@/components/drives/new-drive/form-parts";
+import { useEffect, useState } from "react";
+import { Check, KeyRound, Laptop, ShieldCheck, Smartphone } from "lucide-react";
+import { canChangePassword, clearKeycloakActionResult, getKeycloakActionResult, startPasswordChange } from "@/auth-context-provider";
+import { FieldError } from "@/components/drives/new-drive/form-parts";
+import type { PasswordDetails } from "@/engine/keycloak/account-api";
+import { usePasswordDetails } from "@/hooks/use-password-details";
 import { Badge, InfoRow, ProfileButton, ProfileCard } from "./profile-parts";
-import { PLACEHOLDER_DEVICES, PLACEHOLDER_PASSWORD_CHANGED } from "./profile-placeholders";
+import { PLACEHOLDER_DEVICES } from "./profile-placeholders";
 
-/** The form for a new password. What is typed stays in this component and goes nowhere: changing the password is not connected yet. */
-function ChangePasswordForm({ onClose }: { onClose: () => void }) {
-    const [current, setCurrent] = useState("");
-    const [next, setNext] = useState("");
-    const [repeat, setRepeat] = useState("");
-    const currentId = useFieldId("profile-current-password");
-    const nextId = useFieldId("profile-new-password");
-    const repeatId = useFieldId("profile-repeat-password");
-    const ready = current !== "" && next !== "" && next === repeat;
-
-    return (
-        <form
-            onSubmit={(e) => { e.preventDefault(); if (ready) onClose(); }}
-            className="m-0 flex flex-col gap-3.5 rounded-xl border border-sunny-ink p-4"
-        >
-            <div className="flex items-center gap-2 text-sm font-semibold">
-                <KeyRound aria-hidden="true" className="size-4" strokeWidth={2} />
-                <span>Change password</span>
-            </div>
-            <Field label="Current password" htmlFor={currentId}>
-                <PasswordInput id={currentId} value={current} onChange={setCurrent} label="current password" autoComplete="current-password" autoFocus />
-            </Field>
-            <Field label="New password" htmlFor={nextId}>
-                <PasswordInput id={nextId} value={next} onChange={setNext} label="new password" />
-                <PasswordStrengthMeter password={next} okHint={null} />
-            </Field>
-            <Field label="Repeat new password" htmlFor={repeatId}>
-                <PasswordInput id={repeatId} value={repeat} onChange={setRepeat} label="repeat new password" />
-                <RepeatCheck password={next} repeat={repeat} />
-            </Field>
-            <div className="flex justify-end gap-2">
-                <ProfileButton tone="ghost" size={44} onClick={onClose}>Cancel</ProfileButton>
-                <ProfileButton tone="yellow" size={44} type="submit" disabled={!ready}>Update password</ProfileButton>
-            </div>
-        </form>
-    );
+/** "Last changed Mar 4, 2026"; nothing when the date is not known. */
+function passwordCaption(details?: PasswordDetails): string | undefined {
+    if (!details) return undefined;
+    if (!details.registered) return "No password set";
+    if (details.lastUpdate === undefined) return undefined;
+    return `Last changed ${new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric" }).format(new Date(details.lastUpdate))}`;
 }
 
 /** The password, the two-step verification and the devices that are signed in. */
 export function SecurityCard() {
-    const [changingPassword, setChangingPassword] = useState(false);
+    const { details, loaded } = usePasswordDetails();
+    // What Keycloak reported when it sent the user back (shown once).
+    const [result] = useState(() => getKeycloakActionResult());
+    useEffect(() => clearKeycloakActionResult, []);
+    const passwordResult = result?.action === "UPDATE_PASSWORD" ? result.status : undefined;
+    const canChange = canChangePassword();
+    const caption = passwordCaption(details);
 
     return (
         <ProfileCard title="Sign-in and security">
             <div className="flex flex-col gap-2">
-                {changingPassword
-                    ? <ChangePasswordForm onClose={() => setChangingPassword(false)} />
-                    : (
-                        <InfoRow
-                            first
-                            label="Password"
-                            action={<ProfileButton tone="dark" onClick={() => setChangingPassword(true)}><KeyRound aria-hidden="true" className="size-4" strokeWidth={2.2} />Change</ProfileButton>}
-                        >
-                            {PLACEHOLDER_PASSWORD_CHANGED}
-                        </InfoRow>
-                    )}
                 <InfoRow
-                    first={changingPassword}
+                    first
+                    label="Password"
+                    action={(
+                        <ProfileButton
+                            tone="dark"
+                            disabled={!canChange}
+                            title={canChange ? undefined : "Change the password in the web version"}
+                            onClick={() => startPasswordChange()}
+                        >
+                            <KeyRound aria-hidden="true" className="size-4" strokeWidth={2.2} />{details?.registered === false ? "Set password" : "Change"}
+                        </ProfileButton>
+                    )}
+                >
+                    {caption ?? (loaded ? <span className="font-normal text-sunny-muted">Kept by the sign-in service</span> : "—")}
+                </InfoRow>
+                {passwordResult === "success" && (
+                    <p role="status" className="m-0 flex items-center gap-1.5 text-xs font-semibold text-sunny-green">
+                        <Check aria-hidden="true" className="size-[13px]" strokeWidth={2.6} />Password updated
+                    </p>
+                )}
+                {passwordResult === "error" && <FieldError>The password was not changed. Try again.</FieldError>}
+                <InfoRow
                     label="Two-step verification"
-                    action={<ProfileButton>Turn on</ProfileButton>}
+                    action={<ProfileButton disabled title="Not available yet">Turn on</ProfileButton>}
                 >
                     <Badge>Off</Badge>
                     <span className="font-normal text-sunny-muted">A code from an app at sign-in</span>

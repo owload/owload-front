@@ -27,7 +27,48 @@ let axiosInterceptorId: number | null = null;
 
 let axiosResponseInterceptorId: number | null = null;
 
+let accessTokenProvider: (() => Promise<string>) | undefined;
+
+/**
+ * The current access token, refreshed first when it is about to expire. For the calls the client makes to Keycloak itself
+ * (the account API); the backend gets the token through the request interceptor below. Rejects when nobody is signed in.
+ */
+export async function getFreshAccessToken(): Promise<string> {
+  if (!accessTokenProvider) throw new Error("Not signed in");
+  return accessTokenProvider();
+}
+
+let passwordChangeStarter: (() => void) | undefined;
+let keycloakActionResult: { action?: string, status: "success" | "cancelled" | "error" } | undefined;
+
+/** Whether this client can send the user to Keycloak to change the password (the web client can; the desktop one signs in without a redirect). */
+export function canChangePassword(): boolean {
+  return passwordChangeStarter !== undefined;
+}
+
+/**
+ * Sends the user to Keycloak's own page to set a new password (the required action UPDATE_PASSWORD) and back to the profile
+ * page. The password is typed there; the client never sees it. Keycloak asks to sign in again if the sign-in is not recent.
+ */
+export function startPasswordChange(): void {
+  passwordChangeStarter?.();
+}
+
+/** What came back from the last page of Keycloak the user was sent to, for example `{ action: "UPDATE_PASSWORD", status: "success" }`. */
+export function getKeycloakActionResult() {
+  return keycloakActionResult;
+}
+
+/** Forgets that result once it has been shown. */
+export function clearKeycloakActionResult() {
+  keycloakActionResult = undefined;
+}
+
 function setAxiosInterceptor(getToken: () => string, refreshFn?: () => Promise<void>) {
+  accessTokenProvider = async () => {
+    if (refreshFn) await refreshFn();
+    return getToken();
+  };
   axios.defaults.baseURL = globalOptions.APP_MAIN_BACKEND_URL;
   if (axiosInterceptorId !== null) {
     axios.interceptors.request.eject(axiosInterceptorId);
@@ -194,6 +235,8 @@ function WebAuthProvider({ authenticatedChild, anonymousChild }: ProviderProps) 
   const [userInfo, setUserInfo] = useState<UserInfo>(emptyUserInfo);
 
   useEffect(() => {
+    passwordChangeStarter = () => { void keycloak.login({ action: "UPDATE_PASSWORD", redirectUri: `${window.location.origin}/profile` }); };
+    keycloak.onActionUpdate = (status, action) => { keycloakActionResult = { status, action }; };
     const storedToken = localStorage.getItem(KC_TOKEN_KEY) ?? undefined;
     const storedRefreshToken = localStorage.getItem(KC_REFRESH_TOKEN_KEY) ?? undefined;
 
