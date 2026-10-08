@@ -1,4 +1,4 @@
-import { FolderMinus, FolderPlus, FolderSync, LogIn, LogOut, ShieldOff, Camera, UserPen, type LucideIcon } from "lucide-react";
+import { Camera, Crown, Database, Eye, FolderMinus, FolderOpen, FolderPlus, FolderSync, LogIn, LogOut, PenLine, ShieldOff, Trash2, UserPen, type LucideIcon } from "lucide-react";
 import type { UserEvent } from "@/engine/backend/user-backend";
 import { formatDateTime } from "@/lib/format-when";
 
@@ -20,13 +20,30 @@ export function describeEvent(event: UserEvent): EventView {
         case "drive_created": return { icon: FolderPlus, title: `Created ${drive}` };
         case "drive_restored": return { icon: FolderSync, title: `Restored ${drive} from a storage` };
         case "drive_deleted": return { icon: FolderMinus, title: `Deleted ${drive}` };
+        case "drive_opened": return { icon: FolderOpen, title: `Read from ${drive}` };
+        case "drive_files_read": return { icon: Eye, title: `Read files from ${drive}` };
+        case "drive_written": return { icon: PenLine, title: `Wrote to ${drive}` };
+        case "storage_target_added": return { icon: Database, title: `Added a storage to ${drive}` };
+        case "storage_target_main_changed": return { icon: Crown, title: `Changed the main storage of ${drive}` };
+        case "storage_target_removed": return { icon: Trash2, title: `Removed a storage from ${drive}` };
         default: return { icon: LogIn, title: event.kind.replaceAll("_", " ") };
     }
 }
 
+/** When it happened; for a burst of access to a drive, from when to when (the end as a time of day when it is the same day). */
+function eventWhen(event: UserEvent): string {
+    const start = formatDateTime(event.at);
+    const lastAt = typeof event.details.lastAt === "string" ? new Date(event.details.lastAt) : undefined;
+    const from = new Date(event.at);
+    if (!lastAt || Number.isNaN(lastAt.getTime()) || lastAt.getTime() - from.getTime() < 2 * 60_000) return start;
+    const sameDay = lastAt.toDateString() === from.toDateString();
+    const end = sameDay ? formatDateTime(lastAt.toISOString()).split(", ").pop() : formatDateTime(lastAt.toISOString());
+    return `${start} – ${end}`;
+}
+
 /** Where the event came from: the browser, the address, and when. */
 export function eventMeta(event: UserEvent): string {
-    return [event.currentSession ? "This device" : event.device, event.ip, formatDateTime(event.at)].filter(Boolean).join(" · ");
+    return [event.currentSession ? "This device" : event.device, event.ip, eventWhen(event)].filter(Boolean).join(" · ");
 }
 
 /** One event of the account: an icon, what happened, and where it came from. */

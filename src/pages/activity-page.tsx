@@ -14,7 +14,8 @@ const FILTERS = [
     { id: "all", label: "All", kinds: undefined },
     { id: "sign-ins", label: "Sign-ins", kinds: ["sign_in", "sign_out", "session_revoked", "other_sessions_revoked"] },
     { id: "profile", label: "Profile", kinds: ["name_changed", "picture_changed"] },
-    { id: "drives", label: "Drives", kinds: ["drive_created", "drive_restored", "drive_deleted"] },
+    { id: "drives", label: "Drives", kinds: ["drive_created", "drive_restored", "drive_deleted", "storage_target_added", "storage_target_main_changed", "storage_target_removed"] },
+    { id: "access", label: "Access", kinds: ["drive_opened", "drive_files_read", "drive_written"] },
 ] as const;
 
 /** The events of one day, under the heading of the day. */
