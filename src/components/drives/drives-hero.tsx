@@ -1,9 +1,10 @@
 import { Link } from "react-router-dom";
 import { Lock, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
+import type { DriveKind } from "./drive-kind";
 import { Rings, TopRow } from "./page-top";
 
-export type DrivesFilter = "all" | "private" | "shared";
+export type DrivesFilter = "all" | DriveKind;
 
 interface DrivesHeroProps {
     total: number;
@@ -18,6 +19,8 @@ const FILTERS: { value: DrivesFilter, label: string }[] = [
     { value: "all", label: "All" },
     { value: "private", label: "Private" },
     { value: "shared", label: "Shared" },
+    { value: "public", label: "Public" },
+    { value: "with-me", label: "Shared with me" },
 ];
 
 /** The small line above the title: the counts of the drives. */
@@ -59,7 +62,7 @@ export function DrivesHero({ total, openCount, filter, counts, onFilter, onClose
                         <Lock aria-hidden="true" className="size-4" strokeWidth={2.2} />
                         Close all drives
                     </button>
-                    <div role="tablist" aria-label="Drive type" className="flex gap-0.5 rounded-full bg-sunny-field p-[3px]">
+                    <div role="tablist" aria-label="Drive type" className="flex max-w-full gap-0.5 overflow-x-auto rounded-full bg-sunny-field p-[3px]">
                         {FILTERS.map(({ value, label }) => (
                             <button
                                 key={value}
@@ -68,7 +71,7 @@ export function DrivesHero({ total, openCount, filter, counts, onFilter, onClose
                                 aria-selected={filter === value}
                                 onClick={() => onFilter(value)}
                                 className={cn(
-                                    "flex h-[38px] cursor-pointer items-center gap-[7px] rounded-full px-3.5 font-semibold text-sunny-ink outline-sunny-ink focus-visible:outline-2 focus-visible:outline-offset-2",
+                                    "flex h-[38px] flex-none cursor-pointer items-center gap-[7px] whitespace-nowrap rounded-full px-3.5 font-semibold text-sunny-ink outline-sunny-ink focus-visible:outline-2 focus-visible:outline-offset-2",
                                     filter === value ? "bg-sunny-yellow" : "hover:bg-sunny-ink/10",
                                 )}
                             >

@@ -6,11 +6,17 @@ import { AuthContextProvider, IS_TAURI } from './auth-context-provider.tsx'
 import { LoginForm } from './components/login/login-form.tsx'
 import { Landing } from './landing/Landing.tsx'
 import { installServiceWorker } from './install-sw.ts'
+import { PublicApp, publicTokenOfThisPage } from './public/public-app.tsx'
 
 installServiceWorker();
 
+// The link of a public drive opens it for anyone, with no sign-in.
+const publicToken = publicTokenOfThisPage();
+
 createRoot(document.getElementById('root')!).render(
-  <AuthContextProvider
-    authenticatedChild={<App />}
-    anonymousChild={IS_TAURI ? <LoginForm /> : <Landing />} />
+  publicToken
+    ? <PublicApp token={publicToken} />
+    : <AuthContextProvider
+        authenticatedChild={<App />}
+        anonymousChild={IS_TAURI ? <LoginForm /> : <Landing />} />
 );

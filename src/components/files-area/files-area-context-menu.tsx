@@ -9,9 +9,11 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import ContextMenuHandler from "./selectable-area/context-menu-handler";
 import { registry } from "@/extensions/registry";
 import { ClipboardPaste, CloudUpload, FilePlus, FolderPlus } from "lucide-react";
+import { useCanWrite } from "@/hooks/use-drive-role";
 
 export function FilesAreaContextMenu({ children }: PropsWithChildren) {
     const isMobile = useIsMobile();
+    const canWrite = useCanWrite();
     const openCreateFolderDialog = useCreateFolderDialog();
     const openCreateEditorFileDialog = useCreateEditorFileDialog();
     const { pwd, commitMoveOrCopy } = useFilesStoreOps();
@@ -30,6 +32,11 @@ export function FilesAreaContextMenu({ children }: PropsWithChildren) {
         e.preventDefault();
         activateMobileSelectMode();
     });
+
+    // A reader only views the drive: nothing to create, upload or paste.
+    if (!canWrite) {
+        return <div className="select-none">{children}</div>;
+    }
 
     if(isMobile) {
         return (

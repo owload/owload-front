@@ -10,14 +10,29 @@ export enum Privilege {
   WRITE,
 }
 
+/** Who can open a drive: only the owner, the owner and the people added, or also anyone with the link (read-only, no sign-in). */
+export type DriveVisibility = "private" | "shared" | "public";
+/** What a person may do on a drive: view it; also add and change files; also manage the people and the settings. */
+export type DriveRole = "reader" | "writer" | "admin";
+export type MyDriveRole = DriveRole | "owner";
+
 export interface DriveInfo {
   id: DriveId;
   ownerUserId: UserId;
   title: string;
-  ACL: Map<UserId, Set<Privilege>>;
+  /** The people and their roles; only the owner and an admin get it (for others it is empty). */
+  ACL: Record<UserId, DriveRole>;
   createdTimestamp: number;
   keyNonce: string;
   counterNonce: string;
+  visibility: DriveVisibility;
+  /** What the signed-in user may do on this drive. */
+  myRole: MyDriveRole;
+  /** How many people the drive is shared with (for the owner and the admins). */
+  peopleCount: number;
+  /** Who owns a drive that was shared with me. */
+  ownerName: string | null;
+  ownerEmail: string | null;
 };
 
 export type S3PresetTier = 'hot' | 'cold';

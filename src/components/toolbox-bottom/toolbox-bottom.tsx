@@ -1,6 +1,7 @@
 import { FsObjectType, ROOT_NODE_ID } from "@/engine";
 import { useCreateFolderDialog, useOpenFileProperties, useRenameDialog } from "@/hooks/use-dialogs";
 import { useFilesStoreOps } from "@/hooks/use-files-store-ops";
+import { useCanWrite } from "@/hooks/use-drive-role";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useActivateMobileSelectMode, useDeactivateMobileSelectMode, useIsMobileSelectModeOn } from "@/hooks/use-mobile-select-mode";
 import { useNavigateDir } from "@/hooks/use-navigate-dir";
@@ -23,6 +24,7 @@ export function ToolboxBottom(props: { className?: string }) {
     const mobileFileSelectModeOn = useIsMobileSelectModeOn();
     const activateMobileSelectMode = useActivateMobileSelectMode();
     const isMobile = useIsMobile();
+    const canWrite = useCanWrite();
     const { pwd, rm, commitMoveOrCopy, selectFilesToCopy, selectFilesToMove, downloadSelectedObject } = useFilesStoreOps();
 
     // On a phone the dock starts folded into the "Actions" pill; the user unfolds it.
@@ -167,23 +169,23 @@ export function ToolboxBottom(props: { className?: string }) {
 
     const buttons = (
         <>
-            {!mobileFileSelectModeOn && <>
+            {canWrite && !mobileFileSelectModeOn && <>
                 <DockButton label="Copy" stacked={isMobile} disabled={!isAnyFileSelected} onClick={handleCopyClick} {...dockButton}><Files size={picSize} /></DockButton>
                 <DockButton label="Cut" stacked={isMobile} disabled={!isAnyFileSelected} onClick={handleCutClick} {...dockButton}><SquareScissors size={picSize} /></DockButton>
                 <DockButton label="Paste" stacked={isMobile} disabled={!isPasteAvailable || pasteButtonClickPending} onClick={handlePasteClick} {...dockButton}><ClipboardPaste size={picSize} /></DockButton>
             </>}
-            {mobileFileSelectModeOn && isAnyFileSelected && <>
+            {canWrite && mobileFileSelectModeOn && isAnyFileSelected && <>
                 <DockButton label="Copy" stacked={isMobile} onClick={handleCopyClick} {...dockButton}><Files size={picSize} /></DockButton>
                 <DockButton label="Cut" stacked={isMobile} onClick={handleCutClick} {...dockButton}><SquareScissors size={picSize} /></DockButton>
             </>}
 
             {hasSelectionActions && !isMobile && <DockDivider />}
             {isDownloadAvailable && <DockButton iconOnly={!isMobile} stacked={isMobile} label="Download" onClick={handleDownloadClick} {...dockButton}><CloudDownload size={picSize} /></DockButton>}
-            {isSingleFileSelected && <DockButton iconOnly={!isMobile} stacked={isMobile} label="Rename" onClick={handleRenameClick} {...dockButton}><SquarePen size={picSize} /></DockButton>}
-            {isAnyFileSelected && <DockButton iconOnly={!isMobile} stacked={isMobile} label="Delete" disabled={rmButtonClickPending} onClick={handleDeleteClick} {...dockButton}><Trash size={picSize} /></DockButton>}
+            {canWrite && isSingleFileSelected && <DockButton iconOnly={!isMobile} stacked={isMobile} label="Rename" onClick={handleRenameClick} {...dockButton}><SquarePen size={picSize} /></DockButton>}
+            {canWrite && isAnyFileSelected && <DockButton iconOnly={!isMobile} stacked={isMobile} label="Delete" disabled={rmButtonClickPending} onClick={handleDeleteClick} {...dockButton}><Trash size={picSize} /></DockButton>}
             {isSingleFileSelected && selectedFileObjects[0]?.type !== FsObjectType.DIR && <DockButton iconOnly={!isMobile} stacked={isMobile} label="Properties" onClick={handlePropertiesClick} {...dockButton}><Info size={picSize} /></DockButton>}
 
-            {!mobileFileSelectModeOn && <>
+            {canWrite && !mobileFileSelectModeOn && <>
                 {!isMobile && <DockDivider />}
                 <DockButton label={isMobile ? "Folder" : "Create folder"} stacked={isMobile} onClick={handleCreateFolderClick} {...dockButton}><FolderPlus size={picSize} /></DockButton>
                 <DockButton label="Upload" stacked={isMobile} onClick={handleUploadClick} {...dockButton}><CloudUpload size={picSize} /></DockButton>

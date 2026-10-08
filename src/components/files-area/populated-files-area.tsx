@@ -6,10 +6,12 @@ import { useEffect, useState } from "react";
 import { useViewMode } from "@/stores/view-mode-store";
 import { PATH_SYMBOL_REAPLACEMENT, SYSTEM_PREFIX, thumbnailFileNamePrefix, useFilesStoreOps } from "@/hooks/use-files-store-ops";
 import { FileProperties } from "@/types/types";
+import { useCanWrite } from "@/hooks/use-drive-role";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 export function PopulatedFilesArea() {
     const isMobile = useIsMobile();
+    const canWrite = useCanWrite();
     const viewMode = useViewMode((state) => state.viewMode);
     const fileObjects = useFilesStore((state) => state.fileObjects);
     const { getFileData } = useFilesStoreOps();
@@ -75,7 +77,7 @@ export function PopulatedFilesArea() {
                                     <FileObject
                                         fileObject={fileObject}
                                         thumbnail={thumbnails.get(fileObject.id)}
-                                        draggable={!isMobile}
+                                        draggable={!isMobile && canWrite}
                                         view={viewMode}
                                         className="min-w-0"
                                     />

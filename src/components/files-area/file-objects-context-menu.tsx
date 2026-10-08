@@ -11,11 +11,13 @@ import { FileProperties } from "@/types/types";
 import { useFilesStore } from "@/stores/files-store";
 import { FsObjectType } from "@/engine";
 import { isTauri } from "@/lib/utils";
+import { useCanWrite } from "@/hooks/use-drive-role";
 import { ExternalLink, Files, FolderOpen, Info, SquarePen, SquareScissors, Trash, CloudDownload } from "lucide-react";
 
 
 
 export function FileObjectsContextMenu({ children, fileObject }: PropsWithChildren<{ fileObject: FileProperties }>) {
+    const canWrite = useCanWrite();
     const selectedFileObjects = useSelectedFileObjects();
     const openRenameDialog = useRenameDialog();
     const { pwd, rm, downloadSelectedObject, openSelectedObject, openSelectedObjectInNewTab, isSelectedObjectOpenAvailable, isSelectedObjectDownloadAvailable, selectFilesToCopy, selectFilesToMove } = useFilesStoreOps();
@@ -88,6 +90,7 @@ export function FileObjectsContextMenu({ children, fileObject }: PropsWithChildr
                     onOpen={openSelectedObject}
                     onOpenInNewTab={openSelectedObjectInNewTab}
                     onDownload={downloadSelectedObject}
+                    canWrite={canWrite}
                     onRename={() => openRenameDialog({ pathSrc: pwd()!, originalName: selectedFileObjects[0].name })}
                     onCopy={() => selectFilesToCopy(pwd()!, selectedFileObjects.map((f) => f.name))}
                     onCut={() => selectFilesToMove(pwd()!, selectedFileObjects.map((f) => f.name))}
@@ -119,19 +122,19 @@ export function FileObjectsContextMenu({ children, fileObject }: PropsWithChildr
                     <CloudDownload />Download
                     <ContextMenuShortcut>⌘D</ContextMenuShortcut>
                 </ContextMenuItem>}
-                {selectedFileObjects.length === 1 && <ContextMenuItem onClick={handleRenameClick}>
+                {canWrite && selectedFileObjects.length === 1 && <ContextMenuItem onClick={handleRenameClick}>
                     <SquarePen />Rename
                     <ContextMenuShortcut>⌘R</ContextMenuShortcut>
                 </ContextMenuItem>}
-                <ContextMenuItem onClick={handleCopyClick}>
+                {canWrite && <ContextMenuItem onClick={handleCopyClick}>
                     <Files />Copy
                     <ContextMenuShortcut>⌘C</ContextMenuShortcut>
-                </ContextMenuItem>
-                <ContextMenuItem onClick={handleCutClick}>
+                </ContextMenuItem>}
+                {canWrite && <ContextMenuItem onClick={handleCutClick}>
                     <SquareScissors />Cut
                     <ContextMenuShortcut>⌘X</ContextMenuShortcut>
-                </ContextMenuItem>
-                <ContextMenuItem variant="destructive" onClick={handleDeleteClick}><Trash />Delete</ContextMenuItem>
+                </ContextMenuItem>}
+                {canWrite && <ContextMenuItem variant="destructive" onClick={handleDeleteClick}><Trash />Delete</ContextMenuItem>}
                 {selectedFileObjects.length === 1 && selectedFileObjects[0].type !== FsObjectType.DIR && (
                     <ContextMenuItem onClick={handlePropertiesClick}><Info />Properties</ContextMenuItem>
                 )}

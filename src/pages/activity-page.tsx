@@ -15,6 +15,7 @@ const FILTERS = [
     { id: "sign-ins", label: "Sign-ins", kinds: ["sign_in", "sign_out", "session_revoked", "other_sessions_revoked"] },
     { id: "profile", label: "Profile", kinds: ["name_changed", "picture_changed"] },
     { id: "drives", label: "Drives", kinds: ["drive_created", "drive_restored", "drive_deleted", "storage_target_added", "storage_target_main_changed", "storage_target_removed"] },
+    { id: "sharing", label: "Sharing", kinds: ["drive_visibility_changed", "drive_link_reset", "drive_person_added", "drive_person_invited", "drive_person_removed", "drive_role_changed", "drive_shared_with_you", "drive_left"] },
     { id: "access", label: "Access", kinds: ["drive_opened", "drive_files_read", "drive_written"] },
 ] as const;
 

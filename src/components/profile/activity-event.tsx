@@ -1,4 +1,4 @@
-import { Camera, Crown, Database, Eye, FolderMinus, FolderOpen, FolderPlus, FolderSync, LogIn, LogOut, PenLine, ShieldOff, Trash2, UserPen, type LucideIcon } from "lucide-react";
+import { Camera, Crown, Database, Eye, Link2, Share2, UserCog, UserMinus, UserPlus, Users, FolderMinus, FolderOpen, FolderPlus, FolderSync, LogIn, LogOut, PenLine, ShieldOff, Trash2, UserPen, type LucideIcon } from "lucide-react";
 import type { UserEvent } from "@/engine/backend/user-backend";
 import { formatDateTime } from "@/lib/format-when";
 
@@ -20,6 +20,14 @@ export function describeEvent(event: UserEvent): EventView {
         case "drive_created": return { icon: FolderPlus, title: `Created ${drive}` };
         case "drive_restored": return { icon: FolderSync, title: `Restored ${drive} from a storage` };
         case "drive_deleted": return { icon: FolderMinus, title: `Deleted ${drive}` };
+        case "drive_visibility_changed": return { icon: event.details.visibility === "public" ? Link2 : Users, title: `Made ${drive} ${typeof event.details.visibility === "string" ? event.details.visibility : "different"}${Number(event.details.removedPeople) > 0 ? `, which took ${Number(event.details.removedPeople)} ${Number(event.details.removedPeople) === 1 ? "person" : "people"} off it` : ""}` };
+        case "drive_link_reset": return { icon: Link2, title: `New public link for ${drive}` };
+        case "drive_person_added": return { icon: UserPlus, title: `Shared ${drive} with ${String(event.details.email ?? "someone")}${event.details.role ? ` as ${String(event.details.role)}` : ""}` };
+        case "drive_person_invited": return { icon: UserPlus, title: `Invited ${String(event.details.email ?? "someone")} to ${drive}${event.details.role ? ` as ${String(event.details.role)}` : ""}` };
+        case "drive_person_removed": return { icon: UserMinus, title: `Removed ${String(event.details.email ?? "someone")} from ${drive}` };
+        case "drive_role_changed": return { icon: UserCog, title: `${String(event.details.email ?? "Someone")} is now ${String(event.details.role ?? "")} on ${drive}`.replace("  ", " ") };
+        case "drive_shared_with_you": return { icon: Share2, title: `${drive} was shared with you${event.details.role ? ` as ${String(event.details.role)}` : ""}` };
+        case "drive_left": return { icon: LogOut, title: `Left ${drive}` };
         case "drive_opened": return { icon: FolderOpen, title: `Read from ${drive}` };
         case "drive_files_read": return { icon: Eye, title: `Read files from ${drive}` };
         case "drive_written": return { icon: PenLine, title: `Wrote to ${drive}` };

@@ -8,6 +8,10 @@ export interface DrivesSlice {
   setPasswordRetryFlag: (value: boolean) => void,
   drives: DriveInfo[],
   updateDrives: () => Promise<void>,
+  /** The link of the public drive that is open (the anonymous viewer); undefined for a signed-in user. */
+  publicToken: string | undefined,
+  /** Sets up the anonymous viewer: the one drive of the link is the only one the store knows. */
+  openPublicDrive: (driveInfo: DriveInfo, token: string) => void,
   driveStats: { [key: DriveId]: DriveStats };
   setDriveStats: (driveId: DriveId, driveStats: DriveStats) => void;
   removeDriveStats: (driveId: DriveId) => void;
@@ -25,6 +29,8 @@ export const createDirveStatsSlice: StateCreator<DrivesSlice, [], [], DrivesSlic
     drives.sort((a, b) => a.id <= b.id ? 1 : -1);      
     set({ drives, drivesInitialized: true });
   },
+  publicToken: undefined,
+  openPublicDrive: (driveInfo: DriveInfo, token: string) => set({ drives: [driveInfo], drivesInitialized: true, publicToken: token }),
   driveStats: {},
   setDriveStats: (driveId: DriveId, driveStats: DriveStats) => set((state) => {
     const driveStatsCopy = structuredClone(state.driveStats);

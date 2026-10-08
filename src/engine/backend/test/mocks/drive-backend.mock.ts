@@ -1,8 +1,7 @@
 import { getRandomNonce } from "@/engine/core/enc";
 import { uint8ArrayToBase64 } from "@/engine/core/stream-utils";
-import { UserId } from "../../user-backend";
 import { getTestUserId } from "./test-user-info";
-import { CustomTargetDeletionDecision, CustomStorageConfig, DriveBackend, RestoreResult, RestoreScanResult, DriveId, DriveInfo, DriveStorageTarget, Privilege, S3Preset, StorageTargetInput } from "../../drive-backend";
+import { CustomTargetDeletionDecision, CustomStorageConfig, DriveBackend, RestoreResult, RestoreScanResult, DriveId, DriveInfo, DriveStorageTarget, S3Preset, StorageTargetInput } from "../../drive-backend";
 
 export class MockDriveBackend implements DriveBackend {
     private readonly drives = new Map<DriveId, DriveInfo>();
@@ -35,7 +34,12 @@ export class MockDriveBackend implements DriveBackend {
             id: newDriveId,
             title,
             ownerUserId: getTestUserId(),
-            ACL: new Map<UserId, Set<Privilege>>(),
+            ACL: {},
+            visibility: "private" as const,
+            myRole: "owner" as const,
+            peopleCount: 0,
+            ownerName: null,
+            ownerEmail: null,
             createdTimestamp: Date.now(),
             keyNonce,
             counterNonce

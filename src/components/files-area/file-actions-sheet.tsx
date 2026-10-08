@@ -13,6 +13,8 @@ export type FileActionsSheetProps = {
     files: FileProperties[];
     canOpen: boolean;
     canDownload: boolean;
+    /** False for a reader: the sheet then has no rename, copy, cut or delete. */
+    canWrite?: boolean;
     onOpen: () => void;
     onOpenInNewTab: () => void;
     onDownload: () => void;
@@ -61,11 +63,13 @@ export function FileActionsSheet(props: FileActionsSheetProps) {
                     {props.canOpen && single && !isDir && <Item icon={<ExternalLink />} onClick={run(props.onOpenInNewTab)}>Open in new tab</Item>}
                     {props.canDownload && <Item icon={<CloudDownload />} onClick={run(props.onDownload)}>Download</Item>}
                     {(props.canOpen || props.canDownload) && <Separator />}
-                    {single && <Item icon={<SquarePen />} onClick={run(props.onRename)}>Rename</Item>}
-                    <Item icon={<Files />} onClick={run(props.onCopy)}>Copy</Item>
-                    <Item icon={<SquareScissors />} onClick={run(props.onCut)}>Cut</Item>
-                    <Separator />
-                    <Item icon={<Trash />} destructive onClick={run(props.onDelete)}>Delete</Item>
+                    {props.canWrite !== false && <>
+                        {single && <Item icon={<SquarePen />} onClick={run(props.onRename)}>Rename</Item>}
+                        <Item icon={<Files />} onClick={run(props.onCopy)}>Copy</Item>
+                        <Item icon={<SquareScissors />} onClick={run(props.onCut)}>Cut</Item>
+                        <Separator />
+                        <Item icon={<Trash />} destructive onClick={run(props.onDelete)}>Delete</Item>
+                    </>}
                     {single && !isDir && <Item icon={<Info />} onClick={run(props.onProperties)}>Properties</Item>}
                 </div>
             </DrawerContent>

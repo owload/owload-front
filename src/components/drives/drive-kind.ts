@@ -1,18 +1,22 @@
 import { DriveInfo } from "@/engine";
 
-/** What the "Private / Shared" filter of the drives page tells apart. */
-export type DriveKind = "private" | "shared";
+/** What the filter of the drives page tells apart: my own drives by who can open them, and the drives others shared with me. */
+export type DriveKind = "private" | "shared" | "public" | "with-me";
+
+export const DRIVE_KIND_LABEL: Record<DriveKind, string> = {
+    private: "Private",
+    shared: "Shared",
+    public: "Public",
+    "with-me": "Shared with me",
+};
 
 /**
- * A drive is shared when other people can reach it: it is one of mine that others can access, or it belongs to
- * someone else. The ACL comes from the API as a plain object keyed by user id (the declared `Map` type is not what
- * arrives), so both shapes are counted. Until the id of the current user is known only the ACL is looked at.
+ * A drive of someone else that I was let into is "shared with me" (whatever its visibility); one of mine is private, shared
+ * with people, or public (also open to anyone with the link).
  */
-export function getDriveKind(driveInfo: DriveInfo, currentUserId: string | undefined): DriveKind {
-    if (currentUserId && driveInfo.ownerUserId !== currentUserId) {
-        return "shared";
-    }
-    const acl = driveInfo.ACL as unknown;
-    const sharedWith = acl instanceof Map ? acl.size : Object.keys((acl as object | undefined) ?? {}).length;
-    return sharedWith > 0 ? "shared" : "private";
+export function getDriveKind(driveInfo: DriveInfo): DriveKind {
+    if (driveInfo.myRole && driveInfo.myRole !== "owner") return "with-me";
+    if (driveInfo.visibility === "public") return "public";
+    if (driveInfo.visibility === "shared") return "shared";
+    return "private";
 }

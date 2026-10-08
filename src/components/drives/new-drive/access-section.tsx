@@ -2,7 +2,7 @@ import { Link2, Lock, Users } from "lucide-react";
 import { useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
-import { FormSection, OpenText } from "./form-parts";
+import { FormSection } from "./form-parts";
 
 type Visibility = "private" | "shared" | "public";
 
@@ -13,8 +13,8 @@ const OPTIONS: { value: Visibility, title: string, text: string, Icon: typeof Lo
 ];
 
 /**
- * Who can open the drive. The product has no access settings yet, so this is a drawing of them: the drive is private,
- * the other choices and the people list cannot be used.
+ * Who can open the drive. A new drive is private; who else can open it (people, or anyone with a link) is set in the drive's
+ * settings once it exists, so the other choices and the people list are shown here but cannot be used yet.
  */
 export function AccessSection() {
     const [visibility] = useState<Visibility>("private");
@@ -22,7 +22,7 @@ export function AccessSection() {
         <FormSection
             number={2}
             title="Access"
-            aside={<span className="ml-auto rounded-md bg-sunny-field px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-sunny-muted">Not available yet</span>}
+            aside={<span className="ml-auto rounded-md bg-sunny-field px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-sunny-muted">After creating</span>}
         >
             <fieldset className="m-0 flex flex-col gap-2 border-0 p-0">
                 <legend className="pb-2 text-[13px] font-semibold">Visibility</legend>
@@ -63,7 +63,7 @@ export function AccessSection() {
                 <p className="m-0 text-xs leading-normal text-sunny-muted">
                     <b className="text-sunny-ink">Admin</b> manages people and settings. <b className="text-sunny-ink">Writer</b> adds and changes files. <b className="text-sunny-ink">Reader</b> only views.
                 </p>
-                <p className="m-0 text-xs"><OpenText>[HOW PEOPLE YOU ADD GET THE DRIVE PASSWORD]</OpenText></p>
+                <p className="m-0 text-xs leading-normal text-sunny-muted">After the drive is created, add people in its settings. They are told the drive's password by you, outside Owload.</p>
             </fieldset>
         </FormSection>
     );

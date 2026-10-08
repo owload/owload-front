@@ -1,11 +1,13 @@
 import { useFilesStoreOps } from "@/hooks/use-files-store-ops";
+import { useCanWrite } from "@/hooks/use-drive-role";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useDragEventUpload } from "@/hooks/use-upload";
 import { useFilesStore } from "@/stores/files-store";
 import { Children, PropsWithChildren, cloneElement, useState } from "react";
 
 export function DragAndDropArea({ children }: PropsWithChildren) {
-    const isDisabled = useIsMobile();
+    // On a phone there is no dropping of files; a reader may not add any.
+    const isDisabled = useIsMobile() || !useCanWrite();
     const dragHappening = useFilesStore(state => state.dragHappening);
     const { pwd } = useFilesStoreOps();
     const dragEventUpload = useDragEventUpload();

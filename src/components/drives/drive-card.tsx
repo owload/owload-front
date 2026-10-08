@@ -2,7 +2,7 @@ import { DriveInfo } from "@/engine";
 import { Folder, ListChecks, Lock, LockOpen, SlidersHorizontal } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DriveIcon } from "./drive-icon";
-import { DriveKind } from "./drive-kind";
+import { DRIVE_KIND_LABEL, DriveKind } from "./drive-kind";
 import { PLACEHOLDER_FILE_COUNT, PLACEHOLDER_LAST_OPENED, PLACEHOLDER_TOTAL_SIZE, PLACEHOLDER_USED_PERCENT, PLACEHOLDER_USED_SIZE } from "./drive-placeholders";
 import { useDriveActions } from "./use-drive-actions";
 
@@ -16,7 +16,11 @@ const textButton = "flex h-11 cursor-pointer items-center gap-2 rounded-[10px] p
 export function DriveCard({ driveInfo, kind }: { driveInfo: DriveInfo, kind: DriveKind }) {
     const { driveOpen, passwordIsWrong, description, browse, close, tryAgain, settings, logs } = useDriveActions(driveInfo);
     const showsContents = driveOpen && !passwordIsWrong;
-    const kindLabel = kind === "shared" ? "Shared" : "Private";
+    const kindLabel = DRIVE_KIND_LABEL[kind];
+    // What a drive that someone shared with me tells while it is closed: who shared it and what I may do on it.
+    const sharedBy = kind === "with-me"
+        ? `Shared by ${driveInfo.ownerName || driveInfo.ownerEmail || "its owner"} · ${driveInfo.myRole[0].toUpperCase()}${driveInfo.myRole.slice(1)}`
+        : undefined;
     const StateIcon = showsContents ? LockOpen : Lock;
     const stateLabel = passwordIsWrong ? "Wrong password" : showsContents ? `Open · ${kindLabel}` : `Closed · ${kindLabel}`;
 
@@ -42,7 +46,7 @@ export function DriveCard({ driveInfo, kind }: { driveInfo: DriveInfo, kind: Dri
                     </span>
                     <h2 className="m-0 truncate text-[19px] font-semibold leading-tight">{driveInfo.title}</h2>
                     <span className={cn("truncate text-[13px]", showsContents ? "text-sunny-text-on-yellow" : "text-sunny-muted")}>
-                        {showsContents ? (description || "—") : "Description hidden while closed"}
+                        {showsContents ? (description || "—") : sharedBy ?? "Description hidden while closed"}
                     </span>
                 </div>
             </div>

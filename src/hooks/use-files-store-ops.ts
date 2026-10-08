@@ -1,5 +1,6 @@
 import { useFilesStore } from "@/stores/files-store";
 import { useNavigateDir, useGetNavigateDirUrl } from "./use-navigate-dir";
+import { PublicFilesystemBackend } from "@/engine/backend/public-filesystem-backend";
 import { base64ToUint8Array, DriveClientFactory, FsObjectType, FsTreeNode, ProgressCallback, uint8ArrayToBase64, DriveId, RestFilesystemBackend, PreloadingFilesystemBackend, CachingFilesystemBackend, OperationCancelledError, DriveClient } from "@/engine";
 
 import { AbortContext, FileProperties } from "@/types/types";
@@ -203,8 +204,10 @@ export function useFilesStoreOps() {
         if (abortContext.aborted) { return; }
         const storedKeyExtracted = useFilesStore.getState().driveKeys?.[driveId];
         const addDriveKey = useFilesStore.getState().addDriveKey;
-        const filesystemBackend = new RestFilesystemBackend();
-        const cachingFilesystemBackend = new CachingFilesystemBackend(filesystemBackend);
+        // An anonymous viewer of a public drive reads through its link and keeps nothing in the browser's caches.
+        const publicToken = useFilesStore.getState().publicToken;
+        const filesystemBackend = publicToken ? new PublicFilesystemBackend(publicToken) : new RestFilesystemBackend();
+        const cachingFilesystemBackend = publicToken ? filesystemBackend : new CachingFilesystemBackend(filesystemBackend);
         const preloadingFilesystemBackend = new PreloadingFilesystemBackend(cachingFilesystemBackend);
         let storedKeyEncoded: CryptoKey | undefined = undefined;
         if (storedKeyExtracted) {

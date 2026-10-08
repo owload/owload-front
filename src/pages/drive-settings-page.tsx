@@ -10,6 +10,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useUserInfo } from "@/auth-context-provider";
 import { useFilesStore } from "@/stores/files-store";
 import { useCloseDrive } from "@/hooks/use-close-drives";
+import { AccessSection } from "@/components/access/access-section";
 
 type HealthState = 'loading' | 'ok' | 'error';
 interface HealthResult { state: HealthState; error?: string }
@@ -217,6 +218,14 @@ export function DriveSettingsPage() {
       <h1 className="m-0 text-[32px] font-semibold leading-[1.2] tracking-[-0.01em] max-md:text-[28px]">Drive settings</h1>
       <main className="mt-5 flex max-w-2xl flex-col gap-5 pb-10">
 
+        {driveInfo && (
+          <AccessSection
+            driveInfo={driveInfo}
+            onLeft={() => { void updateDrives(); navigate('/'); }}
+          />
+        )}
+
+        {(!driveInfo || driveInfo.myRole === 'owner' || driveInfo.myRole === 'admin') && (
         <section className="space-y-4 rounded-2xl border border-sunny-line bg-white p-5 shadow-[0_6px_18px_rgba(0,0,0,0.06)]">
           <h2 className="m-0 text-[17px] font-semibold">Storage targets</h2>
 
@@ -303,7 +312,9 @@ export function DriveSettingsPage() {
             }
           />
         </section>
+        )}
 
+        {(!driveInfo || isOwner) && (
         <section className="space-y-3 rounded-2xl border border-[#e6b8b3] bg-[#fdf6f5] p-5">
           <h2 className="m-0 text-[17px] font-semibold text-[#b3261e]">Danger zone</h2>
           <p className="text-sm text-muted-foreground">
@@ -315,6 +326,7 @@ export function DriveSettingsPage() {
             </Button>
           </span>
         </section>
+        )}
       </main>
 
       <Dialog open={!!deleteTarget} onOpenChange={open => !open && setDeleteTarget(null)}>

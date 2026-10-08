@@ -6,6 +6,7 @@ import { useFilesStoreOps } from '@/hooks/use-files-store-ops';
 import { AbortContext } from '@/types/types';
 import { DialogClosedError } from '@/types/errors';
 import { useOpenFileProperties } from '@/hooks/use-dialogs';
+import { useCanWrite } from '@/hooks/use-drive-role';
 
 export function DriveExplorerPage() {
   const navigate = useNavigate();
@@ -105,6 +106,8 @@ export function DriveExplorerPage() {
 
 
   const openFileProperties = useOpenFileProperties();
+  const canWrite = useCanWrite();
+  const publicToken = useFilesStore((state) => state.publicToken);
 
   return (
     <>
@@ -123,6 +126,11 @@ export function DriveExplorerPage() {
             className="ml-auto hover:opacity-80"
             onClick={() => navigate(location.pathname, { replace: true, state: {} })}
           >✕</button>
+        </div>
+      )}
+      {!canWrite && (
+        <div role="status" className="absolute top-18 inset-x-0 z-40 flex items-center gap-2 border-b border-sunny-line bg-sunny-yellow-soft px-4 py-1.5 text-[13px] font-semibold text-sunny-text-on-yellow">
+          {publicToken ? "This is a public drive: you can view and download its files." : "You can view and download files in this drive, not change them."}
         </div>
       )}
       <Outlet />

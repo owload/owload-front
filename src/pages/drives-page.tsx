@@ -5,7 +5,6 @@ import { NoDrives } from "@/components/drives/no-drives";
 import { DebouncedSkeleton } from "@/components/ui/debounced-skeleton";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCloseAllDrives } from "@/hooks/use-close-drives";
-import { useCurrentUserId } from "@/hooks/use-current-user-id";
 import { useFilesStore } from "@/stores/files-store";
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
@@ -15,7 +14,6 @@ export function DrivesPage() {
     const drivesInitialized = useFilesStore((state) => state.drivesInitialized);
     const driveKeys = useFilesStore((state) => state.driveKeys);
     const closeAllDrives = useCloseAllDrives();
-    const currentUserId = useCurrentUserId();
     const [filter, setFilter] = useState<DrivesFilter>("all");
 
     const [searchParams, setSearchParams] = useSearchParams();
@@ -30,11 +28,13 @@ export function DrivesPage() {
         }
     }, []);
 
-    const entries = drives.map((driveInfo) => ({ driveInfo, kind: getDriveKind(driveInfo, currentUserId), open: driveKeys[driveInfo.id] != null }));
+    const entries = drives.map((driveInfo) => ({ driveInfo, kind: getDriveKind(driveInfo), open: driveKeys[driveInfo.id] != null }));
     const counts: Record<DrivesFilter, number> = {
         all: entries.length,
         private: entries.filter((e) => e.kind === "private").length,
         shared: entries.filter((e) => e.kind === "shared").length,
+        public: entries.filter((e) => e.kind === "public").length,
+        "with-me": entries.filter((e) => e.kind === "with-me").length,
     };
     const shown = entries.filter((e) => filter === "all" || e.kind === filter);
     const openDrives = shown.filter((e) => e.open);
