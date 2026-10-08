@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, MonitorSmartphone } from "lucide-react";
 import { Link } from "react-router-dom";
 import { ActivityEventRow } from "@/components/profile/activity-event";
 import { ProfileButton, ProfileCard } from "@/components/profile/profile-parts";
@@ -49,6 +49,13 @@ export function ActivityPage() {
                     <p className="m-0 max-w-[620px] text-sm text-sunny-muted">
                         Sign-ins, sign-outs and changes to your account, with the device and the address each came from. Only you can see this. It is kept for a year.
                     </p>
+                    <Link
+                        to="/profile"
+                        state={{ section: "devices" }}
+                        className="flex min-h-9 items-center gap-2 text-sm font-semibold text-sunny-ink underline underline-offset-4 outline-sunny-ink focus-visible:outline-2 focus-visible:outline-offset-2"
+                    >
+                        <MonitorSmartphone aria-hidden="true" className="size-4" strokeWidth={2.2} />Signed-in devices and sessions
+                    </Link>
                 </div>
 
                 <div role="tablist" aria-label="Kind of activity" className="flex w-fit max-w-full flex-wrap gap-0.5 rounded-full bg-sunny-field p-[3px]">

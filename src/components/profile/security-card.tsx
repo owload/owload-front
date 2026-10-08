@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { Check, KeyRound, Laptop, ShieldCheck, Smartphone } from "lucide-react";
 import { canChangePassword, clearKeycloakActionResult, getKeycloakActionResult, startPasswordChange } from "@/auth-context-provider";
 import { FieldError } from "@/components/drives/new-drive/form-parts";
@@ -20,6 +21,14 @@ function passwordCaption(details?: PasswordDetails): string | undefined {
 /** The sessions the user is signed in with: where from and when last seen, each other one with "Sign out". */
 function SignedInDevices() {
     const { sessions, failed, revoke, revokeOthers } = useSessions();
+    const section = useRef<HTMLDivElement>(null);
+    // Opened from the activity page ("Signed-in devices"): bring this block into view once.
+    const wantedHere = (useLocation().state as { section?: string } | null)?.section === "devices";
+    useEffect(() => {
+        if (!wantedHere) return;
+        section.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+        section.current?.focus({ preventScroll: true });
+    }, [wantedHere]);
     const [busy, setBusy] = useState<string | undefined>();
     const [error, setError] = useState(false);
     const others = (sessions ?? []).filter((session) => !session.current);
@@ -37,8 +46,8 @@ function SignedInDevices() {
     }
 
     return (
-        <div className="flex flex-col gap-1.5 border-t border-sunny-line pt-3.5">
-            <h3 className="m-0 mb-1 text-xs font-normal text-sunny-muted">Signed-in devices</h3>
+        <div ref={section} id="signed-in-devices" tabIndex={-1} aria-labelledby="signed-in-devices-title" className="flex flex-col gap-1.5 rounded-xl border-t border-sunny-line pt-3.5 outline-none focus-visible:ring-2 focus-visible:ring-sunny-yellow">
+            <h3 id="signed-in-devices-title" className="m-0 mb-1 text-xs font-normal text-sunny-muted">Signed-in devices</h3>
             {sessions === undefined
                 ? (failed ? <p className="m-0 text-sm text-sunny-muted">The devices could not be loaded.</p> : <Skeleton className="h-[52px] w-full rounded-xl" />)
                 : (
