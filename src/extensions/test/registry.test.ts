@@ -3,8 +3,9 @@ import { registry } from '../registry';
 
 // The real list: its descriptors must pass the validation that runs at start-up.
 describe('the registry of the client', () => {
-  test('knows the text and spreadsheet editors', () => {
-    expect(registry.all().map((e) => e.extension.id).sort()).toEqual(['text', 'xlsx']);
+  test('knows the text and spreadsheet editors and the HEIC viewer', () => {
+    expect(registry.all().map((e) => e.extension.id).sort()).toEqual(['heic', 'text', 'xlsx']);
+    expect(registry.forFileName('photo.HEIC')?.extension.id).toBe('heic');
     expect(registry.forFileName('notes.txt')?.extension.id).toBe('text');
     expect(registry.forFileName('Budget.XLSX')?.extension.id).toBe('xlsx');
   });
