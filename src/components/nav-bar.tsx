@@ -23,7 +23,7 @@ export function NavBar() {
     }
 
     // The drives pages draw their own header.
-    if (location.pathname === "/" || location.pathname === "/create" || location.pathname === "/profile") {
+    if (location.pathname === "/" || location.pathname === "/create" || location.pathname.startsWith("/profile")) {
         return null;
     }
 

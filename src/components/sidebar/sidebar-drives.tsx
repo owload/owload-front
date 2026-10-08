@@ -12,7 +12,7 @@ import { DriveSwitcher } from "./drive-switcher"
 import { SidebarLogo, SidebarStorage } from "./sidebar-parts"
 
 export function SidebarDrives() {
-  const isProfilePage = useLocation().pathname === "/profile"
+  const isProfilePage = useLocation().pathname.startsWith("/profile")
   return (
     <Sidebar className="z-20">
       <SidebarContent className="gap-3.5 px-4 py-[18px]">

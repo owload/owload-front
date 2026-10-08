@@ -1,4 +1,4 @@
-import { UserBackend, UserId, UserBasicInfo, SaveUserBasicInfoRequest } from "../../user-backend";
+import { UserBackend, UserId, UserBasicInfo, SaveUserBasicInfoRequest, UserSession, UserActivityPage } from "../../user-backend";
 import { getTestUserId, getTestUserEmail } from "./test-user-info";
 
 export class MockUserBackend implements UserBackend {
@@ -52,4 +52,18 @@ export class MockUserBackend implements UserBackend {
     }
 
     async resetAvatar(): Promise<void> {}
+
+    async getSessions(): Promise<UserSession[]> {
+        return [];
+    }
+
+    async revokeSession(): Promise<void> {}
+
+    async revokeOtherSessions(): Promise<void> {}
+
+    async endCurrentSession(): Promise<void> {}
+
+    async getActivity(): Promise<UserActivityPage> {
+        return { items: [], next: null };
+    }
 }

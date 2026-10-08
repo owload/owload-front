@@ -1,6 +1,6 @@
-import { Grip, LogOut, UserRound } from "lucide-react";
+import { Grip, History, LogOut, UserRound } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
-import { useLogout } from "@/auth-context-provider";
+import { useSignOut } from "@/hooks/use-sign-out";
 import { UserAvatar } from "@/components/profile/user-avatar";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
  * has a ring (dark, or yellow when the header is dark, as on a phone).
  */
 export function AccountControls({ alwaysShowApps = false, onDark = false }: { alwaysShowApps?: boolean, onDark?: boolean }) {
-    const logout = useLogout();
+    const signOut = useSignOut();
     const onProfile = useLocation().pathname === "/profile";
     return (
         <div className="flex items-center gap-2">
@@ -38,7 +38,13 @@ export function AccountControls({ alwaysShowApps = false, onDark = false }: { al
                             Profile
                         </Link>
                     </DropdownMenuItem>
-                    <DropdownMenuItem className="w-50" onClick={() => logout()}>
+                    <DropdownMenuItem asChild className="w-50">
+                        <Link to="/profile/activity">
+                            <History className="h-4 w-4" />
+                            Account activity
+                        </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem className="w-50" onClick={() => void signOut()}>
                         <LogOut className="h-4 w-4" />
                         Logout
                     </DropdownMenuItem>

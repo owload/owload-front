@@ -64,7 +64,10 @@ export function clearKeycloakActionResult() {
   keycloakActionResult = undefined;
 }
 
-function setAxiosInterceptor(getToken: () => string, refreshFn?: () => Promise<void>) {
+// The detail of the backend's 401 for a session that the user signed out from another device (owload-back, app/api/deps.py).
+const SESSION_REVOKED_DETAIL = "Session was signed out";
+
+function setAxiosInterceptor(getToken: () => string, refreshFn?: () => Promise<void>, onSessionRevoked?: () => void) {
   accessTokenProvider = async () => {
     if (refreshFn) await refreshFn();
     return getToken();
@@ -82,7 +85,16 @@ function setAxiosInterceptor(getToken: () => string, refreshFn?: () => Promise<v
     return config;
   });
   // Retry once on 401: refresh token then replay the original request
+  let revokedHandled = false;
   axiosResponseInterceptorId = axios.interceptors.response.use(undefined, async error => {
+    // Signed out from another device: the token is fine for Keycloak but the backend refuses it, so sign out here too.
+    if (error?.response?.status === 401 && error.response.data?.detail === SESSION_REVOKED_DETAIL) {
+      if (!revokedHandled) {
+        revokedHandled = true;
+        onSessionRevoked?.();
+      }
+      return Promise.reject(error);
+    }
     if (error?.response?.status === 401 && refreshFn && !error.config?._retried) {
       error.config._retried = true;
       await refreshFn();
@@ -150,7 +162,8 @@ function TauriAuthProvider({ authenticatedChild, anonymousChild }: ProviderProps
     localStorage.setItem(REFRESH_TOKEN_STORAGE_KEY, refreshToken);
     setAxiosInterceptor(
       () => accessTokenRef.current,
-      async () => { if (isTokenExpiringSoon(accessTokenRef.current, 120)) await doRefresh(); }
+      async () => { if (isTokenExpiringSoon(accessTokenRef.current, 120)) await doRefresh(); },
+      logout
     );
     const parsed = parseJwt(accessToken);
     setUserInfo(userInfoFromClaims(parsed));
@@ -256,7 +269,8 @@ function WebAuthProvider({ authenticatedChild, anonymousChild }: ProviderProps) 
                 setUserInfo(emptyUserInfo);
                 setAuthStatus("ANONYMOUS");
               }
-            }
+            },
+            logout
           );
           const parsed = keycloak.tokenParsed as { sub: string; preferred_username: string } & Record<string, unknown>;
           setUserInfo(userInfoFromClaims(parsed));

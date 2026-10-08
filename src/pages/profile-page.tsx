@@ -1,6 +1,8 @@
 import { LogOut, UserRound } from "lucide-react";
-import { useLogout, useUserInfo } from "@/auth-context-provider";
+import { useUserInfo } from "@/auth-context-provider";
+import { useSignOut } from "@/hooks/use-sign-out";
 import { PersonalInfoCard } from "@/components/profile/personal-info-card";
+import { ActivityCard } from "@/components/profile/activity-card";
 import { PlanCard } from "@/components/profile/plan-card";
 import { ProfileButton } from "@/components/profile/profile-parts";
 import { ProfileTop } from "@/components/profile/profile-top";
@@ -11,14 +13,14 @@ import { useFilesStore } from "@/stores/files-store";
 /** The profile of the signed-in user: personal info, sign-in and security, the plan. */
 export function ProfilePage() {
     const userInfo = useUserInfo();
-    const logout = useLogout();
+    const doSignOut = useSignOut();
     const drivesCount = useFilesStore((state) => state.drives.length);
     const { profile, saveName } = useUserProfile();
     // The backend keeps the name and the email; until they arrive, the sign-in token's values are shown.
     const name = (profile ? profile.name : userInfo.fullName) || undefined;
     const email = profile?.email || userInfo.email;
     const signOut = (
-        <ProfileButton size={44} className="px-4" onClick={() => logout()}>
+        <ProfileButton size={44} className="px-4" onClick={() => void doSignOut()}>
             <LogOut aria-hidden="true" className="size-4" strokeWidth={2.2} />
             Sign out
         </ProfileButton>
@@ -50,6 +52,7 @@ export function ProfilePage() {
                     <SecurityCard />
                     <div className="flex min-w-0 flex-col gap-5">
                         <PlanCard drivesCount={drivesCount} />
+                        <ActivityCard />
                     </div>
                 </div>
 

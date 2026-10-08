@@ -2,6 +2,8 @@ import { X } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useSidebar } from "../ui/sidebar";
 import { Button } from "../ui/button";
+import { useUserProfile } from "@/hooks/use-user-profile";
+import { formatDateTime } from "@/lib/format-when";
 import { cn } from "@/lib/utils";
 
 /** The logo at the top of the dark side panel. */
@@ -21,8 +23,13 @@ export function SidebarLogo() {
   );
 }
 
-/** The storage block and the last-seen line at the bottom of the side panel (the numbers are placeholders, as before). */
+/**
+ * The storage block and the last-seen line at the bottom of the side panel. The storage numbers are placeholders, as before;
+ * "Last seen" is when the user was here before this visit (nothing on the very first visit).
+ */
 export function SidebarStorage({ className }: { className?: string }) {
+  const { profile } = useUserProfile();
+  const lastSeen = formatDateTime(profile?.lastSeen);
   return (
     <div className={cn("flex flex-col gap-3.5", className)}>
       <div className="flex flex-col gap-2.5 rounded-[14px] bg-sidebar-accent p-3.5">
@@ -37,7 +44,11 @@ export function SidebarStorage({ className }: { className?: string }) {
           Upgrade
         </Button>
       </div>
-      <div className="text-center text-xs text-sunny-on-dark">Last seen Feb 2, 19:32</div>
+      {lastSeen && (
+        <Link to="/profile/activity" className="rounded text-center text-xs text-sunny-on-dark underline-offset-4 hover:text-white hover:underline focus-visible:outline-2 focus-visible:outline-sidebar-ring" title="See the activity of your account">
+          Last seen {lastSeen}
+        </Link>
+      )}
     </div>
   );
 }

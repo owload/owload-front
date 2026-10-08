@@ -13,6 +13,7 @@ import { DriveExplorerArea } from './components/files-area/drive-explore-area';
 import { DriveLogs } from './components/drive-logs/drive-logs';
 import { DriveSettingsPage } from './pages/drive-settings-page';
 import { ProfilePage } from './pages/profile-page';
+import { ActivityPage } from './pages/activity-page';
 
 function Layout() {
   const location = useLocation();
@@ -58,6 +59,7 @@ function App() {
           </Route>
           <Route path="/profile" element={<Layout />}>
             <Route index element={<ProfilePage />} />
+            <Route path="activity" element={<ActivityPage />} />
           </Route>
           <Route path="/create" element={<Layout />}>
             <Route index element={<CreateDrivePage />} />
