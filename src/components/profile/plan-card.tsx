@@ -1,3 +1,4 @@
+import { PRICING_URL } from "@/lib/site-links";
 import { Badge, ProfileCard } from "./profile-parts";
 import { PLACEHOLDER_STORAGE_PERCENT, PLACEHOLDER_STORAGE_TOTAL, PLACEHOLDER_STORAGE_USED } from "./profile-placeholders";
 
@@ -18,9 +19,9 @@ export function PlanCard({ drivesCount }: { drivesCount: number }) {
                     <div className="h-full rounded-full bg-sunny-ink" style={{ width: `${PLACEHOLDER_STORAGE_PERCENT}%` }} />
                 </div>
             </div>
-            <button type="button" className="flex h-11 w-full cursor-pointer items-center justify-center rounded-[10px] bg-sunny-yellow text-sm font-semibold text-sunny-ink outline-sunny-ink hover:bg-sunny-yellow-edge focus-visible:outline-2 focus-visible:outline-offset-2">
+            <a href={PRICING_URL} target="_blank" rel="noopener noreferrer" className="flex h-11 w-full cursor-pointer items-center justify-center rounded-[10px] bg-sunny-yellow text-sm font-semibold text-sunny-ink outline-sunny-ink hover:bg-sunny-yellow-edge focus-visible:outline-2 focus-visible:outline-offset-2">
                 Upgrade
-            </button>
+            </a>
         </ProfileCard>
     );
 }

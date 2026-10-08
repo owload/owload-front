@@ -4,6 +4,7 @@ import { useSidebar } from "../ui/sidebar";
 import { Button } from "../ui/button";
 import { useUserProfile } from "@/hooks/use-user-profile";
 import { formatDateTime } from "@/lib/format-when";
+import { PRICING_URL } from "@/lib/site-links";
 import { cn } from "@/lib/utils";
 
 /** The logo at the top of the dark side panel. */
@@ -40,8 +41,8 @@ export function SidebarStorage({ className }: { className?: string }) {
         <div role="img" aria-label="Half of storage used" className="h-1 overflow-hidden rounded-full bg-sunny-ink-track">
           <div className="h-full w-1/2 rounded-full bg-sidebar-primary" />
         </div>
-        <Button variant="outline" className="h-11 w-full rounded-[10px] border border-sidebar-primary bg-transparent font-semibold text-sidebar-primary hover:bg-sidebar-primary hover:text-sidebar-primary-foreground">
-          Upgrade
+        <Button asChild variant="outline" className="h-11 w-full rounded-[10px] border border-sidebar-primary bg-transparent font-semibold text-sidebar-primary hover:bg-sidebar-primary hover:text-sidebar-primary-foreground">
+          <a href={PRICING_URL} target="_blank" rel="noopener noreferrer">Upgrade</a>
         </Button>
       </div>
       {lastSeen && (
