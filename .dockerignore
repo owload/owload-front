@@ -1,0 +1,13 @@
+# The build runs inside the image from a clean copy of the sources: nothing of the working directory that was built or installed
+# on this machine (it may be for another system), and no local settings.
+.git
+.github
+.claude
+.env
+.env.*
+node_modules
+dist
+src-tauri/target
+coverage
+pydebug
+*.md
