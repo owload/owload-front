@@ -134,6 +134,86 @@ describe("VideoBuffer", () => {
   });
 });
 
+describe("VideoBuffer when the network misbehaves", () => {
+  /** A drive that fails or hangs the first tries of chosen blocks. */
+  function flakyDrive(opts: { failFirst?: Map<number, number>; hangFirst?: Set<number> }) {
+    const tries = new Map<number, number>();
+    const backend = {
+      async getDataBlock(_drive: string, offset: number, length: number, _cache?: boolean, signal?: AbortSignal) {
+        const n = (tries.get(offset) ?? 0) + 1;
+        tries.set(offset, n);
+        if (opts.hangFirst?.has(offset) && n === 1) {
+          await new Promise((_resolve, reject) => signal?.addEventListener("abort", () => reject(new Error("aborted"))));
+        }
+        if ((opts.failFirst?.get(offset) ?? 0) >= n) throw Object.assign(new Error("boom"), { response: { status: 503 } });
+        return Uint8Array.from({ length }, (_, i) => (offset + i) % 251);
+      },
+    } as unknown as FilesystemBackend;
+    return { backend, tries };
+  }
+  const make = (backend: FilesystemBackend, extra: Partial<ConstructorParameters<typeof VideoBuffer>[0]> = {}) =>
+    new VideoBuffer({ underlying: backend, driveId: "d", fileStart: 0, fileLength: 16 * 8, fileKey: "k", store: new BlockStore(1 << 20, false), blockSize: BLOCK, concurrency: 3, attemptTimeoutsMs: [200, 200, 200], retryDelayMs: 5, ...extra });
+
+  it("asks again for a block whose request failed, and then serves it", async () => {
+    const drive = flakyDrive({ failFirst: new Map([[32, 1]]) });
+    const buffer = make(drive.backend);
+    expect(await buffer.readPiece(32, 16)).toEqual(expected(32, 16));
+    expect(drive.tries.get(32)).toBe(2);
+    await buffer.dispose(true);
+  });
+
+  it("says why a block is not loading while it is being asked for again, and stops saying so once it loads", async () => {
+    const drive = flakyDrive({ failFirst: new Map([[48, 2]]) });
+    const buffer = make(drive.backend, { retryDelayMs: 60 });
+    const read = buffer.readPiece(48, 16);
+    await sleep(30);
+    expect(buffer.problem()).toBeUndefined(); // the first failure is not worth alarming anybody
+    await sleep(150);
+    expect(buffer.problem()).toContain("503"); // the second one is
+    await read;
+    expect(buffer.problem()).toBeUndefined();
+    await buffer.dispose(true);
+  });
+
+  it("abandons a request that hangs and asks again instead of waiting for it", async () => {
+    const drive = flakyDrive({ hangFirst: new Set([64]) });
+    const buffer = make(drive.backend);
+    const started = Date.now();
+    expect(await buffer.readPiece(64, 16)).toEqual(expected(64, 16));
+    expect(drive.tries.get(64)).toBe(2);
+    expect(Date.now() - started).toBeLessThan(1500);
+    await buffer.dispose(true);
+  });
+
+  it("gives up with the reason when every try fails", async () => {
+    const drive = flakyDrive({ failFirst: new Map([[16, 99]]) });
+    const buffer = make(drive.backend, { attemptTimeoutsMs: [50, 50] });
+    await expect(buffer.readPiece(16, 16)).rejects.toThrow("boom");
+    expect(buffer.problem()).toContain("503");
+    await buffer.dispose(true);
+  });
+
+  it("starts the block the player stalls on even when every slot is taken by blocks further on", async () => {
+    const started: number[] = [];
+    const backend = {
+      async getDataBlock(_drive: string, offset: number, length: number) {
+        started.push(offset);
+        await sleep(offset >= 16 * 5 && offset < 16 * 10 ? 400 : 5); // the blocks in the middle are slow and fill the slots
+        return Uint8Array.from({ length }, (_, i) => (offset + i) % 251);
+      },
+    } as unknown as FilesystemBackend;
+    const buffer = make(backend, { fileLength: 16 * 12, concurrency: 2 });
+    await sleep(30);
+    buffer.setWindow(16 * 5, 16 * 6); // slow blocks 5.. are asked for, taking both slots
+    await sleep(30);
+    buffer.setWindow(16 * 2, 16 * 3); // the player seeks back to block 2 (not held yet)
+    await sleep(60);
+    expect(started).toContain(16 * 2);
+    expect(buffer.heldAhead(16 * 2)).toBeGreaterThanOrEqual(16);
+    await buffer.dispose(true);
+  });
+});
+
 describe("BufferingFilesystemBackend", () => {
   it("answers from the buffer of a file it covers and passes everything else on", async () => {
     const drive = fakeDrive();

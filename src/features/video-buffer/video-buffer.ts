@@ -2,6 +2,7 @@ import type { FilesystemBackend } from "@/engine/backend/filesystem-backend";
 import type { DriveId } from "@/engine/backend/drive-backend";
 import { BLOCK_SIZE } from "@/engine/core/constants";
 import { BlockStore } from "./block-store";
+import { TransferGovernor } from "./transfer-governor";
 
 const PREFETCH_CONCURRENCY = 6;
 const FAILED_BLOCK_PAUSE_MS = 5000;
@@ -19,7 +20,23 @@ export interface VideoBufferOptions {
   fileKey: string;
   store: BlockStore;
   blockSize?: number;
+  /** The most blocks fetched at once; the buffer starts lower and adjusts to the network (see TransferGovernor). */
   concurrency?: number;
+  /** How long each try of a block may take before it is abandoned and asked for again, at least (more on a slow line). */
+  attemptTimeoutsMs?: number[];
+  startConcurrency?: number;
+  /** The pause before the second try of a block; it doubles for each further one. */
+  retryDelayMs?: number;
+}
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/** What went wrong, short enough for the player to show. */
+export function describeFailure(error: unknown): string {
+  const status = (error as { response?: { status?: number } } | undefined)?.response?.status;
+  if (status) return `server answered ${status}`;
+  const message = error instanceof Error ? error.message : String(error);
+  return message || "unknown error";
 }
 
 /**
@@ -32,16 +49,14 @@ export class VideoBuffer {
   readonly fileLength: number;
   private readonly fileEnd: number;
   private readonly blockSize: number;
-  private readonly concurrency: number;
+  private readonly governor: TransferGovernor;
   private readonly firstBlock: number;
   private readonly lastBlock: number;
   private readonly pending = new Map<number, Promise<Uint8Array>>();
   private readonly failedAt = new Map<number, number>();
+  private readonly problems = new Map<number, string>();
   private readonly listeners = new Set<() => void>();
   private readonly abort = new AbortController();
-  private totalFetchedBytes = 0;
-  private busyMs = 0;
-  private busySince = 0;
   private windowFrom = 0;
   private windowTo = 0;
   private disposed = false;
@@ -52,7 +67,10 @@ export class VideoBuffer {
     this.fileLength = options.fileLength;
     this.fileEnd = options.fileStart + options.fileLength;
     this.blockSize = options.blockSize ?? BLOCK_SIZE;
-    this.concurrency = options.concurrency ?? PREFETCH_CONCURRENCY;
+    this.governor = new TransferGovernor(
+      { max: options.concurrency ?? PREFETCH_CONCURRENCY, start: options.startConcurrency, baseTimeoutsMs: options.attemptTimeoutsMs },
+      (index) => Math.abs(index - Math.floor((this.fileStart + this.windowFrom) / this.blockSize)),
+    );
     this.firstBlock = Math.floor(this.fileStart / this.blockSize);
     this.lastBlock = Math.floor((this.fileEnd - 1) / this.blockSize);
     this.ready = options.store.useFile(options.fileKey);
@@ -101,9 +119,12 @@ export class VideoBuffer {
 
   /** Bytes per second that the network has delivered while it was being asked for blocks; undefined until there is enough to say. */
   throughput(): number | undefined {
-    const busy = this.busyMs + (this.pending.size > 0 ? Date.now() - this.busySince : 0);
-    if (busy < 300 || this.totalFetchedBytes < 2 * this.blockSize) return undefined;
-    return (this.totalFetchedBytes / busy) * 1000;
+    return this.governor.throughput();
+  }
+
+  /** True for a while after the network proved too slow for the usual number of fetches at once. */
+  isSlow(): boolean {
+    return this.governor.isSlow();
   }
 
   /** How many bytes are held from `byte` onwards without a gap. */
@@ -112,6 +133,11 @@ export class VideoBuffer {
       if (byte >= start && byte < end) return end - byte;
     }
     return 0;
+  }
+
+  /** Why a block is not loading, while one is not (it is being asked for again); undefined when all is well. */
+  problem(): string | undefined {
+    return this.problems.values().next().value;
   }
 
   subscribe(listener: () => void): () => void {
@@ -130,30 +156,60 @@ export class VideoBuffer {
     return [Math.max(this.fileStart, index * this.blockSize), Math.min(this.fileEnd, (index + 1) * this.blockSize)];
   }
 
-  private load(index: number): Promise<Uint8Array> {
+  private load(index: number, urgent = false): Promise<Uint8Array> {
     const existing = this.pending.get(index);
     if (existing) return existing;
     const [start, end] = this.clip(index);
-    if (this.pending.size === 0) this.busySince = Date.now();
-    const promise = this.options.underlying
-      .getDataBlock(this.options.driveId, start, end - start, false, this.abort.signal)
+    const promise = this.governor
+      .schedule(index, () => this.fetchWithRetries(index, start, end), urgent)
       .then(async (bytes) => {
-        if (bytes.byteLength !== end - start) throw new Error("Server responded with wrong data length");
-        this.totalFetchedBytes += bytes.byteLength;
         if (!this.disposed) {
           await this.options.store.put(index, bytes);
           await this.options.store.trim(Math.floor((this.fileStart + this.windowFrom) / this.blockSize));
           this.failedAt.delete(index);
+          this.problems.delete(index);
           this.notify();
         }
         return bytes;
       })
-      .finally(() => {
-        this.pending.delete(index);
-        if (this.pending.size === 0) this.busyMs += Date.now() - this.busySince;
-      });
+      .finally(() => this.pending.delete(index));
     this.pending.set(index, promise);
     return promise;
+  }
+
+  /** One block, asked for again when a try fails or hangs; the reason of a failure is kept while it is being asked for again. */
+  private async fetchWithRetries(index: number, start: number, end: number): Promise<Uint8Array> {
+    const tries = this.options.attemptTimeoutsMs?.length ?? 4;
+    let lastError: unknown;
+    for (let attempt = 0; attempt < tries; attempt++) {
+      const attemptAbort = new AbortController();
+      const stop = () => attemptAbort.abort();
+      this.abort.signal.addEventListener("abort", stop, { once: true });
+      let timedOut = false;
+      const timer = setTimeout(() => { timedOut = true; attemptAbort.abort(new Error("timed out")); }, this.governor.attemptTimeoutMs(attempt));
+      const startedAt = Date.now();
+      try {
+        const bytes = await this.options.underlying.getDataBlock(this.options.driveId, start, end - start, false, attemptAbort.signal);
+        if (bytes.byteLength !== end - start) throw new Error("server sent a block of the wrong length");
+        this.governor.recordBlock(Date.now() - startedAt, bytes.byteLength);
+        return bytes;
+      } catch (e) {
+        lastError = e;
+        if (this.disposed) throw e;
+        if (timedOut) this.governor.recordTimeout();
+        console.warn(`[video-buffer] block ${index}, try ${attempt + 1} of ${tries} failed:`, e);
+        if (attempt >= 1) {
+          // a first failure is usually a blip the next try covers; from the second one the player says so
+          this.problems.set(index, describeFailure(timedOut ? new Error("timed out") : e));
+          this.notify();
+        }
+        if (attempt < tries - 1) await sleep(Math.min(8000, (this.options.retryDelayMs ?? 1000) * 2 ** attempt));
+      } finally {
+        clearTimeout(timer);
+        this.abort.signal.removeEventListener("abort", stop);
+      }
+    }
+    throw lastError;
   }
 
   /** The blocks to have, in the order to get them: the head and the tail, then forward from the play position. */
@@ -170,12 +226,15 @@ export class VideoBuffer {
   private pump(): void {
     if (this.disposed) return;
     const now = Date.now();
+    let first = true; // the first block still missing from the play position is the one the player will stall on: it may use one slot more
     for (const index of this.wanted()) {
-      if (this.pending.size >= this.concurrency) break;
       if (this.pending.has(index) || this.options.store.has(index)) continue;
+      const mostUrgent = first;
+      first = false;
+      if (this.pending.size >= this.governor.limit && !mostUrgent) break;
       const failed = this.failedAt.get(index);
       if (failed !== undefined && now - failed < FAILED_BLOCK_PAUSE_MS) continue;
-      this.load(index).then(
+      this.load(index, mostUrgent).then(
         () => this.pump(),
         () => {
           this.failedAt.set(index, Date.now());

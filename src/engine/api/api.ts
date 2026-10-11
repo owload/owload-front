@@ -59,6 +59,7 @@ async function apiCall<T, D>(url: string, method: "GET" | "POST" | "PUT" | "DELE
             return res.data;
         } catch (e) {
             lastError = e;
+            if (signal?.aborted) { throw e; } // whoever asked has gone: retrying would only keep a dead request alive
             if (e instanceof AxiosError && !isRetryableError(e)) { throw e; }
             if (isStorageUnavailableError(e) && ++storageUnavailableAttempts >= STORAGE_UNAVAILABLE_MAX_ATTEMPTS) { throw e; }
             attempt++;

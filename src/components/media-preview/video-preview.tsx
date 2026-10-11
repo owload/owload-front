@@ -1,4 +1,3 @@
-import { useFilesStoreOps, getPreviewFileName, PREVIEW_SIZES } from "@/hooks/use-files-store-ops";
 import { BufferedVideoPlayer } from "@/features/video-buffer/buffered-video-player";
 import { isVideoBufferEnabled } from "@/features/video-buffer/flag";
 import { getBufferingBackend } from "@/features/video-buffer/buffering-filesystem-backend";
@@ -13,72 +12,57 @@ function getMimeType(fileName: string): string {
     const ext = fileName.split('.').pop()?.toLowerCase() ?? '';
     return MIME_TYPES[ext] ?? 'video/mp4';
 }
-import { useFilesStore } from "@/stores/files-store"
 import { FileProperties } from "@/types/types";
-import { ReactEventHandler, useEffect, useState } from "react";
+import { ReactEventHandler, useEffect, useRef, useState } from "react";
+import { MediaLoadingIndicator } from "./loading-indicator";
+import { PreviewThumbnail, usePreviewThumbnail } from "./use-preview-thumbnail";
 
 interface VideoPreviewProps {
     fileToPreview: FileProperties,
     onLoadedCallback?: () => void
 };
 
-/** The experimental buffered player when it is on (features/video-buffer), the browser's own controls otherwise. */
+/**
+ * The experimental buffered player when it is on (features/video-buffer), the browser's own controls otherwise. Either way nothing of a
+ * player is drawn until there is a picture to show (the file's thumbnail or the first frame): until then an indicator says it is loading.
+ */
 export function VideoPreview(props: VideoPreviewProps) {
+    const { fileToPreview, onLoadedCallback } = props;
+    const thumbnail = usePreviewThumbnail(fileToPreview);
+    const reportedFor = useRef<string | undefined>(undefined);
+    useEffect(() => {
+        if (thumbnail.done && reportedFor.current !== fileToPreview.id) {
+            reportedFor.current = fileToPreview.id;
+            onLoadedCallback?.();
+        }
+    }, [thumbnail.done, fileToPreview.id, onLoadedCallback]);
+
     if (isVideoBufferEnabled() && getBufferingBackend()) {
-        return <BufferedVideoPlayer key={props.fileToPreview.id} {...props} />;
+        return <BufferedVideoPlayer key={fileToPreview.id} fileToPreview={fileToPreview} thumbnailUrl={thumbnail.url} />;
     }
-    return <NativeVideoPreview {...props} />;
+    return <NativeVideoPreview key={fileToPreview.id} fileToPreview={fileToPreview} thumbnail={thumbnail} />;
 }
 
-function NativeVideoPreview({ fileToPreview, onLoadedCallback }: VideoPreviewProps) {
-    const fileObjects = useFilesStore((state) => state.fileObjects);
-    const { getFileData } = useFilesStoreOps();
+function NativeVideoPreview({ fileToPreview, thumbnail }: { fileToPreview: FileProperties, thumbnail: PreviewThumbnail }) {
     const [ready, setReady] = useState(false);
     const [playError, setPlayError] = useState(false);
-    const [imageDataUrl, setImageDataUrl] = useState<string | undefined>();
 
     const start = fileToPreview.byteOffset;
     const len = fileToPreview.byteLength!;
 
-
-    async function loadPreview(previewFile: FileProperties, aborted: boolean) {
-        const data = await getFileData(previewFile);
-        if (aborted) return;
-        const f = new File([data], fileToPreview.name);
-        const url = URL.createObjectURL(f);
-        setImageDataUrl(url);
-        if (onLoadedCallback) {
-            onLoadedCallback();
-        }
-    }
-
-    useEffect(() => {
-        const PREVIEW_ENABLED = true;
-
-        let aborted = false;
-        setImageDataUrl(undefined);
-        setReady(false);
-
-        const previewFileName = getPreviewFileName(fileToPreview.id, PREVIEW_SIZES.MEDIA_PREVIEW);
-        const previewImg = fileObjects.find(f => f.name === previewFileName);
-        if (previewImg && PREVIEW_ENABLED) {
-            loadPreview(previewImg, aborted)
-        }
-        return () => { aborted = true };
-    }, [fileToPreview]);
-
     const onCanPlayHandler: ReactEventHandler<HTMLVideoElement> = () => {
         setReady(true);
-        // (e.target as HTMLVideoElement).play();
     }
 
     const onPlayErrorHandler: ReactEventHandler<HTMLVideoElement> = () => {
         setPlayError(true);
     }
 
+    const showsSomething = ready || !!thumbnail.url;
     return <>
         {playError && <div className="fixed top-0">Media can not be played</div>}
-        {!ready && <img className="max-w-full max-h-full m-auto select-none" src={imageDataUrl}></img>}
+        {!showsSomething && !playError && <MediaLoadingIndicator label="Loading video" />}
+        {!ready && thumbnail.url && <img className="max-w-full max-h-full m-auto select-none" src={thumbnail.url}></img>}
         <video className="max-w-full max-h-full m-auto select-none"
             playsInline
             muted
@@ -86,9 +70,7 @@ function NativeVideoPreview({ fileToPreview, onLoadedCallback }: VideoPreviewPro
             onCanPlayThrough={onCanPlayHandler}
             onCanPlay={onCanPlayHandler}
             onError={onPlayErrorHandler}
-            style={{
-                display: ready ? "block" : "block"
-            }}
+            style={{ display: ready ? "block" : "none" }}
             preload="auto"
             controls src={`/videorequest/${encodeURIComponent(getMimeType(fileToPreview.name))}/${start}/${len}`} />
     </>

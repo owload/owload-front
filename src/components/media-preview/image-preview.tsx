@@ -2,6 +2,7 @@ import { getPreviewFileName, PREVIEW_SIZES, useFilesStoreOps } from "@/hooks/use
 import { useFilesStore } from "@/stores/files-store"
 import { FileProperties } from "@/types/types";
 import { useEffect, useState } from "react"
+import { MediaLoadingIndicator } from "./loading-indicator";
 
 interface ImagePreviewProps {
     fileToPreview: FileProperties,
@@ -13,6 +14,7 @@ export function ImagePreview({ fileToPreview, onLoadedCallback }: ImagePreviewPr
     const { getFileData } = useFilesStoreOps();
     const [ready, setReady] = useState(false);
     const [imageDataUrl, setImageDataUrl] = useState<string | undefined>();
+    const [failed, setFailed] = useState(false);
 
     async function loadPreview(previewFile: FileProperties, aborted: {value: boolean}) {
         const data = await getFileData(previewFile);
@@ -30,6 +32,7 @@ export function ImagePreview({ fileToPreview, onLoadedCallback }: ImagePreviewPr
         const aborted = {value: false};
         setImageDataUrl(undefined);
         setReady(false);
+        setFailed(false);
 
         const lowQualityFileName = getPreviewFileName(fileToPreview.id, PREVIEW_SIZES.MEDIA_PREVIEW);
         const lowQualityFileToPreview = fileObjects.find(f => f.name === lowQualityFileName);
@@ -38,15 +41,18 @@ export function ImagePreview({ fileToPreview, onLoadedCallback }: ImagePreviewPr
                 .then(() => {
                     // `aborted` is an object: testing the object itself is always true and the full image never loaded.
                     if (aborted.value) return;
-                    loadPreview(fileToPreview, aborted);
-                });
+                    return loadPreview(fileToPreview, aborted);
+                })
+                .catch(() => { if (!aborted.value) setFailed(true); });
         } else {
-            loadPreview(fileToPreview, aborted);
+            loadPreview(fileToPreview, aborted).catch(() => { if (!aborted.value) setFailed(true); });
         }
 
         return () => { aborted.value = true };
     }, [fileToPreview]);
     return <>
+        {!ready && !failed && <MediaLoadingIndicator label="Loading photo" />}
+        {failed && !ready && <div role="alert" className="rounded-lg bg-sunny-ink/90 px-4 py-2 text-white">The photo could not be loaded</div>}
         {imageDataUrl &&
             <img src={imageDataUrl} onLoad={() => setReady(true)}
                 className="max-w-full max-h-full m-auto select-none"

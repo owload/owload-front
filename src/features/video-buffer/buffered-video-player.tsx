@@ -3,6 +3,7 @@ import { Loader2, Maximize, Minimize, Pause, Play, Volume2, VolumeX } from "luci
 import type { FileProperties } from "@/types/types";
 import { getBufferingBackend } from "./buffering-filesystem-backend";
 import type { ByteRange, VideoBuffer } from "./video-buffer";
+import { MediaLoadingIndicator } from "@/components/media-preview/loading-indicator";
 import { DEFAULT_TARGET_SEC, TARGET_OPTIONS, decideAction, formatTime, nativeAheadSec, secondsNeeded } from "./player-model";
 
 const MIME_TYPES: Record<string, string> = { mp4: "video/mp4", mov: "video/quicktime", webm: "video/webm" };
@@ -27,11 +28,12 @@ function loadTarget(): number {
 
 interface Props {
   fileToPreview: FileProperties;
-  onLoadedCallback?: () => void;
+  /** The file's small picture, when it has one and it has been fetched: shown until the first frame of the video is there. */
+  thumbnailUrl?: string;
 }
 
 /** The experimental player: the browser decodes, we draw the controls and keep the buffer (decision 0031). Falls back to nothing if the layer is missing. */
-export function BufferedVideoPlayer({ fileToPreview, onLoadedCallback }: Props) {
+export function BufferedVideoPlayer({ fileToPreview, thumbnailUrl }: Props) {
   const backend = getBufferingBackend();
   const start = fileToPreview.byteOffset!;
   const len = fileToPreview.byteLength!;
@@ -44,16 +46,18 @@ export function BufferedVideoPlayer({ fileToPreview, onLoadedCallback }: Props) 
   const userPausedRef = useRef(false);
   const waitingRef = useRef(true);
   const targetRef = useRef(loadTarget());
-  const loadedReportedRef = useRef(false);
   const speedRatioRef = useRef<number | undefined>(undefined);
 
   const [ready, setReady] = useState(false);
+  const [frameReady, setFrameReady] = useState(false);
   const [duration, setDuration] = useState(0);
   const [time, setTime] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [waiting, setWaitingState] = useState(true);
   const [aheadSec, setAheadSec] = useState(0);
   const [held, setHeld] = useState<ByteRange[]>([]);
+  const [problem, setProblem] = useState<string | undefined>();
+  const [slow, setSlow] = useState(false);
   const [targetSec, setTargetState] = useState(targetRef.current);
   const [muted, setMuted] = useState(true);
   const [rateIndex, setRateIndex] = useState(0);
@@ -96,6 +100,8 @@ export function BufferedVideoPlayer({ fileToPreview, onLoadedCallback }: Props) 
       speedRatioRef.current = speedRatio;
       setAheadSec(ahead);
       setHeld(buffer.heldRanges());
+      setProblem(buffer.problem());
+      setSlow(buffer.isSlow());
       const action = decideAction({
         duration: video.duration,
         currentTime: video.currentTime,
@@ -200,6 +206,8 @@ export function BufferedVideoPlayer({ fileToPreview, onLoadedCallback }: Props) 
     showControls();
   }
 
+  // Nothing of a player is drawn until there is a picture (the thumbnail or the first frame); until then an indicator says it is loading.
+  const showsPicture = frameReady || !!thumbnailUrl;
   const needed = secondsNeeded({ duration, currentTime: time, targetSec, speedRatio: speedRatioRef.current });
   const showWaiting = waiting && !userPausedRef.current && !error;
   const playedPercent = duration > 0 ? (time / duration) * 100 : 0;
@@ -212,22 +220,27 @@ export function BufferedVideoPlayer({ fileToPreview, onLoadedCallback }: Props) 
       onKeyDown={onKeyDown}
       onPointerMove={showControls}
       onPointerDown={showControls}
-      className="relative flex max-h-full max-w-full items-center justify-center bg-black outline-none select-none"
+      className={`relative flex max-h-full max-w-full items-center justify-center outline-none select-none ${frameReady ? "bg-black" : ""}`}
     >
-      {error && <div className="absolute top-0 z-10 bg-sunny-ink/90 p-2 text-sm text-white">Media can not be played</div>}
+      {error && (
+        <div role="alert" className={showsPicture ? "absolute top-0 z-10 bg-sunny-ink/90 p-2 text-sm whitespace-nowrap text-white" : "rounded-lg bg-sunny-ink/90 px-4 py-2 whitespace-nowrap text-white"}>
+          Media can not be played
+        </div>
+      )}
+      {!showsPicture && !error && <MediaLoadingIndicator label="Loading video" />}
+      {!frameReady && thumbnailUrl && <img src={thumbnailUrl} alt="" className="max-h-full max-w-full" />}
       {ready && (
         <video
           ref={videoRef}
           className="max-h-full max-w-full"
+          style={frameReady ? undefined : { display: "none" }}
           playsInline
           muted={muted}
           preload="auto"
           src={`/videorequest/${encodeURIComponent(mimeOf(fileToPreview.name))}/${start}/${len}`}
           onClick={togglePlay}
-          onLoadedMetadata={(e) => {
-            setDuration(e.currentTarget.duration);
-            if (!loadedReportedRef.current) { loadedReportedRef.current = true; onLoadedCallback?.(); }
-          }}
+          onLoadedMetadata={(e) => setDuration(e.currentTarget.duration)}
+          onLoadedData={() => setFrameReady(true)}
           onDurationChange={(e) => setDuration(e.currentTarget.duration)}
           onTimeUpdate={(e) => setTime(e.currentTarget.currentTime)}
           onPlay={() => setPlaying(true)}
@@ -242,17 +255,26 @@ export function BufferedVideoPlayer({ fileToPreview, onLoadedCallback }: Props) 
         />
       )}
 
-      {showWaiting && duration > 0 && (
+      {!frameReady && thumbnailUrl && !error && (
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+          <MediaLoadingIndicator label="Loading video" />
+        </div>
+      )}
+
+      {showWaiting && duration > 0 && frameReady && (
         <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-2 text-white">
           <Loader2 className="size-9 animate-spin" aria-hidden="true" />
           <div className="rounded bg-sunny-ink/80 px-3 py-1 text-sm" role="status">
             Buffering: {formatTime(aheadSec)} of {formatTime(needed)}. Press play to start now.
           </div>
+          {slow && !problem && <div className="rounded bg-sunny-yellow px-3 py-1 text-sm text-sunny-text-on-yellow">Slow connection: loading a part at a time. This will take a while.</div>}
+          {problem && <div className="rounded bg-sunny-yellow px-3 py-1 text-sm text-sunny-text-on-yellow">A part of the video is not loading ({problem}). Trying again.</div>}
         </div>
       )}
 
       <div
         ref={controlsRef}
+        hidden={!showsPicture}
         className={`absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-black/80 to-transparent px-2 pt-8 pb-2 text-white transition-opacity ${controlsVisible || !playing || waiting ? "opacity-100" : "pointer-events-none opacity-0"}`}
       >
         <div
