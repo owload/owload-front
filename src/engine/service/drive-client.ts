@@ -14,8 +14,8 @@ import { DriveActionLogEntry } from "./drive-action-log";
 const FS_SNAPSHOT_CACHE = "FS_SNAPSHOT_CACHE_1";
 const ACTION_LOG_CACHE = "ACTION_LOG_CACHE_1";
 const OP_LOG_CACHE = "OP_LOG_CACHE_1";
-import { BLOCK_READ_CONCURRENCY, BLOCK_SIZE } from "../core/constants";
-import { readBlocksInParallel } from "../core/parallel-blocks";
+import { BLOCK_READ_CONCURRENCY, BLOCK_SIZE, BLOCK_WRITE_CONCURRENCY } from "../core/constants";
+import { readBlocksInParallel, writeBlocksInParallel } from "../core/parallel-blocks";
 const UPLOAD_CHUNK_LENGTH = BLOCK_SIZE;
 const DOWNLOAD_CHUNK_LENGTH = BLOCK_SIZE;
 
@@ -468,20 +468,22 @@ export class DriveClient {
     progressCallback: SaveProgressCallback,
     abortSignal?: AbortSignal
   ): WritableStream<Uint8Array> {
-    const saveDataBlockFunc = this.filesystemBackend.saveDataBlock.bind(this.filesystemBackend, sessionId);
+    const saveDataBlock = this.filesystemBackend.saveDataBlock.bind(this.filesystemBackend, sessionId);
     const finalizeFunc = () => this.performOp(new UploadFinishFsOperation(uploadStartOperationHash, fileContentHash));
-    let uploadedBytesLength = 0;
-    return new WritableStream({
-      async write(chunk: Uint8Array) {
-        await saveDataBlockFunc(chunk, uploadedBytesLength, abortSignal);
-        uploadedBytesLength += chunk.byteLength;
+    // Several blocks are written at once (decision 0031). The encrypting stream cuts the data at the boundaries of the stored blocks,
+    // so every stored block is written by one request of this upload and the requests in flight never touch the same one.
+    let writtenBytesLength = 0;
+    return writeBlocksInParallel({
+      concurrency: BLOCK_WRITE_CONCURRENCY,
+      signal: abortSignal,
+      writeBlock: (chunk, blockOffset, blockSignal) => saveDataBlock(chunk, blockOffset, blockSignal),
+      onBlockWritten: (byteLength) => {
+        writtenBytesLength += byteLength;
         if (progressCallback) {
-          progressCallback(uploadedBytesLength);
+          progressCallback(writtenBytesLength);
         }
       },
-      async close() {
-        await finalizeFunc();
-      }
+      onFinished: async () => { await finalizeFunc(); },
     });
   }
 

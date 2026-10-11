@@ -25,7 +25,7 @@ export class RestFilesystemBackend implements FilesystemBackend {
     }
 
     async saveDataBlock(sessionId: SessionId, bytes: Uint8Array, blockByteOffset: number, signal?: AbortSignal): Promise<void> {
-        return postApiCall(`/data?sessionId=${sessionId}&start=${blockByteOffset}`, bytes, "arraybuffer", signal, 1000);
+        return postApiCall(`/data?sessionId=${sessionId}&start=${blockByteOffset}`, bytes, "arraybuffer", signal, 1000, DATA_BLOCK_TIMEOUT_MS);
     }
 
     async getDataBlock(driveId: DriveId, byteOffset: number, byteLength: number, _cache?: boolean, signal?: AbortSignal): Promise<Uint8Array> {

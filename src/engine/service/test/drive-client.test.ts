@@ -404,6 +404,47 @@ test('Download of a file over many blocks, starting inside a block, and of a ran
   expect(checkEqual(part, big.slice(from, from + length))).toBe(true);
 });
 
+test('Upload writes blocks in parallel and never lets two requests touch the same stored block', async () => {
+  const driveClient = await getTestDriveClient();
+  const MIB = 1024 * 1024;
+  const backend = (driveClient as any).filesystemBackend;
+  const original = backend.saveDataBlock.bind(backend);
+  const originalStart = backend.startUploadSession.bind(backend);
+  const sessionOffsets = new Map<string, number>();
+  backend.startUploadSession = async (...args: unknown[]) => {
+    const info = await originalStart(...args);
+    sessionOffsets.set(info.sessionId, info.byteOffset);
+    return info;
+  };
+  const writes: Array<{ start: number; end: number }> = [];
+  let inFlight = 0;
+  let maxInFlight = 0;
+  backend.saveDataBlock = async (sessionId: string, bytes: Uint8Array, blockOffset: number, signal?: AbortSignal) => {
+    const start = sessionOffsets.get(sessionId)! + blockOffset;
+    writes.push({ start, end: start + bytes.byteLength });
+    inFlight++;
+    maxInFlight = Math.max(maxInFlight, inFlight);
+    await new Promise((resolve) => setTimeout(resolve, 5));
+    await original(sessionId, bytes, blockOffset, signal);
+    inFlight--;
+  };
+  const data = new Uint8Array(9 * MIB + 4321);
+  for (let pos = 0; pos < data.length; pos += 65536) crypto.getRandomValues(data.subarray(pos, Math.min(pos + 65536, data.length)));
+  await uploadTestFile("/", "small.dat", new Uint8Array(1234), driveClient); // moves the next file off a block boundary
+  writes.length = 0;
+  await uploadTestFile("/", "big.dat", data, driveClient);
+
+  expect(maxInFlight).toBeGreaterThan(1);
+  for (const w of writes) {
+    expect(Math.floor(w.start / MIB)).toBe(Math.floor((w.end - 1) / MIB)); // one request, one stored block
+  }
+  const blocks = writes.map((w) => Math.floor(w.start / MIB));
+  expect(new Set(blocks).size).toBe(blocks.length); // no stored block is written twice
+  const props = driveClient.ls("/")[1].properties as FsFileProperties;
+  const back = await driveClient.getFileData(props.byteOffset, props.byteLength, props.contentHash!);
+  expect(checkEqual(back, data)).toBe(true);
+});
+
 test('Copying non-existing directory throws an error', async () => {
   const driveClient = await getTestDriveClient();
   await expect(driveClient.cp('nonexistent', ['nonexistent'], '/', 'REPLACE')).rejects.toThrowError('Source does not exist');

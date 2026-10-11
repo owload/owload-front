@@ -85,3 +85,72 @@ export function readBlocksInParallel(options: ParallelBlockReadOptions): Readabl
     },
   });
 }
+
+export interface ParallelBlockWriteOptions {
+  /** Writes one block at `byteOffset` (relative to the start of what is being written). */
+  writeBlock: (chunk: Uint8Array, byteOffset: number, signal: AbortSignal) => Promise<void>;
+  concurrency: number;
+  /** Called when a block has been written, with its length (blocks may finish out of order). */
+  onBlockWritten?: (byteLength: number) => void;
+  /** Called once, after every block has been written. */
+  onFinished?: () => Promise<void>;
+  /** Aborts the write as a whole: the requests in flight are aborted and the stream errors. */
+  signal?: AbortSignal;
+}
+
+/**
+ * Writes the chunks that arrive in order as blocks, several at once: the stream waits for a free slot only when `concurrency`
+ * blocks are in flight, so memory is bounded by the window. A failed block fails the stream and aborts the blocks in flight, and
+ * `onFinished` runs only after every block has been written. The chunks must not share storage with each other: it is the
+ * caller's job to cut them so that two blocks in flight never touch the same stored block.
+ */
+export function writeBlocksInParallel(options: ParallelBlockWriteOptions): WritableStream<Uint8Array> {
+  const { writeBlock, concurrency, signal } = options;
+  if (!(concurrency >= 1)) throw new Error('Incorrect concurrency: ' + concurrency);
+  const abort = new AbortController();
+  const inFlight = new Set<Promise<void>>();
+  let failure: { error: unknown } | undefined;
+  let position = 0;
+
+  const onOuterAbort = () => abort.abort(signal?.reason);
+  if (signal) {
+    if (signal.aborted) abort.abort(signal.reason);
+    else signal.addEventListener('abort', onOuterAbort, { once: true });
+  }
+  const cleanUp = () => signal?.removeEventListener('abort', onOuterAbort);
+  const fail = (error: unknown) => {
+    failure ??= { error };
+    abort.abort(error);
+  };
+  const throwIfFailed = () => {
+    if (failure) throw failure.error;
+    if (abort.signal.aborted) throw abort.signal.reason ?? new DOMException('Aborted', 'AbortError');
+  };
+
+  return new WritableStream<Uint8Array>({
+    async write(chunk) {
+      throwIfFailed();
+      const offset = position;
+      position += chunk.byteLength;
+      const task: Promise<void> = writeBlock(chunk, offset, abort.signal).then(
+        () => { try { options.onBlockWritten?.(chunk.byteLength); } catch (e) { fail(e); } },
+        fail,
+      ).finally(() => inFlight.delete(task));
+      inFlight.add(task);
+      while (inFlight.size >= concurrency) {
+        await Promise.race(inFlight);
+      }
+      throwIfFailed();
+    },
+    async close() {
+      await Promise.all(inFlight);
+      cleanUp();
+      throwIfFailed();
+      await options.onFinished?.();
+    },
+    abort(reason) {
+      fail(reason);
+      cleanUp();
+    },
+  });
+}

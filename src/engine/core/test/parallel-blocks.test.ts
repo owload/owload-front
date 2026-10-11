@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { planBlocks, readBlocksInParallel } from '../parallel-blocks';
+import { planBlocks, readBlocksInParallel, writeBlocksInParallel } from '../parallel-blocks';
 
 const BLOCK = 8;
 
@@ -130,5 +130,90 @@ describe('readBlocksInParallel', () => {
       fetchBlock: async () => { throw new Error('should not be called'); },
     });
     expect((await readAll(rs)).byteLength).toBe(0);
+  });
+});
+
+
+describe('writeBlocksInParallel', () => {
+  async function writeAll(ws: WritableStream<Uint8Array>, chunks: Uint8Array[]) {
+    const writer = ws.getWriter();
+    for (const c of chunks) await writer.write(c);
+    await writer.close();
+  }
+  const chunks = (n: number, size = BLOCK) => Array.from({ length: n }, (_, i) => new Uint8Array(size).fill(i + 1));
+
+  it('writes every block at its own offset, several at once, and finishes after the last one', async () => {
+    const written = new Map<number, number>();
+    let inFlight = 0;
+    let max = 0;
+    let finishedAfter = -1;
+    const ws = writeBlocksInParallel({
+      concurrency: 3,
+      writeBlock: async (chunk, offset) => {
+        inFlight++;
+        max = Math.max(max, inFlight);
+        await sleep(((offset * 7) % 11) + 1);
+        written.set(offset, chunk[0]);
+        inFlight--;
+      },
+      onFinished: async () => { finishedAfter = written.size; },
+    });
+    await writeAll(ws, [...chunks(9), new Uint8Array(3).fill(10)]);
+    expect([...written.keys()].sort((a, b) => a - b)).toEqual([0, 8, 16, 24, 32, 40, 48, 56, 64, 72]);
+    expect(written.get(72)).toBe(10);
+    expect(max).toBe(3);
+    expect(finishedAfter).toBe(10);
+  });
+
+  it('reports each written block', async () => {
+    let total = 0;
+    const ws = writeBlocksInParallel({
+      concurrency: 2,
+      writeBlock: async () => { await sleep(1); },
+      onBlockWritten: (n) => { total += n; },
+    });
+    await writeAll(ws, chunks(5));
+    expect(total).toBe(5 * BLOCK);
+  });
+
+  it('fails when a block fails, aborts the others, and does not finish', async () => {
+    let aborted = 0;
+    let finished = false;
+    const ws = writeBlocksInParallel({
+      concurrency: 3,
+      writeBlock: (_chunk, offset, signal) => new Promise<void>((resolve, reject) => {
+        signal.addEventListener('abort', () => { aborted++; reject(new Error('aborted')); });
+        if (offset === 8) setTimeout(() => reject(new Error('boom')), 2);
+        else if (offset === 0) setTimeout(resolve, 1);
+      }),
+      onFinished: async () => { finished = true; },
+    });
+    await expect(writeAll(ws, chunks(10))).rejects.toThrow('boom');
+    expect(aborted).toBeGreaterThan(0);
+    expect(finished).toBe(false);
+  });
+
+  it('does not finish when the outer signal is aborted', async () => {
+    const controller = new AbortController();
+    let finished = false;
+    const ws = writeBlocksInParallel({
+      concurrency: 2, signal: controller.signal,
+      writeBlock: (_chunk, _offset, signal) => new Promise<void>((_resolve, reject) => {
+        signal.addEventListener('abort', () => reject(new Error('stopped')));
+      }),
+      onFinished: async () => { finished = true; },
+    });
+    const done = writeAll(ws, chunks(6));
+    await sleep(5);
+    controller.abort(new Error('stopped'));
+    await expect(done).rejects.toThrow('stopped');
+    expect(finished).toBe(false);
+  });
+
+  it('finishes an empty write', async () => {
+    let finished = false;
+    const ws = writeBlocksInParallel({ concurrency: 2, writeBlock: async () => undefined, onFinished: async () => { finished = true; } });
+    await writeAll(ws, []);
+    expect(finished).toBe(true);
   });
 });
