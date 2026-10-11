@@ -218,7 +218,7 @@ export function ToolboxBottom(props: { className?: string }) {
                     onMouseDown={(e) => e.stopPropagation()}
                     className="pointer-events-auto flex h-12 cursor-pointer items-center gap-2.5 rounded-full bg-sunny-ink pl-4 pr-4 text-sm font-semibold text-white shadow-[0_10px_24px_rgba(0,0,0,0.26)] outline-sunny-yellow focus-visible:outline-2"
                 >
-                    {showUploadStateButton && <><span className="text-sunny-yellow">{transferPercent}%</span><span aria-hidden="true" className="h-5 w-px bg-sunny-ink-track" /></>}
+                    {showUploadStateButton && <><span className="inline-block min-w-[4ch] text-right tabular-nums text-sunny-yellow">{transferPercent}%</span><span aria-hidden="true" className="h-5 w-px bg-sunny-ink-track" /></>}
                     <span>Actions</span>
                     <ChevronUp className="size-4 text-sunny-yellow" strokeWidth={2.4} aria-hidden="true" />
                 </button>

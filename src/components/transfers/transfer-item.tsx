@@ -23,7 +23,7 @@ function Stage({ label, percent, failed, done, active }: { label: string; percen
                     ? <span className="text-[#ff9c8f]">Failed</span>
                     : done
                         ? <Check aria-label="Done" className="size-3.5 text-sunny-yellow" strokeWidth={3} />
-                        : active && percent > 0 && <span className="text-sunny-yellow">{percent}%</span>}
+                        : active && percent > 0 && <span className="min-w-[4ch] text-right tabular-nums text-sunny-yellow">{percent}%</span>}
             </div>
             <div className="h-1 overflow-hidden rounded-full bg-sunny-ink-track">
                 <div

@@ -45,7 +45,9 @@ export function TransfersTray() {
     const failed = allFinished && errorCount > 0;
     const count = plural(uploadQueue.length, "file", "files");
     const percent = allFinished ? 100 : totalProgress;
-    const label = failed ? `${errorCount} failed` : allFinished ? "Uploaded" : `${count} · ${totalProgress}%`;
+    const label = failed ? `${errorCount} failed` : allFinished ? "Uploaded" : (
+        <>{count} · <span className="inline-block min-w-[4ch] text-right tabular-nums">{totalProgress}%</span></>
+    );
     const ariaLabel = failed ? `Uploads, ${errorCount} failed` : allFinished ? "Uploads, finished" : `Uploads, ${count} · ${totalProgress}%`;
 
     const clearFinished = () => {
