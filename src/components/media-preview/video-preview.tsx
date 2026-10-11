@@ -1,4 +1,7 @@
 import { useFilesStoreOps, getPreviewFileName, PREVIEW_SIZES } from "@/hooks/use-files-store-ops";
+import { BufferedVideoPlayer } from "@/features/video-buffer/buffered-video-player";
+import { isVideoBufferEnabled } from "@/features/video-buffer/flag";
+import { getBufferingBackend } from "@/features/video-buffer/buffering-filesystem-backend";
 
 const MIME_TYPES: Record<string, string> = {
     mp4: 'video/mp4',
@@ -19,7 +22,15 @@ interface VideoPreviewProps {
     onLoadedCallback?: () => void
 };
 
-export function VideoPreview({ fileToPreview, onLoadedCallback }: VideoPreviewProps) {
+/** The experimental buffered player when it is on (features/video-buffer), the browser's own controls otherwise. */
+export function VideoPreview(props: VideoPreviewProps) {
+    if (isVideoBufferEnabled() && getBufferingBackend()) {
+        return <BufferedVideoPlayer key={props.fileToPreview.id} {...props} />;
+    }
+    return <NativeVideoPreview {...props} />;
+}
+
+function NativeVideoPreview({ fileToPreview, onLoadedCallback }: VideoPreviewProps) {
     const fileObjects = useFilesStore((state) => state.fileObjects);
     const { getFileData } = useFilesStoreOps();
     const [ready, setReady] = useState(false);

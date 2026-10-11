@@ -32,6 +32,7 @@ type RequestState = {
   done: boolean;
   cacheKey: string | null;      // set when this response should be cached on completion
   accumulated: Uint8Array[];    // accumulates chunks for the cache
+  delivered: number;            // chunks handed to the browser; reported to the page so it can slow down (see sw-backpressure.ts)
 };
 const requestStates = new Map<string, RequestState>();
 
@@ -73,7 +74,7 @@ sw.addEventListener('message', (event) => {
 
 async function getClientFetchReadableStream(clientId: string, byteOffset: number, byteLength: number, cacheKey: string | null = null): Promise<ReadableStream<Uint8Array>> {
   const requestId = Math.random().toString(36).substring(2);
-  requestStates.set(requestId, { queue: [], resolve: null, done: false, cacheKey, accumulated: [] });
+  requestStates.set(requestId, { queue: [], resolve: null, done: false, cacheKey, accumulated: [], delivered: 0 });
 
   const client = await sw.clients.get(clientId);
   if (!client) throw new Error('Client not found');
@@ -92,6 +93,7 @@ async function getClientFetchReadableStream(clientId: string, byteOffset: number
         }
         if (state.queue.length > 0) {
           controller.enqueue(state.queue.shift()!);
+          client.postMessage({ type: 'responseDemand', requestId, delivered: ++state.delivered });
           resolve();
         } else if (state.done) {
           controller.close();
@@ -104,6 +106,7 @@ async function getClientFetchReadableStream(clientId: string, byteOffset: number
               requestStates.delete(requestId);
             } else {
               controller.enqueue(chunk);
+              client.postMessage({ type: 'responseDemand', requestId, delivered: ++state.delivered });
             }
             resolve();
           };

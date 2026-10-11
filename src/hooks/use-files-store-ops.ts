@@ -13,6 +13,9 @@ import { useUserInfo } from "@/auth-context-provider";
 import { buildWriterIndex, findPendingUploads, getNodePath } from "@/engine/service/ops-log-analysis";
 import { NodeWriterInfo, OverwriteWarningInfo } from "@/types/types";
 import { registry } from "@/extensions/registry";
+import { isVideoBufferEnabled } from "@/features/video-buffer/flag";
+import { installVideoBuffer } from "@/features/video-buffer/buffering-filesystem-backend";
+import { noteDemand, releaseRequest, waitForRoom } from "@/features/video-buffer/sw-backpressure";
 
 let swMessageEventListener: ((event: MessageEvent) => void) | undefined;
 const swRequestReaders = new Map<string, ReadableStreamDefaultReader<Uint8Array>>();
@@ -228,7 +231,8 @@ export function useFilesStoreOps() {
             driveInfo.keyNonce,
             driveInfo.counterNonce,
             password,
-            preloadingFilesystemBackend
+            // the buffered video player's layer (a no-op unless the experiment is on, see features/video-buffer)
+            installVideoBuffer(preloadingFilesystemBackend, driveId, !!publicToken, isVideoBufferEnabled())
         );
         const ccl = factoryReturnValue.driveClient;
         if (!storedKeyEncoded) {
@@ -244,9 +248,11 @@ export function useFilesStoreOps() {
                 const { byteOffset, byteLength } = event.data.data;
                 const requestId = event.data.requestId;
                 const sw = event.source;
+                const bounded = isVideoBufferEnabled(); // do not run ahead of what the browser takes (experimental, see features/video-buffer)
                 ccl.getFileDataStream(byteOffset, byteLength, "", true).then(async stream => {
                     const reader = stream.getReader();
                     swRequestReaders.set(requestId, reader);
+                    let sentChunks = 0;
                     try {
                         while (true) {
                             const { done, value } = await reader.read();
@@ -257,19 +263,28 @@ export function useFilesStoreOps() {
                             }
                             // Transfer ArrayBuffer ownership (zero-copy across threads)
                             sw?.postMessage({ type: "responseData", requestId, data: value }, { transfer: [value.buffer] });
+                            sentChunks++;
+                            if (bounded) {
+                                await waitForRoom(requestId, sentChunks);
+                                if (swRequestReaders.get(requestId) !== reader) break; // cancelled while waiting
+                            }
                         }
                     } catch {
                         sw?.postMessage({ type: "responseFinish", requestId });
                     } finally {
                         swRequestReaders.delete(requestId);
+                        releaseRequest(requestId);
                     }
                 });
+            } else if (event.data.type === "responseDemand") {
+                noteDemand(event.data.requestId, event.data.delivered);
             } else if (event.data.type === "cancelClientFetch") {
                 const reader = swRequestReaders.get(event.data.requestId);
                 if (reader) {
                     reader.cancel();
                     swRequestReaders.delete(event.data.requestId);
                 }
+                releaseRequest(event.data.requestId);
             }
         };
         navigator.serviceWorker.addEventListener("message", swMessageEventListener);
