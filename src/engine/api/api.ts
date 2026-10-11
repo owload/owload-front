@@ -41,6 +41,12 @@ const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
 // shown to the user instead of silently retrying for minutes.
 const STORAGE_UNAVAILABLE_MAX_ATTEMPTS = 3;
 
+// A read that gets "bad gateway", "unavailable" or "gateway timeout" has not reached the application (a proxy that is still waiting for
+// the backend, or reused a connection the backend had closed): asking again a moment later usually works, so reads try again twice
+// even where the caller asked for no retries. Writes are never repeated this way.
+const GATEWAY_STATUSES = new Set([502, 503, 504]);
+const GATEWAY_RETRIES_FOR_READS = 2;
+
 function waitForOnline() {
     return new Promise(resolve => {
         if (navigator.onLine) return resolve(undefined);
@@ -53,6 +59,7 @@ async function apiCall<T, D>(url: string, method: "GET" | "POST" | "PUT" | "DELE
     let attempt = 0;
     let lastError: unknown;
     let storageUnavailableAttempts = 0;
+    let gatewayRetries = 0;
     while (attempt <= retryCount) {
         try {
             res = await makeProperAxiosApiCall<T, D>(url, method, responseType, timeout, data, signal);
@@ -60,6 +67,11 @@ async function apiCall<T, D>(url: string, method: "GET" | "POST" | "PUT" | "DELE
         } catch (e) {
             lastError = e;
             if (signal?.aborted) { throw e; } // whoever asked has gone: retrying would only keep a dead request alive
+            if (method === "GET" && attempt >= retryCount && e instanceof AxiosError && GATEWAY_STATUSES.has(e.response?.status ?? 0) && gatewayRetries < GATEWAY_RETRIES_FOR_READS) {
+                gatewayRetries++;
+                await sleep(delay * gatewayRetries);
+                continue;
+            }
             if (e instanceof AxiosError && !isRetryableError(e)) { throw e; }
             if (isStorageUnavailableError(e) && ++storageUnavailableAttempts >= STORAGE_UNAVAILABLE_MAX_ATTEMPTS) { throw e; }
             attempt++;
