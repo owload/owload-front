@@ -14,7 +14,8 @@ import { DriveActionLogEntry } from "./drive-action-log";
 const FS_SNAPSHOT_CACHE = "FS_SNAPSHOT_CACHE_1";
 const ACTION_LOG_CACHE = "ACTION_LOG_CACHE_1";
 const OP_LOG_CACHE = "OP_LOG_CACHE_1";
-import { BLOCK_SIZE } from "../core/constants";
+import { BLOCK_READ_CONCURRENCY, BLOCK_SIZE } from "../core/constants";
+import { readBlocksInParallel } from "../core/parallel-blocks";
 const UPLOAD_CHUNK_LENGTH = BLOCK_SIZE;
 const DOWNLOAD_CHUNK_LENGTH = BLOCK_SIZE;
 
@@ -425,32 +426,27 @@ export class DriveClient {
     return [encryptProgressCallback, transferProgressCallback];
   }
 
-  public async getFileDataStream(byteOffset: number, byteLength: number, _contentHash: string, cache = false, progressCallback?: ProgressCallback): Promise<ReadableStream<Uint8Array>> {
+  public async getFileDataStream(byteOffset: number, byteLength: number, _contentHash: string, cache = false, progressCallback?: ProgressCallback, signal?: AbortSignal): Promise<ReadableStream<Uint8Array>> {
     // Streaming reads are partial/byte-range and used for media preview (contentHash = "").
     // Full-file integrity is verified in getFileData after collecting all decrypted bytes.
-    const thisObj = this;
-    const firstChunkLength = DOWNLOAD_CHUNK_LENGTH - byteOffset % DOWNLOAD_CHUNK_LENGTH;
+    // Several blocks are read from the server at once and handed out in order (decision 0031).
     const [encryptProgressCallback, transferProgressCallback] = this.getProgressHandlers(progressCallback, byteLength);
     let bytesDownloaded = 0;
-    const rs = new ReadableStream({
-      async pull(controller) {
-        let chunkLength = bytesDownloaded === 0 ? firstChunkLength : DOWNLOAD_CHUNK_LENGTH;
-        if (bytesDownloaded + chunkLength > byteLength) {
-          chunkLength = byteLength - bytesDownloaded;
-        }
-        const data = await thisObj.filesystemBackend.getDataBlock(
-          thisObj.driveId,
-          byteOffset + bytesDownloaded,
-          chunkLength,
-          cache);
-        controller.enqueue(data);
-        bytesDownloaded += data.byteLength;
-        transferProgressCallback(bytesDownloaded)
-        if (bytesDownloaded === byteLength) {
-          controller.close();
-        }
-      }
-    });
+    const rs = readBlocksInParallel({
+      byteOffset,
+      byteLength,
+      blockSize: DOWNLOAD_CHUNK_LENGTH,
+      concurrency: BLOCK_READ_CONCURRENCY,
+      signal,
+      fetchBlock: (blockOffset, blockLength, blockSignal) =>
+        this.filesystemBackend.getDataBlock(this.driveId, blockOffset, blockLength, cache, blockSignal),
+    }).pipeThrough(new TransformStream<Uint8Array, Uint8Array>({
+      transform(block, controller) {
+        bytesDownloaded += block.byteLength;
+        transferProgressCallback(bytesDownloaded);
+        controller.enqueue(block);
+      },
+    }));
     return createEncryptingStream(rs, this.streamKeys.data, this.nonce, byteOffset, DOWNLOAD_CHUNK_LENGTH, encryptProgressCallback);
   }
 

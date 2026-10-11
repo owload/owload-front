@@ -380,6 +380,30 @@ test('Upload data test', async () => {
 
 });
 
+test('Download of a file over many blocks, starting inside a block, and of a range of it', async () => {
+  const driveClient = await getTestDriveClient();
+  const MIB = 1024 * 1024;
+  const randomBytes = (len: number) => {
+    const bytes = new Uint8Array(len);
+    for (let pos = 0; pos < len; pos += 65536) crypto.getRandomValues(bytes.subarray(pos, Math.min(pos + 65536, len)));
+    return bytes;
+  };
+  const small = randomBytes(1234); // moves the next file off a block boundary
+  const big = randomBytes(9 * MIB + 4321); // more blocks than are read at once
+  await uploadTestFile("/", "small.dat", small, driveClient);
+  await uploadTestFile("/", "big.dat", big, driveClient);
+
+  const props = driveClient.ls("/")[1].properties as FsFileProperties;
+  expect(props.byteOffset % MIB).not.toBe(0);
+  const whole = await driveClient.getFileData(props.byteOffset, props.byteLength, props.contentHash!);
+  expect(checkEqual(whole, big)).toBe(true);
+
+  const from = 3 * MIB + 77;
+  const length = 4 * MIB + 5;
+  const part = await driveClient.getFileData(props.byteOffset + from, length, "");
+  expect(checkEqual(part, big.slice(from, from + length))).toBe(true);
+});
+
 test('Copying non-existing directory throws an error', async () => {
   const driveClient = await getTestDriveClient();
   await expect(driveClient.cp('nonexistent', ['nonexistent'], '/', 'REPLACE')).rejects.toThrowError('Source does not exist');

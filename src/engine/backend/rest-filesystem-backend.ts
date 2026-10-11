@@ -2,6 +2,7 @@ import { deleteApiCall, getApiCall, postApiCall } from "../api/api";
 import { DriveId } from "./drive-backend";
 import { FilesystemBackend, SessionId, SessionInfo } from "./filesystem-backend";
 import { DriveActionLogEntry } from "../service/drive-action-log";
+import { DATA_BLOCK_TIMEOUT_MS } from "../core/constants";
 
 export class RestFilesystemBackend implements FilesystemBackend {
     async getOperations(driveId: DriveId, startBytePos: number): Promise<Uint8Array> {
@@ -27,13 +28,13 @@ export class RestFilesystemBackend implements FilesystemBackend {
         return postApiCall(`/data?sessionId=${sessionId}&start=${blockByteOffset}`, bytes, "arraybuffer", signal, 1000);
     }
 
-    async getDataBlock(driveId: DriveId, byteOffset: number, byteLength: number): Promise<Uint8Array> {
+    async getDataBlock(driveId: DriveId, byteOffset: number, byteLength: number, _cache?: boolean, signal?: AbortSignal): Promise<Uint8Array> {
         if (byteLength <= 0) {
             throw new Error("byteLength is zero or negative: " + byteLength)
         }
         const url = `/data?driveId=${driveId}&start=${byteOffset}&end=${byteOffset + byteLength}`;
         let buf;
-        buf = await getApiCall<Uint8Array>(url, "arraybuffer", undefined, 1000);
+        buf = await getApiCall<Uint8Array>(url, "arraybuffer", signal, 1000, DATA_BLOCK_TIMEOUT_MS);
 
         if (buf.byteLength > byteLength) {
             throw new Error(`Server responded with wrong data length. Requested: ${byteLength}, returned: ${buf.byteLength}`)

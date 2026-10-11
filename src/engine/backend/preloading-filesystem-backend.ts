@@ -43,8 +43,8 @@ export class PreloadingFilesystemBackend implements FilesystemBackend {
         return this.underlyingFilesystemBackend.saveDataBlock(sessionId, bytes, blockByteOffset, signal);
     }
 
-    async getDataBlock(driveId: DriveId, byteOffset: number, byteLength: number, cache = false): Promise<Uint8Array> {
-        return this.underlyingFilesystemBackend.getDataBlock(driveId, byteOffset, byteLength, cache);
+    async getDataBlock(driveId: DriveId, byteOffset: number, byteLength: number, cache = false, signal?: AbortSignal): Promise<Uint8Array> {
+        return this.underlyingFilesystemBackend.getDataBlock(driveId, byteOffset, byteLength, cache, signal);
     }
 
     async deleteDataRange(driveId: DriveId, start: number, end: number): Promise<void> {

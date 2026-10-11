@@ -54,7 +54,7 @@ export class CachingFilesystemBackend implements FilesystemBackend {
     return this.underlyingFilesystemBackend.saveDataBlock(sessionId, bytes, blockByteOffset, signal);
   }
 
-  async getDataBlock(driveId: DriveId, byteOffset: number, byteLength: number, cache = false): Promise<Uint8Array> {
+  async getDataBlock(driveId: DriveId, byteOffset: number, byteLength: number, cache = false, signal?: AbortSignal): Promise<Uint8Array> {
     if (byteLength <= 0) {
       throw new Error("byteLength is zero or negative: " + byteLength)
     }
@@ -64,7 +64,7 @@ export class CachingFilesystemBackend implements FilesystemBackend {
       buf = await getCachedUint8Value(this.DATA_CACHE, url);
     }
     if (!buf) {
-      buf = await this.underlyingFilesystemBackend.getDataBlock(driveId, byteOffset, byteLength)
+      buf = await this.underlyingFilesystemBackend.getDataBlock(driveId, byteOffset, byteLength, false, signal)
       if (cache) {
         await setCachedValue<Uint8Array>(this.DATA_CACHE, url, buf);
       }

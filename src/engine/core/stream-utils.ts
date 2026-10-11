@@ -13,9 +13,9 @@ export function checkEqual(a: Uint8Array, b: Uint8Array): boolean {
 }
 
 export async function readToUint8Array(rs: ReadableStream<Uint8Array>, size?: number): Promise<Uint8Array<ArrayBuffer>> {
-  return new Promise<Uint8Array<ArrayBuffer>>((resolve) => {
+  return new Promise<Uint8Array<ArrayBuffer>>((resolve, reject) => {
     const ws = ToUint8WritableStream(size, resolve);
-    rs.pipeTo(ws);
+    rs.pipeTo(ws).catch(reject);
   });
 }
 

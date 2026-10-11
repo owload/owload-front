@@ -2,6 +2,7 @@ import { getApiCall } from "../api/api";
 import type { DriveActionLogEntry } from "../service/drive-action-log";
 import type { DriveId } from "./drive-backend";
 import { FilesystemBackend, SessionId, SessionInfo } from "./filesystem-backend";
+import { DATA_BLOCK_TIMEOUT_MS } from "../core/constants";
 
 /** Reading a public drive with its link, without signing in. Nothing can be written through the link, so those calls refuse. */
 export class PublicFilesystemBackend implements FilesystemBackend {
@@ -11,12 +12,12 @@ export class PublicFilesystemBackend implements FilesystemBackend {
         return new Uint8Array(await getApiCall(`/public/${this.token}/ops/${startBytePos}`, "arraybuffer"));
     }
 
-    async getDataBlock(_driveId: DriveId, byteOffset: number, byteLength: number): Promise<Uint8Array> {
+    async getDataBlock(_driveId: DriveId, byteOffset: number, byteLength: number, _cache?: boolean, signal?: AbortSignal): Promise<Uint8Array> {
         if (byteLength <= 0) {
             throw new Error("byteLength is zero or negative: " + byteLength);
         }
         const url = `/public/${this.token}/data?start=${byteOffset}&end=${byteOffset + byteLength}`;
-        const buf = await getApiCall<Uint8Array>(url, "arraybuffer", undefined, 1000);
+        const buf = await getApiCall<Uint8Array>(url, "arraybuffer", signal, 1000, DATA_BLOCK_TIMEOUT_MS);
         if (buf.byteLength > byteLength) {
             throw new Error(`Server responded with wrong data length. Requested: ${byteLength}, returned: ${buf.byteLength}`);
         }
