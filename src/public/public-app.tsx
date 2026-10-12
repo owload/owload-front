@@ -43,6 +43,8 @@ function asDriveInfo(info: PublicDriveInfo): DriveInfo {
         peopleCount: 0,
         ownerName: info.ownerName,
         ownerEmail: null,
+        lastReadAt: info.lastReadAt ?? null,
+        storedBytes: null,
     };
 }
 

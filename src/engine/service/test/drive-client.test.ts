@@ -445,6 +445,18 @@ test('Upload writes blocks in parallel and never lets two requests touch the sam
   expect(checkEqual(back, data)).toBe(true);
 });
 
+test('File usage counts the files of the whole tree and can leave some out', async () => {
+  const driveClient = await getTestDriveClient();
+  await uploadTestFile("/", "a.txt", new Uint8Array(100), driveClient);
+  await driveClient.mkdir("/sub");
+  await uploadTestFile("/sub", "b.txt", new Uint8Array(250), driveClient);
+  await uploadTestFile("/", "$$$sy$s$stem!_thumb_360_x", new Uint8Array(40), driveClient);
+  expect(driveClient.getFileUsage(() => false)).toEqual({ fileCount: 3, usedBytes: 390 });
+  expect(driveClient.getFileUsage((name) => name.startsWith("$$$sy$s$stem!_"))).toEqual({ fileCount: 2, usedBytes: 350 });
+  expect(driveClient.cd("/sub")).toBeUndefined();
+  expect(driveClient.getFileUsage(() => false).fileCount).toBe(3); // wherever the user is, the whole drive is counted
+});
+
 test('Copying non-existing directory throws an error', async () => {
   const driveClient = await getTestDriveClient();
   await expect(driveClient.cp('nonexistent', ['nonexistent'], '/', 'REPLACE')).rejects.toThrowError('Source does not exist');

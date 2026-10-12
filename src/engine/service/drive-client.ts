@@ -202,6 +202,10 @@ export class DriveClient {
     return this.fsState.getTotalFileSize();
   }
 
+  public getFileUsage(skip: (name: string) => boolean): { fileCount: number; usedBytes: number } {
+    return this.fsState.getFileUsage(skip);
+  }
+
   public getEffectiveRanges(): Array<{ byteOffset: number; byteLength: number }> {
     return this.fsState.getAllFileRanges();
   }

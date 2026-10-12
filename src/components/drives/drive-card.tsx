@@ -3,7 +3,7 @@ import { Folder, ListChecks, Lock, LockOpen, SlidersHorizontal } from "lucide-re
 import { cn } from "@/lib/utils";
 import { DriveIcon } from "./drive-icon";
 import { DRIVE_KIND_LABEL, DriveKind } from "./drive-kind";
-import { PLACEHOLDER_FILE_COUNT, PLACEHOLDER_LAST_OPENED, PLACEHOLDER_TOTAL_SIZE, PLACEHOLDER_USED_PERCENT, PLACEHOLDER_USED_SIZE } from "./drive-placeholders";
+import { formatBytes, formatDateTime, usedPercent } from "./drive-stats-format";
 import { useDriveActions } from "./use-drive-actions";
 
 const iconButton = "flex size-11 flex-none cursor-pointer items-center justify-center rounded-[10px] text-sunny-ink outline-sunny-ink hover:bg-sunny-ink/10 focus-visible:outline-2 focus-visible:outline-offset-2";
@@ -14,8 +14,10 @@ const textButton = "flex h-11 cursor-pointer items-center gap-2 rounded-[10px] p
  * one is a white card of the same shape that shows only what is known while the drive is closed.
  */
 export function DriveCard({ driveInfo, kind }: { driveInfo: DriveInfo, kind: DriveKind }) {
-    const { driveOpen, passwordIsWrong, description, browse, close, tryAgain, settings, logs } = useDriveActions(driveInfo);
+    const { driveOpen, passwordIsWrong, description, fileCount, usedBytes, browse, close, tryAgain, settings, logs } = useDriveActions(driveInfo);
     const showsContents = driveOpen && !passwordIsWrong;
+    const percent = usedPercent(usedBytes, driveInfo.storedBytes);
+    const stored = driveInfo.storedBytes == null ? "…" : formatBytes(driveInfo.storedBytes); // the server is still counting
     const kindLabel = DRIVE_KIND_LABEL[kind];
     // What a drive that someone shared with me tells while it is closed: who shared it and what I may do on it.
     const sharedBy = kind === "with-me"
@@ -53,17 +55,21 @@ export function DriveCard({ driveInfo, kind }: { driveInfo: DriveInfo, kind: Dri
 
             <div className="flex min-w-0 max-w-[460px] flex-[1_1_300px] flex-col gap-1.5">
                 <div className="flex items-baseline gap-2">
-                    <span className="text-xl font-semibold leading-none">{showsContents ? PLACEHOLDER_USED_SIZE : PLACEHOLDER_TOTAL_SIZE}</span>
+                    <span className="text-xl font-semibold leading-none">{showsContents && usedBytes !== undefined ? formatBytes(usedBytes) : stored}</span>
                     <span className={cn("text-[13px]", showsContents ? "text-sunny-text-on-yellow" : "text-sunny-muted")}>
-                        {showsContents ? `of ${PLACEHOLDER_TOTAL_SIZE} · ${PLACEHOLDER_FILE_COUNT} files` : "total · contents hidden while closed"}
+                        {showsContents
+                            ? (fileCount !== undefined ? `in ${fileCount} ${fileCount === 1 ? "file" : "files"} · ${stored} stored` : `${stored} stored`)
+                            : "stored · contents hidden while closed"}
                     </span>
                 </div>
-                {showsContents ? (
-                    <div role="img" aria-label={`${PLACEHOLDER_USED_PERCENT} percent of the drive is used`} className="h-1 overflow-hidden rounded-full bg-sunny-ink/20">
-                        <div className="h-full rounded-full bg-sunny-ink" style={{ width: `${PLACEHOLDER_USED_PERCENT}%` }} />
+                {showsContents && percent !== undefined ? (
+                    <div role="img" aria-label={`Files take ${percent} percent of the ${stored} stored on the servers`} title="Files take this much of what is stored; the rest is old versions and previews" className="h-1 overflow-hidden rounded-full bg-sunny-ink/20">
+                        <div className="h-full rounded-full bg-sunny-ink" style={{ width: `${percent}%` }} />
                     </div>
-                ) : <div aria-hidden="true" className="h-1 rounded-full bg-sunny-line" />}
-                <span className={cn("text-xs", showsContents ? "text-sunny-text-on-yellow" : "text-sunny-muted")}>Last opened {PLACEHOLDER_LAST_OPENED}</span>
+                ) : <div aria-hidden="true" className={cn("h-1 rounded-full", showsContents ? "bg-sunny-ink/20" : "bg-sunny-line")} />}
+                <span title="By anyone: you, the people it is shared with, or a visitor of its public link" className={cn("text-xs", showsContents ? "text-sunny-text-on-yellow" : "text-sunny-muted")}>
+                    {driveInfo.lastReadAt ? `Last read ${formatDateTime(driveInfo.lastReadAt)}` : "Not read yet"}
+                </span>
             </div>
 
             <div className="flex w-full flex-wrap items-center gap-2 max-md:gap-1 md:ml-auto md:w-auto md:flex-none" onClick={(e) => e.stopPropagation()}>

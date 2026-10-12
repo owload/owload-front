@@ -42,6 +42,23 @@ export class FsState {
     return this.sumFileSizes(this.rootNode);
   }
 
+  /** How many files are in the whole tree and how many bytes they hold, leaving out the files for which `skip(name)` is true. */
+  public getFileUsage(skip: (name: string) => boolean): { fileCount: number; usedBytes: number } {
+    const usage = { fileCount: 0, usedBytes: 0 };
+    const walk = (node: FsTreeNode<FsObjectType>) => {
+      if (node.type === FsObjectType.FILE) {
+        if (!skip(node.name)) {
+          usage.fileCount++;
+          usage.usedBytes += (node.properties as FsFileProperties).byteLength ?? 0;
+        }
+        return;
+      }
+      node.childNodes.forEach(walk);
+    };
+    walk(this.rootNode);
+    return usage;
+  }
+
   public getAllFileRanges(): Array<{ byteOffset: number; byteLength: number }> {
     return this.collectRanges(this.rootNode);
   }

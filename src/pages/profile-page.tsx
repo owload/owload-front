@@ -8,13 +8,11 @@ import { ProfileButton } from "@/components/profile/profile-parts";
 import { ProfileTop } from "@/components/profile/profile-top";
 import { SecurityCard } from "@/components/profile/security-card";
 import { useUserProfile } from "@/hooks/use-user-profile";
-import { useFilesStore } from "@/stores/files-store";
 
 /** The profile of the signed-in user: personal info, sign-in and security, the plan. */
 export function ProfilePage() {
     const userInfo = useUserInfo();
     const doSignOut = useSignOut();
-    const drivesCount = useFilesStore((state) => state.drives.length);
     const { profile, saveName } = useUserProfile();
     // The backend keeps the name and the email; until they arrive, the sign-in token's values are shown.
     const name = (profile ? profile.name : userInfo.fullName) || undefined;
@@ -51,7 +49,7 @@ export function ProfilePage() {
                     />
                     <SecurityCard />
                     <div className="flex min-w-0 flex-col gap-5">
-                        <PlanCard drivesCount={drivesCount} />
+                        <PlanCard />
                         <ActivityCard />
                     </div>
                 </div>

@@ -2,6 +2,9 @@ import { FsObjectType, ProgressInfo } from "@/engine";
 
 export interface DriveStats {
   description?: string;
+  /** What the open drive holds, counted by the client that has its key (the server cannot): files without the system ones, and their bytes. */
+  fileCount?: number;
+  usedBytes?: number;
 }
 
 export interface FileProperties {

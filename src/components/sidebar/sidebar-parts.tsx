@@ -6,6 +6,9 @@ import { useUserProfile } from "@/hooks/use-user-profile";
 import { formatDateTime } from "@/lib/format-when";
 import { PRICING_URL } from "@/lib/site-links";
 import { cn } from "@/lib/utils";
+import { useOwnedStorage } from "@/hooks/use-owned-storage";
+import { FREE_PLAN_STORAGE_BYTES, storagePercent } from "@/lib/owned-storage";
+import { formatBytes } from "@/components/drives/drive-stats-format";
 
 /** The logo at the top of the dark side panel. */
 export function SidebarLogo() {
@@ -25,21 +28,26 @@ export function SidebarLogo() {
 }
 
 /**
- * The storage block and the last-seen line at the bottom of the side panel. The storage numbers are placeholders, as before;
- * "Last seen" is when the user was here before this visit (nothing on the very first visit).
+ * The storage block and the last-seen line at the bottom of the side panel. The storage is what the drives the user owns hold on the
+ * servers, out of the plan's fixed amount; "Last seen" is when the user was here before this visit (nothing on the very first visit).
  */
 export function SidebarStorage({ className }: { className?: string }) {
   const { profile } = useUserProfile();
   const lastSeen = formatDateTime(profile?.lastSeen);
+  const storage = useOwnedStorage();
+  const total = formatBytes(FREE_PLAN_STORAGE_BYTES);
+  const percent = storage ? storagePercent(storage.usedBytes) : 0;
   return (
     <div className={cn("flex flex-col gap-3.5", className)}>
       <div className="flex flex-col gap-2.5 rounded-[14px] bg-sidebar-accent p-3.5">
         <div className="flex items-baseline justify-between gap-2">
           <span className="font-semibold text-white">Storage</span>
-          <span className="text-xs text-sunny-on-dark">1.5 GB of 3 GB</span>
+          <span className="text-xs tabular-nums text-sunny-on-dark" title="What the drives you own hold on the servers">
+            {storage ? `${formatBytes(storage.usedBytes)}${storage.complete ? "" : "+"} of ${total}` : `of ${total}`}
+          </span>
         </div>
-        <div role="img" aria-label="Half of storage used" className="h-1 overflow-hidden rounded-full bg-sunny-ink-track">
-          <div className="h-full w-1/2 rounded-full bg-sidebar-primary" />
+        <div role="img" aria-label={storage ? `${formatBytes(storage.usedBytes)} of ${total} used by the drives you own` : "Storage is being counted"} className="h-1 overflow-hidden rounded-full bg-sunny-ink-track">
+          <div className="h-full rounded-full bg-sidebar-primary" style={{ width: `${percent}%` }} />
         </div>
         <Button asChild variant="outline" className="h-11 w-full rounded-[10px] border border-sidebar-primary bg-transparent font-semibold text-sidebar-primary hover:bg-sidebar-primary hover:text-sidebar-primary-foreground">
           <a href={PRICING_URL} target="_blank" rel="noopener noreferrer">Upgrade</a>

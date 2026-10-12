@@ -33,6 +33,11 @@ export interface DriveInfo {
   /** Who owns a drive that was shared with me. */
   ownerName: string | null;
   ownerEmail: string | null;
+  /** When anyone (not only me) last read the drive, in milliseconds; null if nobody has. */
+  lastReadAt: number | null;
+  /** How many bytes the drive's blocks take on the servers (live files, old versions and thumbnails together; freed blocks are not
+   *  counted); null while the server has not counted them yet. */
+  storedBytes: number | null;
 };
 
 export type S3PresetTier = 'hot' | 'cold';

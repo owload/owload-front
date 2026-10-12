@@ -18,6 +18,8 @@ export function useDriveActions(driveInfo: DriveInfo) {
         driveOpen,
         passwordIsWrong,
         description: driveStats?.description,
+        fileCount: driveStats?.fileCount,
+        usedBytes: driveStats?.usedBytes,
         browse: () => navigate(openDriveUrl),
         close: () => closeDrive(driveInfo.id),
         // closing forgets the wrong key, so that opening the drive asks for the password again

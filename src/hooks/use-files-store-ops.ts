@@ -150,7 +150,7 @@ export function useFilesStoreOps() {
             }));
         setFileObjects([...updatedDirObjects, ...updatedFileObjects]);
         const description = driveClient.getDescription();
-        setDriveStats(driveClient.getDriveId(), { description });
+        setDriveStats(driveClient.getDriveId(), { description, ...driveClient.getFileUsage((name) => name.startsWith(SYSTEM_PREFIX)) });
         if (filesToMoveOrCopy?.fileNames?.length && !filesToMoveOrCopyExist()) {
             clearFilesToMoveOrCopy();
         }

@@ -79,6 +79,7 @@ export interface PublicDriveInfo {
     createdTimestamp: number;
     dataLength: number;
     ownerName: string | null;
+    lastReadAt?: number | null;
 }
 
 /** Reads the description of a public drive; rejects with a 404 for a link that does not work (wrong, old or turned off). */

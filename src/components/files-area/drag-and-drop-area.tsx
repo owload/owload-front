@@ -6,8 +6,11 @@ import { useFilesStore } from "@/stores/files-store";
 import { Children, PropsWithChildren, cloneElement, useState } from "react";
 
 export function DragAndDropArea({ children }: PropsWithChildren) {
-    // On a phone there is no dropping of files; a reader may not add any.
-    const isDisabled = useIsMobile() || !useCanWrite();
+    // On a phone there is no dropping of files; a reader may not add any. Both hooks are always called: `||` between hook calls would skip
+    // the second one on a phone and change the order of hooks between renders.
+    const isMobile = useIsMobile();
+    const canWrite = useCanWrite();
+    const isDisabled = isMobile || !canWrite;
     const dragHappening = useFilesStore(state => state.dragHappening);
     const { pwd } = useFilesStoreOps();
     const dragEventUpload = useDragEventUpload();
