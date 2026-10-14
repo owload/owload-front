@@ -4,7 +4,7 @@ import type { FileProperties } from "@/types/types";
 import { getBufferingBackend } from "./buffering-filesystem-backend";
 import type { ByteRange, VideoBuffer } from "./video-buffer";
 import { MediaLoadingIndicator } from "@/components/media-preview/loading-indicator";
-import { DEFAULT_TARGET_SEC, TARGET_OPTIONS, decideAction, formatTime, nativeAheadSec, secondsNeeded } from "./player-model";
+import { AUTO_MAX_WAIT_SEC, AUTO_TARGET, DEFAULT_TARGET_SEC, TARGET_OPTIONS, decideAction, decideAfterTargetChange, formatTime, nativeAheadSec, prefetchSeconds, secondsNeeded, stabilizeNeeded } from "./player-model";
 
 const MIME_TYPES: Record<string, string> = { mp4: "video/mp4", mov: "video/quicktime", webm: "video/webm" };
 const TARGET_STORAGE_KEY = "owload.videoBuffer.target";
@@ -18,8 +18,9 @@ function loadTarget(): number {
   try {
     const stored = localStorage.getItem(TARGET_STORAGE_KEY);
     if (stored === "inf") return Infinity;
+    if (stored === "auto") return AUTO_TARGET;
     const n = Number(stored);
-    if (TARGET_OPTIONS.some((o) => o.seconds === n)) return n;
+    if (stored !== null && TARGET_OPTIONS.some((o) => o.seconds === n)) return n;
   } catch {
     // storage may be blocked
   }
@@ -46,7 +47,12 @@ export function BufferedVideoPlayer({ fileToPreview, thumbnailUrl }: Props) {
   const userPausedRef = useRef(false);
   const waitingRef = useRef(true);
   const targetRef = useRef(loadTarget());
-  const speedRatioRef = useRef<number | undefined>(undefined);
+  // What a wait is for and how far it has got, kept steady while the wait lasts (the speed they come from moves all the time).
+  const neededRef = useRef<number | undefined>(undefined);
+  const lastTargetRef = useRef(targetRef.current); // the choice the figures above were worked out for
+  const tickRef = useRef<() => void>(() => undefined);
+  const shownAheadRef = useRef(0);
+  const [waitView, setWaitView] = useState<{ ahead: number; needed: number }>({ ahead: 0, needed: 0 });
 
   const [ready, setReady] = useState(false);
   const [frameReady, setFrameReady] = useState(false);
@@ -93,16 +99,27 @@ export function BufferedVideoPlayer({ fileToPreview, thumbnailUrl }: Props) {
       const bytesPerSecond = len / video.duration;
       const playByte = video.currentTime * bytesPerSecond;
       const target = targetRef.current;
-      buffer.setWindow(playByte, Number.isFinite(target) ? target * bytesPerSecond : len);
+      const prefetch = prefetchSeconds(target);
+      buffer.setWindow(playByte, Number.isFinite(prefetch) ? prefetch * bytesPerSecond : len);
       const ahead = Math.max(buffer.heldAhead(playByte) / bytesPerSecond, nativeAheadSec(video.buffered, video.currentTime));
       const throughput = buffer.throughput();
       const speedRatio = throughput === undefined ? undefined : throughput / bytesPerSecond;
-      speedRatioRef.current = speedRatio;
       setAheadSec(ahead);
       setHeld(buffer.heldRanges());
       setProblem(buffer.problem());
       setSlow(buffer.isSlow());
-      const action = decideAction({
+      const remaining = Math.max(0, video.duration - video.currentTime);
+      if (waitingRef.current) {
+        const raw = secondsNeeded({ duration: video.duration, currentTime: video.currentTime, targetSec: target, speedRatio });
+        // a length the user chose is exact; in Auto it comes from the speed, so it is held steady for as long as the wait lasts
+        neededRef.current = target === AUTO_TARGET ? Math.min(stabilizeNeeded(neededRef.current, raw), AUTO_MAX_WAIT_SEC, remaining) : raw;
+        shownAheadRef.current = Math.max(shownAheadRef.current, ahead); // what is buffered does not seem to go back during a wait
+        setWaitView({ ahead: Math.min(shownAheadRef.current, neededRef.current), needed: neededRef.current });
+      } else {
+        neededRef.current = undefined;
+        shownAheadRef.current = 0;
+      }
+      const facts = {
         duration: video.duration,
         currentTime: video.currentTime,
         aheadSec: ahead,
@@ -111,7 +128,17 @@ export function BufferedVideoPlayer({ fileToPreview, thumbnailUrl }: Props) {
         userPaused: userPausedRef.current,
         waiting: waitingRef.current,
         speedRatio,
-      });
+      };
+      let action;
+      if (target !== lastTargetRef.current) {
+        // another choice was made: the figure of the old one goes, a new one is worked out and acted on at once, up or down
+        lastTargetRef.current = target;
+        neededRef.current = undefined;
+        action = decideAfterTargetChange(facts);
+        if (action === "pause-for-buffer") shownAheadRef.current = 0;
+      } else {
+        action = decideAction({ ...facts, neededSec: neededRef.current });
+      }
       if (action === "pause-for-buffer") {
         video.pause();
         setWaiting(true);
@@ -122,6 +149,7 @@ export function BufferedVideoPlayer({ fileToPreview, thumbnailUrl }: Props) {
         });
       }
     };
+    tickRef.current = tick;
     tick();
     const timer = setInterval(tick, 250);
     return () => clearInterval(timer);
@@ -180,7 +208,8 @@ export function BufferedVideoPlayer({ fileToPreview, thumbnailUrl }: Props) {
   function setTarget(seconds: number) {
     targetRef.current = seconds;
     setTargetState(seconds);
-    try { localStorage.setItem(TARGET_STORAGE_KEY, Number.isFinite(seconds) ? String(seconds) : "inf"); } catch { /* storage may be blocked */ }
+    tickRef.current(); // act on the new choice now, not at the next beat
+    try { localStorage.setItem(TARGET_STORAGE_KEY, seconds === AUTO_TARGET ? "auto" : Number.isFinite(seconds) ? String(seconds) : "inf"); } catch { /* storage may be blocked */ }
   }
 
   function toggleFullscreen() {
@@ -208,7 +237,6 @@ export function BufferedVideoPlayer({ fileToPreview, thumbnailUrl }: Props) {
 
   // Nothing of a player is drawn until there is a picture (the thumbnail or the first frame); until then an indicator says it is loading.
   const showsPicture = frameReady || !!thumbnailUrl;
-  const needed = secondsNeeded({ duration, currentTime: time, targetSec, speedRatio: speedRatioRef.current });
   const showWaiting = waiting && !userPausedRef.current && !error;
   const playedPercent = duration > 0 ? (time / duration) * 100 : 0;
   const btn = "flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-full text-white outline-sunny-yellow hover:bg-white/15 focus-visible:outline-2";
@@ -265,7 +293,7 @@ export function BufferedVideoPlayer({ fileToPreview, thumbnailUrl }: Props) {
         <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-2 text-white">
           <Loader2 className="size-9 animate-spin" aria-hidden="true" />
           <div className="rounded bg-sunny-ink/80 px-3 py-1 text-sm" role="status">
-            Buffering: {formatTime(aheadSec)} of {formatTime(needed)}. Press play to start now.
+            Buffering: {formatTime(waitView.ahead)} of {formatTime(waitView.needed)}. Press play to start now.
           </div>
           {slow && !problem && <div className="rounded bg-sunny-yellow px-3 py-1 text-sm text-sunny-text-on-yellow">Slow connection: loading a part at a time. This will take a while.</div>}
           {problem && <div className="rounded bg-sunny-yellow px-3 py-1 text-sm text-sunny-text-on-yellow">A part of the video is not loading ({problem}). Trying again.</div>}
@@ -318,8 +346,8 @@ export function BufferedVideoPlayer({ fileToPreview, thumbnailUrl }: Props) {
           >
             {RATES[rateIndex]}×
           </button>
-          <div className="ml-auto flex items-center gap-1 text-xs" role="group" aria-label="Buffer ahead">
-            <span className="hidden sm:inline text-sunny-on-dark">Buffer ahead</span>
+          <div className="ml-auto flex items-center gap-1 text-xs" role="group" aria-label="Buffer before playing">
+            <span className="hidden sm:inline text-sunny-on-dark" title="How much to load before the video starts (and after it has run dry). Auto works it out from the speed of your connection.">Buffer first</span>
             {TARGET_OPTIONS.map((o) => (
               <button
                 key={o.label}

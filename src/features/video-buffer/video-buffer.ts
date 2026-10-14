@@ -8,6 +8,8 @@ const PREFETCH_CONCURRENCY = 6;
 const FAILED_BLOCK_PAUSE_MS = 5000;
 /** The head and the tail of a file come first: an MP4 whose index is at the end cannot start without its tail. */
 const EDGE_BLOCKS = 2;
+/** How far past the window the player's own reads may go before they are held back (see `readPiece`), in blocks. */
+const READ_SLACK_BLOCKS = 2;
 
 export type ByteRange = [start: number, end: number];
 
@@ -59,6 +61,8 @@ export class VideoBuffer {
   private readonly abort = new AbortController();
   private windowFrom = 0;
   private windowTo = 0;
+  private readonly gated: Array<() => void> = [];
+  private windowKnown = false; // the player has said where it is at least once; until then nothing is held back
   private disposed = false;
   private ready: Promise<void>;
 
@@ -85,6 +89,7 @@ export class VideoBuffer {
   /** A piece of the file that lies inside one stored block (what the client asks the backend for). */
   async readPiece(offset: number, length: number): Promise<Uint8Array> {
     await this.ready;
+    await this.waitForWindow(offset - this.fileStart);
     const index = Math.floor(offset / this.blockSize);
     if (Math.floor((offset + length - 1) / this.blockSize) !== index) {
       throw new Error("A piece must lie inside one block");
@@ -97,9 +102,35 @@ export class VideoBuffer {
   /** Tells the buffer where the player is (a byte position in the file) and how far ahead to keep it filled. */
   setWindow(playByte: number, aheadBytes: number): void {
     const from = Math.max(0, Math.min(this.fileLength, Math.floor(playByte)));
+    this.windowKnown = true;
     this.windowFrom = from;
     this.windowTo = Math.min(this.fileLength, from + Math.max(0, aheadBytes));
+    this.releaseGated(); // the reads held back look again at where they stand
     this.pump();
+  }
+
+  /**
+   * The browser asks for a video with a range that runs to the end of the file and reads as much as it likes, whatever the user chose to
+   * buffer: a short video would be loaded whole with "30 s" selected. A read that is far past the window is held until the play position
+   * (or the choice) moves so that it is inside; the head and the tail of the file, and everything behind the window, are never held.
+   */
+  private async waitForWindow(relativeOffset: number): Promise<void> {
+    const edge = EDGE_BLOCKS * this.blockSize;
+    const slack = READ_SLACK_BLOCKS * this.blockSize;
+    while (
+      this.windowKnown &&
+      !this.disposed &&
+      relativeOffset >= edge &&
+      relativeOffset < this.fileLength - edge &&
+      relativeOffset >= this.windowTo + slack
+    ) {
+      await new Promise<void>((resolve) => this.gated.push(resolve));
+    }
+  }
+
+  private releaseGated(): void {
+    const waiting = this.gated.splice(0);
+    for (const resolve of waiting) resolve();
   }
 
   /** What is held, as ranges of bytes of the file, merged. */
@@ -148,6 +179,7 @@ export class VideoBuffer {
   async dispose(clear: boolean): Promise<void> {
     this.disposed = true;
     this.abort.abort();
+    this.releaseGated();
     this.listeners.clear();
     if (clear) await this.options.store.clear();
   }

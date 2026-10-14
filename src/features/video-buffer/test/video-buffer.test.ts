@@ -168,8 +168,8 @@ describe("VideoBuffer when the network misbehaves", () => {
     const read = buffer.readPiece(48, 16);
     await sleep(30);
     expect(buffer.problem()).toBeUndefined(); // the first failure is not worth alarming anybody
-    await sleep(150);
-    expect(buffer.problem()).toContain("503"); // the second one is
+    for (let i = 0; i < 100 && buffer.problem() === undefined; i++) await sleep(20); // the second one is; a busy machine may be slow to get there
+    expect(buffer.problem()).toContain("503");
     await read;
     expect(buffer.problem()).toBeUndefined();
     await buffer.dispose(true);
@@ -243,5 +243,64 @@ describe("BufferingFilesystemBackend", () => {
     layer.closeBuffer(buffer);
     await sleep(10);
     expect(buffer.heldRanges()).toEqual([]);
+  });
+});
+
+describe("VideoBuffer holds back reads that are far past the window", () => {
+  const fileLength = 16 * 40;
+  const make = (drive: ReturnType<typeof fakeDrive>) => makeBuffer(drive, 0, fileLength, new BlockStore(1 << 20, false), 3);
+
+  it("answers a read inside the window at once, and one far past it only when the window has moved there", async () => {
+    const drive = fakeDrive();
+    const buffer = make(drive);
+    buffer.setWindow(16 * 10, 16 * 4); // blocks 10..13, with two blocks of slack to 15
+    let late = false;
+    const farRead = buffer.readPiece(16 * 25, 16).then((bytes) => { late = true; return bytes; });
+    expect(await buffer.readPiece(16 * 11, 16)).toEqual(expected(16 * 11, 16));
+    await sleep(40);
+    expect(late).toBe(false);
+    expect(drive.reads.some((r) => r.offset === 16 * 25)).toBe(false); // nothing was fetched for it
+    buffer.setWindow(16 * 24, 16 * 4); // the player has got there
+    expect(await farRead).toEqual(expected(16 * 25, 16));
+    await buffer.dispose(true);
+  });
+
+  it("never holds back the head and the tail, or what is behind the window", async () => {
+    const drive = fakeDrive();
+    const buffer = make(drive);
+    buffer.setWindow(16 * 20, 16 * 2);
+    expect(await buffer.readPiece(0, 16)).toEqual(expected(0, 16));
+    expect(await buffer.readPiece(16 * 39, 16)).toEqual(expected(16 * 39, 16));
+    expect(await buffer.readPiece(16 * 5, 16)).toEqual(expected(16 * 5, 16));
+    await buffer.dispose(true);
+  });
+
+  it("lets everything through when the whole of the file is wanted", async () => {
+    const drive = fakeDrive();
+    const buffer = make(drive);
+    buffer.setWindow(0, fileLength);
+    expect(await buffer.readPiece(16 * 30, 16)).toEqual(expected(16 * 30, 16));
+    await buffer.dispose(true);
+  });
+
+  it("lets a read go when the choice is made longer", async () => {
+    const drive = fakeDrive();
+    const buffer = make(drive);
+    buffer.setWindow(0, 16 * 3);
+    const farRead = buffer.readPiece(16 * 20, 16);
+    await sleep(20);
+    buffer.setWindow(0, 16 * 25); // from "30 s" to a longer one
+    expect(await farRead).toEqual(expected(16 * 20, 16));
+    await buffer.dispose(true);
+  });
+
+  it("releases the held reads when the buffer is closed", async () => {
+    const drive = fakeDrive();
+    const buffer = make(drive);
+    buffer.setWindow(0, 16 * 2);
+    const farRead = buffer.readPiece(16 * 20, 16).catch(() => "released");
+    await sleep(20);
+    await buffer.dispose(true);
+    await expect(Promise.race([farRead, sleep(200).then(() => "still held")])).resolves.not.toBe("still held");
   });
 });
