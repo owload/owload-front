@@ -3,7 +3,7 @@ import { ExternalLink, Files, FolderOpen, Info, SquarePen, SquareScissors, Trash
 import { Drawer, DrawerContent, DrawerDescription, DrawerTitle } from "../ui/drawer";
 import { FsObjectType } from "@/engine";
 import { FileProperties } from "@/types/types";
-import { cn } from "@/lib/utils";
+import { cn, isTauri } from "@/lib/utils";
 import { getColorClassname } from "./extension-badge";
 import { readableSize } from "./file-object";
 
@@ -16,7 +16,8 @@ export type FileActionsSheetProps = {
     /** False for a reader: the sheet then has no rename, copy, cut or delete. */
     canWrite?: boolean;
     onOpen: () => void;
-    onOpenInNewTab: () => void;
+    /** Not given where a new tab cannot be opened (the anonymous viewer of a public link). */
+    onOpenInNewTab?: () => void;
     onDownload: () => void;
     onRename: () => void;
     onCopy: () => void;
@@ -59,8 +60,8 @@ export function FileActionsSheet(props: FileActionsSheetProps) {
                     </div>
                 </div>
                 <div role="menu" className="flex flex-col">
+                    {props.canOpen && single && props.onOpenInNewTab && <Item icon={<ExternalLink />} onClick={run(props.onOpenInNewTab)}>{isTauri() ? "Open in new window" : "Open in new tab"}</Item>}
                     {props.canOpen && <Item icon={<FolderOpen />} onClick={run(props.onOpen)}>Open</Item>}
-                    {props.canOpen && single && !isDir && <Item icon={<ExternalLink />} onClick={run(props.onOpenInNewTab)}>Open in new tab</Item>}
                     {props.canDownload && <Item icon={<CloudDownload />} onClick={run(props.onDownload)}>Download</Item>}
                     {(props.canOpen || props.canDownload) && <Separator />}
                     {props.canWrite !== false && <>

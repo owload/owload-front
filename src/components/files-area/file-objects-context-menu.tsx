@@ -26,6 +26,8 @@ export function FileObjectsContextMenu({ children, fileObject }: PropsWithChildr
     const mobileFileSelectModeOn = useIsMobileSelectModeOn();
     const activateMobileSelectMode = useActivateMobileSelectMode();
     const selectIds = useFilesStore((state) => state.selectIds);
+    // A new tab does not have the visitor's link of a public drive (it is kept in the tab's own session storage), so it is not offered there.
+    const canOpenInNewTab = useFilesStore((state) => state.publicToken) === undefined;
 
     function handleCopyClick(e: React.PointerEvent<HTMLDivElement>) {
         e.stopPropagation();
@@ -88,7 +90,7 @@ export function FileObjectsContextMenu({ children, fileObject }: PropsWithChildr
                     canOpen={isSelectedObjectOpenAvailable()}
                     canDownload={isSelectedObjectDownloadAvailable()}
                     onOpen={openSelectedObject}
-                    onOpenInNewTab={openSelectedObjectInNewTab}
+                    onOpenInNewTab={canOpenInNewTab ? openSelectedObjectInNewTab : undefined}
                     onDownload={downloadSelectedObject}
                     canWrite={canWrite}
                     onRename={() => openRenameDialog({ pathSrc: pwd()!, originalName: selectedFileObjects[0].name })}
@@ -111,12 +113,12 @@ export function FileObjectsContextMenu({ children, fileObject }: PropsWithChildr
                     Select
                     <ContextMenuShortcut>⌘O</ContextMenuShortcut>
                 </ContextMenuItem>}
+                {isSelectedObjectOpenAvailable() && canOpenInNewTab && <ContextMenuItem onClick={openSelectedObjectInNewTab}>
+                    <ExternalLink />{isTauri() ? 'Open in new window' : 'Open in new tab'}
+                </ContextMenuItem>}
                 {isSelectedObjectOpenAvailable() && <ContextMenuItem onClick={openSelectedObject}>
                     <FolderOpen />Open
                     <ContextMenuShortcut>⌘O</ContextMenuShortcut>
-                </ContextMenuItem>}
-                {isSelectedObjectOpenAvailable() && selectedFileObjects[0]?.type !== FsObjectType.DIR && <ContextMenuItem onClick={openSelectedObjectInNewTab}>
-                    <ExternalLink />{isTauri() ? 'Open in new window' : 'Open in new tab'}
                 </ContextMenuItem>}
                 {isSelectedObjectDownloadAvailable() && <ContextMenuItem onClick={handleDownloadClick}>
                     <CloudDownload />Download
