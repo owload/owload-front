@@ -241,6 +241,8 @@ export function BufferedVideoPlayer({ fileToPreview, thumbnailUrl }: Props) {
   const playedPercent = duration > 0 ? (time / duration) * 100 : 0;
   const btn = "flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-full text-white outline-sunny-yellow hover:bg-white/15 focus-visible:outline-2";
 
+  // The video and its picture are limited by the window, not by a percentage of this box: the box is as big as its content, so a percentage of
+  // it is no limit at all and a tall video would run off the screen. The preview is a full-window overlay, so the window is its size.
   return (
     <div
       ref={containerRef}
@@ -256,11 +258,11 @@ export function BufferedVideoPlayer({ fileToPreview, thumbnailUrl }: Props) {
         </div>
       )}
       {!showsPicture && !error && <MediaLoadingIndicator label="Loading video" />}
-      {!frameReady && thumbnailUrl && <img src={thumbnailUrl} alt="" className="max-h-full max-w-full" />}
+      {!frameReady && thumbnailUrl && <img src={thumbnailUrl} alt="" className="max-h-[100dvh] max-w-[100vw]" />}
       {ready && (
         <video
           ref={videoRef}
-          className="max-h-full max-w-full"
+          className="max-h-[100dvh] max-w-[100vw]"
           style={frameReady ? undefined : { display: "none" }}
           playsInline
           muted={muted}
