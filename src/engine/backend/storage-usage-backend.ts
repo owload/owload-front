@@ -1,0 +1,15 @@
+import { getApiCall } from "../api/api";
+
+/** What the drives the user owns take in the storages (GET /userinfo/storage): in Owload's own (S3 presets) and in the user's own S3. */
+export interface StorageUsage {
+    presetBytes: number;
+    customBytes: number;
+    presetDrives: number;
+    customDrives: number;
+    /** False while the server has not counted some storage of some drive yet: the numbers are then a part of the whole. */
+    complete: boolean;
+}
+
+export function getStorageUsage(): Promise<StorageUsage> {
+    return getApiCall<StorageUsage>("/userinfo/storage");
+}

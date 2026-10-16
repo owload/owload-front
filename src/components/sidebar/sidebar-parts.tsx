@@ -6,8 +6,8 @@ import { useUserProfile } from "@/hooks/use-user-profile";
 import { formatDateTime } from "@/lib/format-when";
 import { PRICING_URL } from "@/lib/site-links";
 import { cn } from "@/lib/utils";
-import { useOwnedStorage } from "@/hooks/use-owned-storage";
-import { FREE_PLAN_STORAGE_BYTES, storagePercent } from "@/lib/owned-storage";
+import { useStorageUsage } from "@/hooks/use-storage-usage";
+import { FREE_PLAN_STORAGE_BYTES, storagePercent } from "@/lib/storage-usage";
 import { formatBytes } from "@/components/drives/drive-stats-format";
 
 /** The logo at the top of the dark side panel. */
@@ -28,25 +28,26 @@ export function SidebarLogo() {
 }
 
 /**
- * The storage block and the last-seen line at the bottom of the side panel. The storage is what the drives the user owns hold on the
- * servers, out of the plan's fixed amount; "Last seen" is when the user was here before this visit (nothing on the very first visit).
+ * The storage block and the last-seen line at the bottom of the side panel. The storage is what the drives the user owns hold in Owload's
+ * own storage (the S3 presets), out of the plan's fixed amount; the user's own S3 is not limited and is not shown here (the profile page
+ * has it). "Last seen" is when the user was here before this visit (nothing on the very first visit).
  */
 export function SidebarStorage({ className }: { className?: string }) {
   const { profile } = useUserProfile();
   const lastSeen = formatDateTime(profile?.lastSeen);
-  const storage = useOwnedStorage();
+  const usage = useStorageUsage();
   const total = formatBytes(FREE_PLAN_STORAGE_BYTES);
-  const percent = storage ? storagePercent(storage.usedBytes) : 0;
+  const percent = usage ? storagePercent(usage.presetBytes) : 0;
   return (
     <div className={cn("flex flex-col gap-3.5", className)}>
       <div className="flex flex-col gap-2.5 rounded-[14px] bg-sidebar-accent p-3.5">
         <div className="flex items-baseline justify-between gap-2">
           <span className="font-semibold text-white">Storage</span>
-          <span className="text-xs tabular-nums text-sunny-on-dark" title="What the drives you own hold on the servers">
-            {storage ? `${formatBytes(storage.usedBytes)}${storage.complete ? "" : "+"} of ${total}` : `of ${total}`}
+          <span className="text-xs tabular-nums text-sunny-on-dark" title="What your drives hold in Owload's storage (drives on your own S3 are not counted)">
+            {usage ? `${formatBytes(usage.presetBytes)}${usage.complete ? "" : "+"} of ${total}` : `of ${total}`}
           </span>
         </div>
-        <div role="img" aria-label={storage ? `${formatBytes(storage.usedBytes)} of ${total} used by the drives you own` : "Storage is being counted"} className="h-1 overflow-hidden rounded-full bg-sunny-ink-track">
+        <div role="img" aria-label={usage ? `${formatBytes(usage.presetBytes)} of ${total} of Owload storage used` : "Storage is being counted"} className="h-1 overflow-hidden rounded-full bg-sunny-ink-track">
           <div className="h-full rounded-full bg-sidebar-primary" style={{ width: `${percent}%` }} />
         </div>
         <Button asChild variant="outline" className="h-11 w-full rounded-[10px] border border-sidebar-primary bg-transparent font-semibold text-sidebar-primary hover:bg-sidebar-primary hover:text-sidebar-primary-foreground">

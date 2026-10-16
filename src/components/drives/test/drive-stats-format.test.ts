@@ -9,7 +9,9 @@ describe("formatBytes", () => {
         expect(formatBytes(1536)).toBe("1.5 KB");
         expect(formatBytes(12 * 1024 * 1024)).toBe("12 MB");
         expect(formatBytes(1.5 * 1024 ** 3)).toBe("1.5 GB");
-        expect(formatBytes(3 * 1024 ** 4)).toBe("3.0 TB");
+        expect(formatBytes(3 * 1024 ** 4)).toBe("3 TB");
+        expect(formatBytes(2 * 1024 ** 2)).toBe("2 MB");
+        expect(formatBytes(2.5 * 1024 ** 2)).toBe("2.5 MB");
     });
 });
 

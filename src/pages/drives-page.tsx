@@ -6,10 +6,12 @@ import { DebouncedSkeleton } from "@/components/ui/debounced-skeleton";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCloseAllDrives } from "@/hooks/use-close-drives";
 import { useFilesStore } from "@/stores/files-store";
+import { useRefreshUncountedDrives } from "@/hooks/use-refresh-uncounted-drives";
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 
 export function DrivesPage() {
+    useRefreshUncountedDrives();
     const drives = useFilesStore((state) => state.drives);
     const drivesInitialized = useFilesStore((state) => state.drivesInitialized);
     const driveKeys = useFilesStore((state) => state.driveKeys);

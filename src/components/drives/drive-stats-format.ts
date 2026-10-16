@@ -10,7 +10,7 @@ export function formatBytes(bytes: number): string {
         unit++;
     }
     const digits = unit === 0 || value >= 10 ? 0 : 1;
-    return `${value.toFixed(digits)} ${UNITS[unit]}`;
+    return `${value.toFixed(digits).replace(/\.0$/, "")} ${UNITS[unit]}`; // "3 GB", not "3.0 GB"
 }
 
 /** "Dec 12, 2024, 12:32" in the user's own language and time zone. */
