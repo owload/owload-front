@@ -12,7 +12,7 @@ import { MediaPreview } from "@/components/media-preview/media-preview";
 import type { MediaViewerSource } from "@/components/media-preview/preview-source";
 import type { FileProperties } from "@/types/types";
 import { useMediaLibrary } from "@/features/media/use-media-library";
-import { blocksInView, buildSections, layoutSections, TILE_SIZES, type GroupBy, type TileSize } from "@/features/media/media-layout";
+import { blocksInView, buildSections, layoutSections, TILE_SIZES, type GroupBy, type LayoutMode, type TileSize } from "@/features/media/media-layout";
 import { MediaTile } from "@/features/media/media-tile";
 import { clearThumbnails } from "@/features/media/media-thumbnails";
 import { describeCounts } from "@/features/media/media-format";
@@ -34,6 +34,11 @@ const GROUPS: ReadonlyArray<{ value: GroupBy; label: string; name: string }> = [
     { value: "day", label: "Days", name: "By day" },
     { value: "month", label: "Months", name: "By month" },
 ];
+const MODES: ReadonlyArray<{ value: LayoutMode; label: string; name: string }> = [
+    { value: "mosaic", label: "Mosaic", name: "Tiles of different sizes" },
+    { value: "rows", label: "Rows", name: "Rows with the proportions of each picture" },
+];
+const MODE_KEY = "owload.mediaLayout";
 const SIZE_KEY = "owload.mediaTileSize";
 const GROUP_KEY = "owload.mediaGroupBy";
 const HEADER_HEIGHT = 52;
@@ -65,6 +70,16 @@ function loadGroup(): GroupBy {
 function fileProperties(file: { id: string; name: string; byteOffset: number; byteLength: number }): FileProperties {
     const extension = file.name.includes(".") ? file.name.split(".").pop()!.toLowerCase() : "";
     return { id: file.id, type: FsObjectType.FILE, name: file.name, extension, byteOffset: file.byteOffset, byteLength: file.byteLength, finished: true };
+}
+
+function loadMode(): LayoutMode {
+    try {
+        const stored = localStorage.getItem(MODE_KEY);
+        if (stored === "mosaic" || stored === "rows") return stored;
+    } catch {
+        // storage may be blocked
+    }
+    return "mosaic";
 }
 
 function toFileProperties(item: MediaItem): FileProperties {
@@ -102,6 +117,7 @@ export function MediaPage() {
     const [filter, setFilter] = useState<Filter>("all");
     const [size, setSizeState] = useState<TileSize>(loadSize);
     const [groupBy, setGroupByState] = useState<GroupBy>(loadGroup);
+    const [mode, setModeState] = useState<LayoutMode>(loadMode);
     const [viewerId, setViewerId] = useState<string | undefined>();
     const [scroll, setScroll] = useState({ top: 0, height: 800 });
     const [width, setWidth] = useState(0);
@@ -115,6 +131,11 @@ export function MediaPage() {
     const setGroupBy = (next: GroupBy) => {
         setGroupByState(next);
         try { localStorage.setItem(GROUP_KEY, next); } catch { /* storage may be blocked */ }
+    };
+
+    const setMode = (next: LayoutMode) => {
+        setModeState(next);
+        try { localStorage.setItem(MODE_KEY, next); } catch { /* storage may be blocked */ }
     };
 
     useEffect(() => () => clearThumbnails(), []);
@@ -151,10 +172,11 @@ export function MediaPage() {
     const items = useMemo(() => (filter === "all" ? snapshot.items : snapshot.items.filter((item) => item.kind === filter)), [snapshot.items, filter]);
     const byId = useMemo(() => new Map(items.map((item) => [item.id, item])), [items]);
 
-    const targetHeight = TILE_SIZES[size] * (isMobile ? 0.62 : 1);
+    // in the mosaic the size is that of one cell, which a picture may take two or four of: a little smaller than a row of the same setting
+    const targetHeight = TILE_SIZES[size] * (isMobile ? 0.62 : 1) * (mode === "mosaic" ? 0.8 : 1);
     const layout = useMemo(
-        () => layoutSections(buildSections(items.map((i) => ({ id: i.id, aspect: i.aspect, takenAt: i.takenAt })), Date.now(), groupBy), { width, targetHeight, gap: isMobile ? 3 : 4, headerHeight: HEADER_HEIGHT, sectionGap: SECTION_GAP }),
-        [items, width, targetHeight, isMobile, groupBy],
+        () => layoutSections(buildSections(items.map((i) => ({ id: i.id, aspect: i.aspect, takenAt: i.takenAt })), Date.now(), groupBy), { width, targetHeight, mode, gap: isMobile ? 3 : 4, headerHeight: HEADER_HEIGHT, sectionGap: SECTION_GAP }),
+        [items, width, targetHeight, isMobile, groupBy, mode],
     );
     const visible = useMemo(() => blocksInView(layout, scroll.top - OVERSCAN, scroll.top + scroll.height + OVERSCAN), [layout, scroll]);
 
@@ -195,6 +217,11 @@ export function MediaPage() {
                     <div role="group" aria-label="Show" className="flex items-center rounded-full bg-sunny-field p-0.5">
                         {FILTERS.map((f) => (
                             <button key={f.value} type="button" aria-pressed={filter === f.value} className={segmentClass(filter === f.value)} onClick={() => setFilter(f.value)}>{f.label}</button>
+                        ))}
+                    </div>
+                    <div role="group" aria-label="Layout" className="flex items-center rounded-full bg-sunny-field p-0.5">
+                        {MODES.map((m) => (
+                            <button key={m.value} type="button" aria-label={m.name} aria-pressed={mode === m.value} className={segmentClass(mode === m.value)} onClick={() => setMode(m.value)}>{m.label}</button>
                         ))}
                     </div>
                     <div role="group" aria-label="Group by" className="flex items-center rounded-full bg-sunny-field p-0.5">
@@ -238,7 +265,7 @@ export function MediaPage() {
                                         {block.tiles.map((tile) => {
                                             const item = byId.get(tile.id);
                                             return item && driveClient ? (
-                                                <MediaTile key={tile.id} item={item} driveClient={driveClient} left={tile.left} width={tile.width} height={tile.height} onOpen={setViewerId} />
+                                                <MediaTile key={tile.id} item={item} driveClient={driveClient} left={tile.left} top={tile.top} width={tile.width} height={tile.height} onOpen={setViewerId} />
                                             ) : null;
                                         })}
                                     </div>

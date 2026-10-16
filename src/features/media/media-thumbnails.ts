@@ -1,5 +1,8 @@
 import { PhotoCache } from "@/lib/photo-cache";
 import type { DriveClient } from "@/engine";
+import { registry } from "@/extensions/registry";
+import { requestPreview } from "@/extensions/preview";
+import { isExtensionPhoto } from "@/components/media-preview/extension-photo";
 import type { MediaItem } from "./media-library";
 
 /** At most this many small pictures are fetched and decrypted at once: scrolling quickly asks for hundreds. */
@@ -31,11 +34,15 @@ function imageType(bytes: Uint8Array): string {
     return "";
 }
 
-/** The address of the small picture of a media file, or undefined when the drive has none for it. */
-export function loadThumbnail(driveClient: DriveClient, item: MediaItem, stillWanted: () => boolean): Promise<string | undefined> {
-    const thumbnail = item.thumbnail;
-    if (!thumbnail) return Promise.resolve(undefined);
-    return cache.get(item.id, async () => {
+/** A tile wider or taller than this many pixels is shown with the larger picture (about 1024 pixels), where the drive has one, so that it is not blurred. */
+const LARGE_TILE = 380;
+
+/** The address of the picture of a media file for a tile of this size, or undefined when the drive has none for it. */
+export function loadThumbnail(driveClient: DriveClient, item: MediaItem, stillWanted: () => boolean, tileWidth = 0, tileHeight = 0): Promise<string | undefined> {
+    const large = (tileWidth > LARGE_TILE || tileHeight > LARGE_TILE) && item.preview !== undefined;
+    const thumbnail = large ? item.preview : item.thumbnail;
+    if (!thumbnail) return decodeThumbnail(driveClient, item, stillWanted, tileWidth > LARGE_TILE || tileHeight > LARGE_TILE ? 720 : 360);
+    return cache.get(`${item.id}:${large ? "large" : "small"}`, async () => {
         await takeSlot();
         try {
             if (!stillWanted()) throw new NotWantedAnymore();
@@ -43,6 +50,45 @@ export function loadThumbnail(driveClient: DriveClient, item: MediaItem, stillWa
             return URL.createObjectURL(new Blob([bytes], { type: imageType(bytes) }));
         } finally {
             giveSlot();
+        }
+    });
+}
+
+/** Decoding a photo takes a worker and a few seconds of the processor: two at a time, apart from the fetching of the small pictures. */
+const DECODE_CONCURRENCY = 2;
+const DECODE_TIMEOUT_MS = 60_000;
+/** The usual limit of a stored thumbnail is small; a 720-pixel PNG is more. */
+const DECODED_MAX_BYTES = 4 * 1024 * 1024;
+let decoding = 0;
+const decodeWaiting: Array<() => void> = [];
+
+async function takeDecodeSlot(): Promise<void> {
+    if (decoding < DECODE_CONCURRENCY) { decoding++; return; }
+    await new Promise<void>((resolve) => decodeWaiting.push(resolve));
+}
+
+function giveDecodeSlot(): void {
+    const next = decodeWaiting.shift();
+    if (next) next();
+    else decoding--;
+}
+
+/** A photo the browser cannot draw (HEIC) and that has no small picture in the drive (uploaded before there were any, or while no extension could make one) is decoded here, from the file itself. */
+function decodeThumbnail(driveClient: DriveClient, item: MediaItem, stillWanted: () => boolean, size: number): Promise<string | undefined> {
+    if (item.kind !== "photo" || !isExtensionPhoto(item.name) || item.file.finished === false) return Promise.resolve(undefined);
+    const entry = registry.forFileName(item.name);
+    if (!entry?.extension.preview) return Promise.resolve(undefined);
+    return cache.get(`${item.id}:decoded:${size}`, async () => {
+        await takeDecodeSlot();
+        try {
+            if (!stillWanted()) throw new NotWantedAnymore();
+            const data = await driveClient.getFileData(item.file.byteOffset, item.file.byteLength, "", false);
+            if (!stillWanted()) throw new NotWantedAnymore();
+            const png = await requestPreview(entry.extension, data, { size, timeoutMs: DECODE_TIMEOUT_MS, maxBytes: DECODED_MAX_BYTES });
+            if (!png) throw new Error("The photo could not be decoded");
+            return URL.createObjectURL(new Blob([png as Uint8Array<ArrayBuffer>], { type: "image/png" }));
+        } finally {
+            giveDecodeSlot();
         }
     });
 }

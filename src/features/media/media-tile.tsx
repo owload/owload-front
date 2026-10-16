@@ -12,11 +12,13 @@ interface Props {
     width: number;
     height: number;
     left: number;
+    /** Distance from the top of its block (the mosaic has tiles that start lower than the others of the block). */
+    top?: number;
     onOpen: (id: string) => void;
 }
 
 /** One picture of the mosaic: its small picture when it has arrived, a quiet colour before that, a play mark and the length for a video. */
-export const MediaTile = memo(function MediaTile({ item, driveClient, width, height, left, onOpen }: Props) {
+export const MediaTile = memo(function MediaTile({ item, driveClient, width, height, left, top = 0, onOpen }: Props) {
     const [url, setUrl] = useState<string | undefined>();
     const [failed, setFailed] = useState(false);
 
@@ -24,11 +26,11 @@ export const MediaTile = memo(function MediaTile({ item, driveClient, width, hei
         let wanted = true;
         setUrl(undefined);
         setFailed(false);
-        loadThumbnail(driveClient, item, () => wanted)
+        loadThumbnail(driveClient, item, () => wanted, width, height)
             .then((address) => { if (wanted) { setUrl(address); setFailed(address === undefined); } })
             .catch((error) => { if (wanted && !(error instanceof NotWantedAnymore)) setFailed(true); });
         return () => { wanted = false; };
-    }, [driveClient, item.id, item.thumbnail?.id]);
+    }, [driveClient, item.id, item.thumbnail?.id, item.preview?.id, width > 380 || height > 380]);
 
     const Icon = item.kind === "video" ? Film : ImageIcon;
     return (
@@ -37,8 +39,8 @@ export const MediaTile = memo(function MediaTile({ item, driveClient, width, hei
             onClick={() => onOpen(item.id)}
             aria-label={`${item.kind === "video" ? "Video" : "Photo"} ${item.name}`}
             title={item.name}
-            style={{ left, width, height }}
-            className="group absolute top-0 cursor-pointer overflow-hidden rounded-[10px] bg-sunny-field outline-sunny-ink focus-visible:outline-2 focus-visible:outline-offset-2"
+            style={{ left, top, width, height }}
+            className="group absolute cursor-pointer overflow-hidden rounded-[10px] bg-sunny-field outline-sunny-ink focus-visible:outline-2 focus-visible:outline-offset-2"
         >
             {url ? (
                 <img src={url} alt="" draggable={false} className="absolute inset-0 size-full object-cover transition-transform duration-300 group-hover:scale-[1.03]" />

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { blocksInView, buildSections, clampAspect, dayKey, dayLabel, justifyRows, layoutSections, MAX_ASPECT, MIN_ASPECT, type LayoutItem } from "../media-layout";
+import { blocksInView, buildSections, clampAspect, dayKey, dayLabel, justifyRows, layoutSections, MAX_ASPECT, MIN_ASPECT, mosaicColumns, packMosaic, unitHash, type LayoutItem } from "../media-layout";
 
 const item = (id: string, aspect: number, takenAt = Date.UTC(2024, 2, 9, 12)): LayoutItem => ({ id, aspect, takenAt });
 const options = { width: 1000, targetHeight: 200, gap: 4, headerHeight: 44, sectionGap: 16 };
@@ -154,5 +154,114 @@ describe("grouping modes", () => {
     it("tells a month by its number, so that two Mays of different years are two sections", () => {
         const sections = buildSections([item("a", 1, noon(2024, 5, 3)), item("b", 1, noon(2023, 5, 3))], now, "month");
         expect(sections.map((s) => s.key)).toEqual(["2024-05", "2023-05"]);
+    });
+});
+
+describe("the mosaic", () => {
+    const same = (n: number, aspect = 4 / 3): LayoutItem[] => Array.from({ length: n }, (_, i) => item(`photo-${i}`, aspect, Date.UTC(2024, 2, 9, 12) - i * 60_000));
+    const cellsOf = (tiles: ReturnType<typeof packMosaic>["tiles"]) => tiles.flatMap((t) => Array.from({ length: t.columns * t.rows }, (_, i) => `${t.row + Math.floor(i / t.columns)}:${t.column + (i % t.columns)}`));
+
+    it("gives the same number back for the same name, and different ones for different names", () => {
+        expect(unitHash("a")).toBe(unitHash("a"));
+        expect(unitHash("a")).not.toBe(unitHash("b"));
+        for (const name of ["", "a", "photo-1", "é"]) expect(unitHash(name)).toBeGreaterThanOrEqual(0);
+    });
+
+    it("takes as many columns as the cell size allows, at least two", () => {
+        expect(mosaicColumns(1000, 220, 4)).toBe(4);
+        expect(mosaicColumns(1000, 150, 4)).toBe(7);
+        expect(mosaicColumns(300, 400, 4)).toBe(2);
+    });
+
+    it("places every picture once, on no cell twice, inside the columns", () => {
+        const { tiles } = packMosaic(same(80), 5);
+        expect(tiles.map((t) => t.id)).toEqual(same(80).map((i) => i.id));
+        const cells = cellsOf(tiles);
+        expect(new Set(cells).size).toBe(cells.length);
+        for (const t of tiles) expect(t.column + t.columns).toBeLessThanOrEqual(5);
+    });
+
+    it("leaves no hole inside: every cell above the last row is taken", () => {
+        for (const columns of [2, 3, 4, 6, 8]) {
+            const { tiles, rows } = packMosaic(same(120), columns);
+            const taken = new Set(cellsOf(tiles));
+            for (let r = 0; r < rows - 1; r++) for (let c = 0; c < columns; c++) expect(taken.has(`${r}:${c}`)).toBe(true);
+        }
+    });
+
+    it("makes a mosaic even of pictures of one size: tiles of several sizes, and a large one to open a section", () => {
+        const { tiles } = packMosaic(same(80), 5);
+        const sizes = new Set(tiles.map((t) => `${t.columns}x${t.rows}`));
+        expect(sizes.size).toBeGreaterThanOrEqual(3);
+        expect(tiles[0]).toMatchObject({ columns: 2, rows: 2 });
+        const mostly = tiles.filter((t) => t.columns === 1 && t.rows === 1).length;
+        expect(mostly).toBeGreaterThan(tiles.length / 2); // most are small: a mosaic, not a wall of big ones
+    });
+
+    it("makes a portrait tall and a landscape wide when it wants more than one cell", () => {
+        const portraits = packMosaic(same(100, 0.6).slice(1), 5).tiles.filter((t) => t.columns * t.rows === 2);
+        expect(portraits.every((t) => t.rows === 2)).toBe(true);
+        const landscapes = packMosaic(same(100, 1.5).slice(1), 5).tiles.filter((t) => t.columns * t.rows === 2);
+        expect(landscapes.every((t) => t.columns === 2)).toBe(true);
+    });
+
+    it("does not put large tiles one after another", () => {
+        const { tiles } = packMosaic(same(200), 6);
+        const bigAt = tiles.map((t, i) => (t.columns === 2 && t.rows === 2 ? i : -1)).filter((i) => i >= 0);
+        expect(bigAt.length).toBeGreaterThan(3);
+        for (let i = 1; i < bigAt.length; i++) expect(bigAt[i] - bigAt[i - 1]).toBeGreaterThanOrEqual(5);
+    });
+
+    it("is the same every time, and does not use large tiles on a grid of two columns", () => {
+        expect(packMosaic(same(30), 4)).toEqual(packMosaic(same(30), 4));
+        for (const t of packMosaic(same(30), 2).tiles) expect(t.columns * t.rows).toBeLessThanOrEqual(2);
+    });
+
+    it("is empty for no pictures, and one cell for one", () => {
+        expect(packMosaic([], 4)).toEqual({ tiles: [], rows: 0 });
+        expect(packMosaic(same(1), 4).tiles).toHaveLength(1);
+    });
+
+    it("makes even a short section of equal pictures a mosaic, without overlaps or holes inside", () => {
+        for (const columns of [3, 5, 7]) {
+            for (let count = 3; count <= 9; count++) {
+                const { tiles, rows } = packMosaic(same(count), columns);
+                const cells = cellsOf(tiles);
+                expect(new Set(cells).size).toBe(cells.length);
+                expect(new Set(tiles.map((t) => `${t.columns}x${t.rows}`)).size).toBeGreaterThan(1);
+                // every row above the last is full
+                for (let r = 0; r < rows - 1; r++) for (let c = 0; c < columns; c++) expect(cells).toContain(`${r}:${c}`);
+            }
+        }
+    });
+
+    it("lays out into blocks that fill the width with straight edges and do not overlap", () => {
+        const layout = layoutSections(buildSections(same(100)), { ...options, mode: "mosaic" });
+        const rows = layout.blocks.filter((b): b is Extract<typeof b, { type: "row" }> => b.type === "row");
+        expect(rows.length).toBeGreaterThan(3);
+        const boxes: Array<[number, number, number, number]> = [];
+        for (const block of rows) {
+            for (const tile of block.tiles) {
+                expect(tile.left).toBeGreaterThanOrEqual(0);
+                expect(tile.left + tile.width).toBeLessThanOrEqual(1000);
+                expect(tile.width).toBeGreaterThan(0);
+                expect(tile.height).toBeGreaterThan(0);
+                boxes.push([tile.left, block.top + (tile.top ?? 0), tile.left + tile.width, block.top + (tile.top ?? 0) + tile.height]);
+            }
+        }
+        for (let i = 0; i < boxes.length; i++) {
+            for (let j = i + 1; j < boxes.length; j++) {
+                const [a, b] = [boxes[i], boxes[j]];
+                const overlap = a[0] < b[2] && b[0] < a[2] && a[1] < b[3] && b[1] < a[3];
+                expect(overlap).toBe(false);
+            }
+        }
+        expect(layout.height).toBeGreaterThan(rows[rows.length - 1].top);
+        for (const block of layout.blocks) expect(block.top + block.height).toBeLessThanOrEqual(layout.height);
+    });
+
+    it("works for a very narrow area", () => {
+        const layout = layoutSections(buildSections(same(10)), { ...options, width: 120, mode: "mosaic" });
+        for (const block of layout.blocks) if (block.type === "row") for (const t of block.tiles) expect(t.left + t.width).toBeLessThanOrEqual(120);
     });
 });
