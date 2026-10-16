@@ -13,6 +13,7 @@ import { useUserInfo } from "@/auth-context-provider";
 import { buildWriterIndex, findPendingUploads, getNodePath } from "@/engine/service/ops-log-analysis";
 import { NodeWriterInfo, OverwriteWarningInfo } from "@/types/types";
 import { registry } from "@/extensions/registry";
+import { isExtensionPhoto } from "@/components/media-preview/extension-photo";
 import { isVideoBufferEnabled } from "@/features/video-buffer/flag";
 import { installVideoBuffer } from "@/features/video-buffer/buffering-filesystem-backend";
 import { noteDemand, releaseRequest, waitForRoom } from "@/features/video-buffer/sw-backpressure";
@@ -190,7 +191,8 @@ export function useFilesStoreOps() {
             }
             sync();
             selectIds([node.id]);
-            if (registry.forFileName(node.name)) {
+            // a photo that an extension decodes (HEIC) opens in the media preview, so that it pages like the others; the rest in the editor
+            if (registry.forFileName(node.name) && !isExtensionPhoto(node.name)) {
                 setEditorOpen(true);
             } else {
                 setMediaPreviewOpen(true);

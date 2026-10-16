@@ -1,5 +1,7 @@
 import { useFilesStore } from "@/stores/files-store"
 import { ImagePreview } from "./image-preview";
+import { ExtensionPhotoPreview } from "./extension-photo-preview";
+import { isExtensionPhoto } from "./extension-photo";
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import { FsObjectType } from "@/engine";
 import React, { useEffect } from "react";
@@ -76,7 +78,7 @@ export function MediaPreview() {
         let nextFileObject = fileObjects[nextFileObjectIndex];
         while (nextFileObject!.name.startsWith(SYSTEM_PREFIX)
             || nextFileObject!.type === FsObjectType.DIR
-            || (!imageExtensions.includes(nextFileObject!.extension!) && !playableVideoExtensions.includes(nextFileObject!.extension!))) {
+            || (!imageExtensions.includes(nextFileObject!.extension!) && !playableVideoExtensions.includes(nextFileObject!.extension!) && !isExtensionPhoto(nextFileObject!.name))) {
             nextFileObjectIndex = getNextFileObjectIndex(currentIndex, direction);
             nextFileObject = fileObjects[nextFileObjectIndex];
             currentIndex = nextFileObjectIndex;
@@ -189,6 +191,7 @@ export function MediaPreview() {
                 >
                     {imageExtensions.includes(fileToPreview.extension!) && <ImagePreview fileToPreview={fileToPreview} onLoadedCallback={onLoadedCallback} />}
                     {playableVideoExtensions.includes(fileToPreview.extension!) && <VideoPreview fileToPreview={fileToPreview} onLoadedCallback={onLoadedCallback} />}
+                    {isExtensionPhoto(fileToPreview.name) && <ExtensionPhotoPreview fileToPreview={fileToPreview} neighbours={[nextFileObject, prevFileObject].filter((f): f is NonNullable<typeof f> => !!f && isExtensionPhoto(f.name))} onLoadedCallback={onLoadedCallback} />}
                 </div>
             </div>
 
