@@ -12,7 +12,7 @@ import { DriveSwitcher } from "./drive-switcher"
 import { SidebarLogo, SidebarStorage } from "./sidebar-parts"
 import { useUploadFile } from "@/hooks/use-upload-file"
 import { useCreateFolderDialog } from "@/hooks/use-dialogs"
-import { Link, useParams } from "react-router-dom"
+import { Link, useLocation, useParams } from "react-router-dom"
 import { useFilesStore } from "@/stores/files-store"
 
 export function SidebarInsideDrive() {
@@ -20,13 +20,17 @@ export function SidebarInsideDrive() {
   const openCreateFolderDialog = useCreateFolderDialog();
   const { driveId } = useParams<{ driveId: string }>();
   const filesInitialized = useFilesStore((state) => state.filesInitialized);
+  const { pathname } = useLocation();
+  const onMedia = pathname.endsWith("/media");
+  const onSettings = pathname.endsWith("/settings");
+  const onLogs = pathname.endsWith("/logs");
 
   const menuItems = [
     {
       title: "All Files",
-      url: "#",
+      url: driveId ? `/drive/${driveId}` : "#",
       icon: FileText,
-      active: true
+      active: !onMedia && !onSettings && !onLogs,
     },
     {
       title: "Recent",
@@ -35,8 +39,9 @@ export function SidebarInsideDrive() {
     },
     {
       title: "Media",
-      url: "#",
+      url: driveId ? `/drive/${driveId}/media` : "#",
       icon: ImagePlay,
+      active: onMedia,
     },
     {
       title: "Recycle Bin",
@@ -47,6 +52,7 @@ export function SidebarInsideDrive() {
       title: "Settings",
       url: driveId ? `/drive/${driveId}/settings` : "#",
       icon: Settings,
+      active: onSettings,
     },
   ]
 

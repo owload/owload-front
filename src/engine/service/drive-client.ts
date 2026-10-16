@@ -3,9 +3,10 @@ import { getCachedUint8Value, setCachedValue } from "../backend/caches";
 import { DriveId } from "../backend/drive-backend";
 import { FilesystemBackend, SessionId } from "../backend/filesystem-backend";
 import { createEncryptingStream, encrypt } from "../core/enc";
+import { open as openSealed, seal as sealValue } from "../core/sealed-cache";
 import { readBlobAsStream, readToUint8Array, uint8ArrayToBase64 } from "../core/stream-utils";
 import { MkDirFsOperation, RmFsOperation, RenameFsOperation, CpFsOperation, UploadStartFsOperation, UploadFinishFsOperation, FsOperation, DescriptionFsOperation, MvFsOperation, FsOperationNameConflictMode } from "./fs-operation";
-import { FsState, PerformOpMode, NameAlreadyUsed, TargetDoesNotExistError, FsObjectType, FsError } from "./fs-state";
+import { FsState, PerformOpMode, NameAlreadyUsed, TargetDoesNotExistError, FsObjectType, FsError, type FsFileProperties } from "./fs-state";
 import { FsTreeNode, FsTreeNodeId } from "./fs-tree-node";
 import { OperationService } from "./operation-service";
 import { FsOperationWrapper, RejectionReason } from "./ops-repository";
@@ -14,6 +15,7 @@ import { DriveActionLogEntry } from "./drive-action-log";
 const FS_SNAPSHOT_CACHE = "FS_SNAPSHOT_CACHE_1";
 const ACTION_LOG_CACHE = "ACTION_LOG_CACHE_1";
 const OP_LOG_CACHE = "OP_LOG_CACHE_1";
+const MEDIA_META_CACHE = "MEDIA_META_CACHE_1";
 import { BLOCK_READ_CONCURRENCY, BLOCK_SIZE, BLOCK_WRITE_CONCURRENCY } from "../core/constants";
 import { readBlocksInParallel, writeBlocksInParallel } from "../core/parallel-blocks";
 const UPLOAD_CHUNK_LENGTH = BLOCK_SIZE;
@@ -48,6 +50,8 @@ export interface DriveStreamKeys {
   cacheActLog: CryptoKey;
   cacheOpLog: CryptoKey;
   cacheKeys: CryptoKey;
+  /** For the cache of the dates and sizes of the media files (decision 0035). */
+  cacheMedia: CryptoKey;
 }
 
 export class DriveClient {
@@ -200,6 +204,35 @@ export class DriveClient {
 
   public getEffectiveSize(): number {
     return this.fsState.getTotalFileSize();
+  }
+
+  /** Every file of the drive, with where its bytes are; for the sections that look at the whole drive (media). */
+  public listAllFiles(): Array<{ id: string; name: string; parentId?: string; byteOffset: number; byteLength: number; contentHash?: string; finished?: boolean }> {
+    return this.fsState.getAllFiles().map((node) => {
+      const properties = node.properties as FsFileProperties;
+      return { id: node.id, name: node.name, parentId: node.getParentNode()?.id, byteOffset: properties.byteOffset, byteLength: properties.byteLength, contentHash: properties.contentHash, finished: properties.finished };
+    });
+  }
+
+  /** What the media section learned from the files (dates, sizes), kept encrypted in this browser so that the files are not read again (decision 0035). */
+  public async loadMediaMetaCache(): Promise<unknown | null> {
+    const cached = await getCachedUint8Value(MEDIA_META_CACHE, await this.getMediaCacheKey());
+    if (!cached) return null;
+    try {
+      return JSON.parse(new TextDecoder().decode(await openSealed(this.streamKeys.cacheMedia, cached)));
+    } catch {
+      return null; // damaged, or kept under another key: it is made again
+    }
+  }
+
+  public async saveMediaMetaCache(value: unknown): Promise<void> {
+    const sealed = await sealValue(this.streamKeys.cacheMedia, new TextEncoder().encode(JSON.stringify(value)));
+    await setCachedValue<Uint8Array>(MEDIA_META_CACHE, await this.getMediaCacheKey(), sealed);
+  }
+
+  private async getMediaCacheKey(): Promise<string> {
+    const encrypted = await encrypt(this.driveId + '_media', this.streamKeys.cacheKeys, this.nonce);
+    return uint8ArrayToBase64(encrypted);
   }
 
   public getFileUsage(skip: (name: string) => boolean): { fileCount: number; usedBytes: number } {

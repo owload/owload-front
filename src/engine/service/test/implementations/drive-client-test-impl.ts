@@ -14,6 +14,7 @@ export async function getTestDriveClient() {
         cacheActLog: await deriveStreamKey(e.keyEncoded, counterNonce, 'owload-cache-actlog-v2'),
         cacheOpLog: await deriveStreamKey(e.keyEncoded, counterNonce, 'owload-cache-oplog-v2'),
         cacheKeys: await deriveStreamKey(e.keyEncoded, counterNonce, 'owload-cache-keys-v2'),
+        cacheMedia: await deriveStreamKey(e.keyEncoded, counterNonce, 'owload-cache-media-v2'),
     };
     return new DriveClient(
         e.driveInfo.id,

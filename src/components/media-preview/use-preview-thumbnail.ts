@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { getPreviewFileName, PREVIEW_SIZES, useFilesStoreOps } from "@/hooks/use-files-store-ops";
-import { useFilesStore } from "@/stores/files-store";
+import { PREVIEW_SIZES, useFilesStoreOps } from "@/hooks/use-files-store-ops";
+import { usePreviewFileFinder } from "./preview-source";
 import { FileProperties } from "@/types/types";
 
 export interface PreviewThumbnail {
@@ -12,7 +12,7 @@ export interface PreviewThumbnail {
 
 /** The small picture the drive keeps next to a video, for showing something at once. Its object URL is released when it is no longer needed. */
 export function usePreviewThumbnail(fileToPreview: FileProperties): PreviewThumbnail {
-    const fileObjects = useFilesStore((state) => state.fileObjects);
+    const findPreview = usePreviewFileFinder();
     const { getFileData } = useFilesStoreOps();
     const [state, setState] = useState<{ forId: string; url?: string; done: boolean }>({ forId: fileToPreview.id, done: false });
 
@@ -20,8 +20,7 @@ export function usePreviewThumbnail(fileToPreview: FileProperties): PreviewThumb
         let aborted = false;
         let objectUrl: string | undefined;
         setState({ forId: fileToPreview.id, done: false });
-        const previewFileName = getPreviewFileName(fileToPreview.id, PREVIEW_SIZES.MEDIA_PREVIEW);
-        const previewFile = fileObjects.find((f) => f.name === previewFileName);
+        const previewFile = findPreview(fileToPreview.id, PREVIEW_SIZES.MEDIA_PREVIEW);
         if (!previewFile) {
             setState({ forId: fileToPreview.id, done: true });
             return;

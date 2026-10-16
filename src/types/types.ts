@@ -18,6 +18,8 @@ export interface FileProperties {
   byteLength?: number;
   contentHash?: string;
   finished?: boolean;
+  /** The short video saved with this photo (a Live Photo), when it is known; the preview offers to play it. */
+  live?: FileProperties;
 }
 
 export type UploadQueueItemStatus = "QUEUED" | "PROGRESS" | "FINISHED" | "CANCELLED" | "ERROR";

@@ -30,13 +30,14 @@ export class DriveClientFactory {
     }
     const counterNonce = base64ToUint8Array(driveCounterNonce);
 
-    const [K_ops, K_data, K_cacheFsState, K_cacheActLog, K_cacheOpLog, K_cacheKeys] = await Promise.all([
+    const [K_ops, K_data, K_cacheFsState, K_cacheActLog, K_cacheOpLog, K_cacheKeys, K_cacheMedia] = await Promise.all([
       deriveStreamKey(keyEncoded, counterNonce, 'owload-ops-v2'),
       deriveStreamKey(keyEncoded, counterNonce, 'owload-data-v2'),
       deriveStreamKey(keyEncoded, counterNonce, 'owload-cache-fsstate-v2'),
       deriveStreamKey(keyEncoded, counterNonce, 'owload-cache-actlog-v2'),
       deriveStreamKey(keyEncoded, counterNonce, 'owload-cache-oplog-v2'),
       deriveStreamKey(keyEncoded, counterNonce, 'owload-cache-keys-v2'),
+      deriveStreamKey(keyEncoded, counterNonce, 'owload-cache-media-v2'),
     ]);
 
     const encryptor = new EncryptorImpl<Uint8Array>(K_ops, counterNonce);
@@ -52,6 +53,7 @@ export class DriveClientFactory {
       cacheActLog: K_cacheActLog,
       cacheOpLog: K_cacheOpLog,
       cacheKeys: K_cacheKeys,
+      cacheMedia: K_cacheMedia,
     };
 
     return {

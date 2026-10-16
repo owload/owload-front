@@ -1,5 +1,5 @@
-import { getPreviewFileName, PREVIEW_SIZES, useFilesStoreOps } from "@/hooks/use-files-store-ops";
-import { useFilesStore } from "@/stores/files-store"
+import { PREVIEW_SIZES, useFilesStoreOps } from "@/hooks/use-files-store-ops";
+import { usePreviewFileFinder } from "./preview-source";
 import { FileProperties } from "@/types/types";
 import { useEffect, useState } from "react"
 import { MediaLoadingIndicator } from "./loading-indicator";
@@ -10,7 +10,7 @@ interface ImagePreviewProps {
 };
 
 export function ImagePreview({ fileToPreview, onLoadedCallback }: ImagePreviewProps) {
-    const fileObjects = useFilesStore((state) => state.fileObjects);
+    const findPreview = usePreviewFileFinder();
     const { getFileData } = useFilesStoreOps();
     const [ready, setReady] = useState(false);
     const [imageDataUrl, setImageDataUrl] = useState<string | undefined>();
@@ -34,8 +34,7 @@ export function ImagePreview({ fileToPreview, onLoadedCallback }: ImagePreviewPr
         setReady(false);
         setFailed(false);
 
-        const lowQualityFileName = getPreviewFileName(fileToPreview.id, PREVIEW_SIZES.MEDIA_PREVIEW);
-        const lowQualityFileToPreview = fileObjects.find(f => f.name === lowQualityFileName);
+        const lowQualityFileToPreview = findPreview(fileToPreview.id, PREVIEW_SIZES.MEDIA_PREVIEW);
         if (lowQualityFileToPreview && LOW_QUALITY_PREVIEW_ENABLED) {
             loadPreview(lowQualityFileToPreview, aborted)
                 .then(() => {

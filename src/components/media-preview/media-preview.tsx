@@ -1,6 +1,8 @@
 import { useFilesStore } from "@/stores/files-store"
 import { ImagePreview } from "./image-preview";
 import { ExtensionPhotoPreview } from "./extension-photo-preview";
+import { LivePhotoButton } from "./live-photo-button";
+import { PreviewFinderProvider, type MediaViewerSource } from "./preview-source";
 import { isExtensionPhoto } from "./extension-photo";
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import { FsObjectType } from "@/engine";
@@ -11,7 +13,8 @@ import { useSelectedFileObjects } from "@/hooks/use-selected-file-objects";
 import { useNavigateDir } from "@/hooks/use-navigate-dir";
 import { useIsMobile } from "@/hooks/use-mobile";
 
-export function MediaPreview() {
+/** Shows the file that is open, with the arrows and swipes to the next and the previous. `source` is given where it is not the current folder that is paged through (the media section). */
+export function MediaPreview({ source }: { source?: MediaViewerSource } = {}) {
     const { closeSelectedObject } = useFilesStoreOps();
     const isMobile = useIsMobile();
     const selectedFileObjects = useSelectedFileObjects();
@@ -32,7 +35,25 @@ export function MediaPreview() {
     const [isDragging, setIsDragging] = React.useState(false);
     const [newLoaded, setNewLoaded] = React.useState(false);
 
-    const fileToPreview = selectedFileObjects[0];
+    const fileToPreview = source ? source.files.find((f) => f.id === source.currentId) : selectedFileObjects[0];
+    const list = source ? source.files : fileObjects;
+    const goTo = (id: string) => (source ? source.onNavigate(id) : navigateDir(id));
+    const close = () => (source ? source.onClose() : closeSelectedObject());
+    // what the keys do is read from here, so that the one listener below always sees the file that is open now
+    const keyActions = React.useRef<{ prev?: () => void; next?: () => void; close: () => void }>({ close: () => undefined });
+
+    useEffect(() => {
+        const onKeyDown = (e: KeyboardEvent) => {
+            if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey) return;
+            const target = e.target as HTMLElement | null;
+            if (target?.closest?.('input, textarea, select, [contenteditable="true"], [role="slider"], [role="dialog"]')) return;
+            if (e.key === "Escape") { keyActions.current.close(); }
+            else if (e.key === "ArrowRight" && keyActions.current.next) { e.preventDefault(); keyActions.current.next(); }
+            else if (e.key === "ArrowLeft" && keyActions.current.prev) { e.preventDefault(); keyActions.current.prev(); }
+        };
+        window.addEventListener("keydown", onKeyDown);
+        return () => window.removeEventListener("keydown", onKeyDown);
+    }, []);
 
     useEffect(() => {
         const touchListener = (e: TouchEvent) => {
@@ -58,29 +79,29 @@ export function MediaPreview() {
         };
     }, [touchAreaDivRef.current, fileToPreview]);
 
-    if (!selectedFileObjects || selectedFileObjects.length === 0) {
+    if (!fileToPreview) {
         return null;
     }
 
     function getNextFileObjectIndex(currentIndex: number, direction: 'next' | 'prev') {
         let nextIndex = direction === 'next' ? currentIndex + 1 : currentIndex - 1;
-        if (nextIndex < 0) nextIndex = fileObjects.length - 1;
-        if (nextIndex >= fileObjects.length) nextIndex = 0;
+        if (nextIndex < 0) nextIndex = list.length - 1;
+        if (nextIndex >= list.length) nextIndex = 0;
         return nextIndex;
     }
 
     function getNextPreviewableFileObject(direction: 'next' | 'prev') {
-        if (!fileToPreview || !fileObjects || fileObjects.length === 0) {
+        if (!fileToPreview || !list || list.length === 0) {
             return null;
         }
-        let currentIndex = fileObjects.findIndex(f => f.id === fileToPreview.id);
+        let currentIndex = list.findIndex(f => f.id === fileToPreview.id);
         let nextFileObjectIndex = getNextFileObjectIndex(currentIndex, direction);
-        let nextFileObject = fileObjects[nextFileObjectIndex];
+        let nextFileObject = list[nextFileObjectIndex];
         while (nextFileObject!.name.startsWith(SYSTEM_PREFIX)
             || nextFileObject!.type === FsObjectType.DIR
             || (!imageExtensions.includes(nextFileObject!.extension!) && !playableVideoExtensions.includes(nextFileObject!.extension!) && !isExtensionPhoto(nextFileObject!.name))) {
             nextFileObjectIndex = getNextFileObjectIndex(currentIndex, direction);
-            nextFileObject = fileObjects[nextFileObjectIndex];
+            nextFileObject = list[nextFileObjectIndex];
             currentIndex = nextFileObjectIndex;
         }
         if (nextFileObject === fileToPreview) {
@@ -93,16 +114,22 @@ export function MediaPreview() {
     const prevFileObject = getNextPreviewableFileObject('prev');
 
     function handlePrevClick() {
-        navigateDir(prevFileObject!.id);
+        goTo(prevFileObject!.id);
     }
 
     function handleNextClick() {
-        navigateDir(nextFileObject!.id);
+        goTo(nextFileObject!.id);
     }
 
     function handleClose() {
-        closeSelectedObject();
+        close();
     }
+
+    keyActions.current = {
+        prev: prevFileObject ? handlePrevClick : undefined,
+        next: nextFileObject ? handleNextClick : undefined,
+        close: handleClose,
+    };
 
 
     function handleTouchStart(e: TouchEvent) {
@@ -148,7 +175,7 @@ export function MediaPreview() {
         else if (Math.abs(deltaY) > Math.abs(deltaX) && Math.abs(deltaY) > closeThreshold) {
             setDragY(deltaY > 0 ? window.innerHeight : -window.innerHeight);
             setDragX(0);
-            closeSelectedObject();
+            close();
         }
         else {
             setDragX(0);
@@ -168,6 +195,7 @@ export function MediaPreview() {
     }
 
     return (
+        <PreviewFinderProvider value={source?.findPreview ?? null}>
         <div
             className="fixed inset-0 z-150 flex items-center bg-sunny-ink/90"
             ref={overlayDivRef}
@@ -205,9 +233,11 @@ export function MediaPreview() {
                     <ChevronRight className="size-6" strokeWidth={2.2} aria-hidden="true" />
                 </button>
             )}
+            {fileToPreview.live && <LivePhotoButton key={fileToPreview.id} photo={fileToPreview} />}
             <button type="button" aria-label="Close preview" onClick={handleClose} className="absolute right-4 top-4 flex size-11 cursor-pointer items-center justify-center rounded-xl bg-sunny-ink text-sunny-yellow outline-sunny-yellow hover:bg-sunny-ink-raised focus-visible:outline-2">
                 <X className="size-5" strokeWidth={2.4} aria-hidden="true" />
             </button>
         </div>
+        </PreviewFinderProvider>
     );
 }
