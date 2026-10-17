@@ -11,6 +11,12 @@ export class MockDriveBackend implements DriveBackend {
         return [];
     }
 
+    async setStorageLimit(driveId: DriveId, limitBytes: number | null): Promise<DriveInfo> {
+        const driveInfo = await this.getDriveInfo(driveId);
+        driveInfo.storageLimitBytes = limitBytes;
+        return driveInfo;
+    }
+
     async deleteDrive(driveId: DriveId, _customTargetDecisions: CustomTargetDeletionDecision[], _force?: boolean): Promise<void> {
         this.drives.delete(driveId);
     }
@@ -42,6 +48,7 @@ export class MockDriveBackend implements DriveBackend {
             ownerEmail: null,
             lastReadAt: null,
             storedBytes: 0,
+            storageLimitBytes: null,
             createdTimestamp: Date.now(),
             keyNonce,
             counterNonce

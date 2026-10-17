@@ -7,7 +7,7 @@ import { formatDateTime } from "@/lib/format-when";
 import { PRICING_URL } from "@/lib/site-links";
 import { cn } from "@/lib/utils";
 import { useStorageUsage } from "@/hooks/use-storage-usage";
-import { FREE_PLAN_STORAGE_BYTES, storagePercent } from "@/lib/storage-usage";
+import { storagePercent } from "@/lib/storage-usage";
 import { formatBytes } from "@/components/drives/drive-stats-format";
 
 /** The logo at the top of the dark side panel. */
@@ -36,8 +36,8 @@ export function SidebarStorage({ className }: { className?: string }) {
   const { profile } = useUserProfile();
   const lastSeen = formatDateTime(profile?.lastSeen);
   const usage = useStorageUsage();
-  const total = formatBytes(FREE_PLAN_STORAGE_BYTES);
-  const percent = usage ? storagePercent(usage.presetBytes) : 0;
+  const total = usage ? formatBytes(usage.limitBytes) : "…";
+  const percent = usage ? storagePercent(usage.presetBytes, usage.limitBytes) : 0;
   return (
     <div className={cn("flex flex-col gap-3.5", className)}>
       <div className="flex flex-col gap-2.5 rounded-[14px] bg-sidebar-accent p-3.5">

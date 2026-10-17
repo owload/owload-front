@@ -1,4 +1,4 @@
-import { postApiCall, getApiCall, deleteApiCall, patchApiCall } from "../api/api";
+import { postApiCall, getApiCall, deleteApiCall, patchApiCall, putApiCall } from "../api/api";
 import { getRandomNonce } from "../core/enc";
 import { uint8ArrayToBase64 } from "../core/stream-utils";
 import { type UserId } from "./user-backend";
@@ -38,6 +38,8 @@ export interface DriveInfo {
   /** How many bytes the drive's blocks take on the servers (live files, old versions and thumbnails together; freed blocks are not
    *  counted); null while the server has not counted them yet. */
   storedBytes: number | null;
+  /** The most the drive may store, set by its owner; null: none of its own (the owner's storage is the limit). */
+  storageLimitBytes: number | null;
 };
 
 export type S3PresetTier = 'hot' | 'cold';
@@ -111,6 +113,8 @@ export abstract class DriveBackend {
   abstract createDrive(title: string, storageTarget?: StorageTargetInput): Promise<DriveInfo>;
   abstract getDriveInfo(driveId: DriveId): Promise<DriveInfo>;
   abstract getAccessibleDrives(): Promise<DriveInfo[]>;
+  /** The owner sets the most the drive may store, or null for none of its own. Returns the drive as it is now. */
+  abstract setStorageLimit(driveId: DriveId, limitBytes: number | null): Promise<DriveInfo>;
   abstract deleteDrive(driveId: DriveId, customTargetDecisions: CustomTargetDeletionDecision[], force?: boolean): Promise<void>;
   abstract getS3Presets(): Promise<S3Preset[]>;
   abstract addStorageTarget(driveId: DriveId, target: StorageTargetInput): Promise<void>;
@@ -137,6 +141,10 @@ export class RestDriveBackend implements DriveBackend {
 
   getDriveInfo(driveId: DriveId): Promise<DriveInfo> {
     return getApiCall(`/drives/${driveId}`);
+  }
+
+  setStorageLimit(driveId: DriveId, limitBytes: number | null): Promise<DriveInfo> {
+    return putApiCall(`/drives/${driveId}/storage-limit`, { limitBytes });
   }
 
   deleteDrive(driveId: DriveId, customTargetDecisions: CustomTargetDeletionDecision[], force = false): Promise<void> {

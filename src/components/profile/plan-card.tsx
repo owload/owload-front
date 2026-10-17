@@ -2,7 +2,7 @@ import { PRICING_URL } from "@/lib/site-links";
 import { Badge, ProfileCard } from "./profile-parts";
 import { formatBytes } from "@/components/drives/drive-stats-format";
 import { useStorageUsage } from "@/hooks/use-storage-usage";
-import { FREE_PLAN_STORAGE_BYTES, storagePercent } from "@/lib/storage-usage";
+import { storagePercent } from "@/lib/storage-usage";
 
 function driveCount(count: number) {
     return `${count} ${count === 1 ? "drive" : "drives"}`;
@@ -30,7 +30,7 @@ function UsageRow({ label, value, note, percent, ariaLabel }: { label: string; v
  */
 export function PlanCard() {
     const usage = useStorageUsage();
-    const total = formatBytes(FREE_PLAN_STORAGE_BYTES);
+    const total = usage ? formatBytes(usage.limitBytes) : "…";
     const more = usage && !usage.complete ? "+" : ""; // the server is still counting: what is shown is a part
     const preset = usage?.presetBytes ?? 0;
     const custom = usage?.customBytes ?? 0;
@@ -46,7 +46,7 @@ export function PlanCard() {
                 label="Owload storage"
                 value={usage ? `${formatBytes(preset)}${more} of ${total}` : "—"}
                 note={usage ? `What your drives hold in Owload's storage · ${driveCount(usage.presetDrives)}` : "Counting…"}
-                percent={usage ? storagePercent(preset) : 0}
+                percent={usage ? storagePercent(preset, usage.limitBytes) : 0}
                 ariaLabel={usage ? `${formatBytes(preset)} of ${total} of Owload storage used` : "Storage is being counted"}
             />
             {hasCustom && usage && (

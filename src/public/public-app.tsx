@@ -45,6 +45,7 @@ function asDriveInfo(info: PublicDriveInfo): DriveInfo {
         ownerEmail: null,
         lastReadAt: info.lastReadAt ?? null,
         storedBytes: null,
+        storageLimitBytes: null,
     };
 }
 

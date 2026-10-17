@@ -8,6 +8,8 @@ export interface StorageUsage {
     customDrives: number;
     /** False while the server has not counted some storage of some drive yet: the numbers are then a part of the whole. */
     complete: boolean;
+    /** What the plan allows in Owload's own storage, the same for everybody (the user's own S3 is not held by it). */
+    limitBytes: number;
 }
 
 export function getStorageUsage(): Promise<StorageUsage> {

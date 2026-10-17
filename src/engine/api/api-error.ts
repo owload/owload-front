@@ -1,4 +1,5 @@
 import { AxiosError } from "axios";
+import { formatBytes } from "@/components/drives/drive-stats-format";
 
 /**
  * Turning a failed API call into something the user can read.
@@ -78,6 +79,29 @@ export function asStorageConnectionFailed(detail: unknown): { message: string; r
   return null;
 }
 
+/** The body of a write that does not fit in the drive's limit or in the owner's (HTTP 413). The figures are there for the owner only. */
+export const STORAGE_LIMIT_EXCEEDED = "STORAGE_LIMIT_EXCEEDED";
+
+export interface StorageLimitExceededDetail {
+  code: typeof STORAGE_LIMIT_EXCEEDED;
+  /** "drive": the limit of the drive; "plan": the owner's storage. */
+  scope: "drive" | "plan";
+  message: string;
+  limitBytes?: number;
+  usedBytes?: number;
+}
+
+export function asStorageLimitExceeded(detail: unknown): StorageLimitExceededDetail | null {
+  if (
+    detail && typeof detail === "object" &&
+    (detail as { code?: unknown }).code === STORAGE_LIMIT_EXCEEDED &&
+    typeof (detail as { message?: unknown }).message === "string"
+  ) {
+    return detail as StorageLimitExceededDetail;
+  }
+  return null;
+}
+
 export function isStorageUnavailableError(error: unknown): boolean {
   return asStorageTargetsUnavailable(readErrorDetail(error)) !== null;
 }
@@ -151,6 +175,20 @@ export function describeApiErrorLines(error: unknown, fallback = "The operation 
         : "Part of the data may have been left on the storages that were available."
     );
     return sentences;
+  }
+
+  const full = asStorageLimitExceeded(detail);
+  if (full) {
+    const lines = [full.message];
+    if (typeof full.limitBytes === "number" && typeof full.usedBytes === "number") {
+      lines.push(`${formatBytes(full.usedBytes)} of ${formatBytes(full.limitBytes)} are used.`);
+    }
+    lines.push(
+      full.scope === "drive"
+        ? "Delete files, or ask the owner of the drive to raise its limit."
+        : "Delete files to free some space, or upgrade the plan."
+    );
+    return lines;
   }
 
   const connection = asStorageConnectionFailed(detail);

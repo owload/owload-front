@@ -11,6 +11,7 @@ import { useUserInfo } from "@/auth-context-provider";
 import { useFilesStore } from "@/stores/files-store";
 import { useCloseDrive } from "@/hooks/use-close-drives";
 import { AccessSection } from "@/components/access/access-section";
+import { StorageLimitSection } from "@/components/storage/storage-limit-section";
 
 type HealthState = 'loading' | 'ok' | 'error';
 interface HealthResult { state: HealthState; error?: string }
@@ -223,6 +224,10 @@ export function DriveSettingsPage() {
             driveInfo={driveInfo}
             onLeft={() => { void updateDrives(); navigate('/'); }}
           />
+        )}
+
+        {driveInfo && isOwner && (
+          <StorageLimitSection key={driveInfo.storageLimitBytes ?? 'none'} driveInfo={driveInfo} onChanged={(info) => { setDriveInfo(info); void updateDrives(); }} />
         )}
 
         {(!driveInfo || driveInfo.myRole === 'owner' || driveInfo.myRole === 'admin') && (

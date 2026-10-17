@@ -165,3 +165,24 @@ describe('a storage that could not be read with the connection the user typed in
     expect(describeApiErrorLines(axiosError(502, { detail: { code: 'STORAGE_CONNECTION_FAILED' } }), 'fallback')).toEqual(['fallback']);
   });
 });
+
+describe('a write that does not fit the storage limit', () => {
+  const limit = (scope: string, extra: object = {}) => ({ code: 'STORAGE_LIMIT_EXCEEDED', scope, message: 'X.', ...extra });
+
+  test('tells the owner the figures and what to do about the drive limit', () => {
+    const error = axiosError(413, { detail: limit('drive', { message: 'This drive has reached its storage limit.', limitBytes: 5 * 1024 ** 3, usedBytes: 4.5 * 1024 ** 3 }) });
+    expect(describeApiErrorLines(error)).toEqual([
+      'This drive has reached its storage limit.',
+      '4.5 GB of 5 GB are used.',
+      'Delete files, or ask the owner of the drive to raise its limit.',
+    ]);
+  });
+
+  test('says the owner\'s storage is full without figures when the server gave none', () => {
+    const error = axiosError(413, { detail: limit('plan', { message: 'The storage of the drive\'s owner is full.' }) });
+    expect(describeApiErrorLines(error)).toEqual([
+      'The storage of the drive\'s owner is full.',
+      'Delete files to free some space, or upgrade the plan.',
+    ]);
+  });
+});
