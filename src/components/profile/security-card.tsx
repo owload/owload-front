@@ -4,6 +4,7 @@ import { Check, KeyRound, Laptop, ShieldCheck, Smartphone } from "lucide-react";
 import { canChangePassword, clearKeycloakActionResult, getKeycloakActionResult, startPasswordChange } from "@/auth-context-provider";
 import { FieldError } from "@/components/drives/new-drive/form-parts";
 import type { PasswordDetails } from "@/engine/keycloak/account-api";
+import { useSkeletonGate } from "@/hooks/use-skeleton-gate";
 import { Skeleton } from "@/components/ui/skeleton";
 import { describeLastSeen } from "@/lib/format-when";
 import { usePasswordDetails } from "@/hooks/use-password-details";
@@ -21,6 +22,7 @@ function passwordCaption(details?: PasswordDetails): string | undefined {
 /** The sessions the user is signed in with: where from and when last seen, each other one with "Sign out". */
 function SignedInDevices() {
     const { sessions, failed, revoke, revokeOthers } = useSessions();
+    const gate = useSkeletonGate(sessions === undefined && !failed);
     const section = useRef<HTMLDivElement>(null);
     // Opened from the activity page ("Signed-in devices"): bring this block into view once.
     const wantedHere = (useLocation().state as { section?: string } | null)?.section === "devices";
@@ -48,8 +50,8 @@ function SignedInDevices() {
     return (
         <div ref={section} id="signed-in-devices" tabIndex={-1} aria-labelledby="signed-in-devices-title" className="flex flex-col gap-1.5 rounded-xl border-t border-sunny-line pt-3.5 outline-none focus-visible:ring-2 focus-visible:ring-sunny-yellow">
             <h3 id="signed-in-devices-title" className="m-0 mb-1 text-xs font-normal text-sunny-muted">Signed-in devices</h3>
-            {sessions === undefined
-                ? (failed ? <p className="m-0 text-sm text-sunny-muted">The devices could not be loaded.</p> : <Skeleton className="h-[52px] w-full rounded-xl" />)
+            {(sessions === undefined || gate === "skeleton")
+                ? (failed ? <p className="m-0 text-sm text-sunny-muted">The devices could not be loaded.</p> : gate === "skeleton" ? <Skeleton className="h-[52px] w-full rounded-xl" /> : <div aria-hidden="true" className="invisible h-[52px]" />)
                 : (
                     <ul className="m-0 flex list-none flex-col p-0">
                         {sessions.map((session) => {

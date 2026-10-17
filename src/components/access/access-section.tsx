@@ -3,6 +3,7 @@ import { Check, Copy, Link2, Lock, RefreshCw, Users, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useSkeletonGate } from "@/hooks/use-skeleton-gate";
 import { Skeleton } from "@/components/ui/skeleton";
 import { initialsOf } from "@/components/profile/avatar-presets";
 import { AvatarView } from "@/components/profile/user-avatar";
@@ -79,6 +80,7 @@ function PersonRow({ person, canChange, canRemoveAdmin, busy, onRole, onRemove }
  */
 export function AccessSection({ driveInfo, onLeft }: { driveInfo: DriveInfo, onLeft: () => void }) {
     const { access, failed, setVisibility, resetLink, addPerson, changeRole, removePerson, leave } = useDriveAccess(driveInfo.id);
+    const gate = useSkeletonGate(!access && !failed);
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState<string | undefined>();
     const [email, setEmail] = useState("");
@@ -114,11 +116,11 @@ export function AccessSection({ driveInfo, onLeft }: { driveInfo: DriveInfo, onL
         }
     }
 
-    if (!access) {
+    if (!access || gate === "skeleton") {
         return (
             <section className="space-y-3 rounded-2xl border border-sunny-line bg-white p-5 shadow-[0_6px_18px_rgba(0,0,0,0.06)]">
                 <h2 className="m-0 text-[17px] font-semibold">Access</h2>
-                {failed ? <p className="text-sm text-muted-foreground">The access to this drive could not be loaded.</p> : <Skeleton className="h-[120px] w-full rounded-xl" />}
+                {failed ? <p className="text-sm text-muted-foreground">The access to this drive could not be loaded.</p> : gate === "skeleton" ? <Skeleton className="h-[120px] w-full rounded-xl" /> : <div aria-hidden="true" className="invisible h-[120px]" />}
             </section>
         );
     }

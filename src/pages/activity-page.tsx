@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import { ActivityEventRow } from "@/components/profile/activity-event";
 import { ProfileButton, ProfileCard } from "@/components/profile/profile-parts";
 import { ProfileTop } from "@/components/profile/profile-top";
+import { useSkeletonGate } from "@/hooks/use-skeleton-gate";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { UserEvent } from "@/engine/backend/user-backend";
 import { useActivity } from "@/hooks/use-activity";
@@ -37,6 +38,7 @@ export function ActivityPage() {
     const filter = FILTERS.find((f) => f.id === filterId)!;
     const kinds = useMemo(() => (filter.kinds ? [...filter.kinds] : undefined), [filter]);
     const { events, failed, loading, hasMore, loadMore } = useActivity({ kinds, pageSize: 25 });
+    const gate = useSkeletonGate(events === undefined && !failed);
     const groups = useMemo(() => groupByDay(events ?? []), [events]);
 
     return (
@@ -79,8 +81,8 @@ export function ActivityPage() {
                 </div>
 
                 <ProfileCard title={filter.label === "All" ? "All activity" : filter.label} className="max-w-[760px]">
-                    {events === undefined
-                        ? (failed ? <p className="m-0 text-sm text-sunny-muted">The activity could not be loaded.</p> : <Skeleton className="h-[240px] w-full rounded-xl" />)
+                    {(events === undefined || gate === "skeleton")
+                        ? (failed ? <p className="m-0 text-sm text-sunny-muted">The activity could not be loaded.</p> : gate === "skeleton" ? <Skeleton className="h-[240px] w-full rounded-xl" /> : <div aria-hidden="true" className="invisible h-[240px]" />)
                         : events.length === 0
                             ? <p className="m-0 text-sm text-sunny-muted">Nothing here yet.</p>
                             : groups.map((group) => (

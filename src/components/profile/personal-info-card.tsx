@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Camera, Check, Grid2x2, Pencil } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { useSkeletonGate } from "@/hooks/use-skeleton-gate";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Field, FieldError, useFieldId } from "@/components/drives/new-drive/form-parts";
 import { useUserProfile } from "@/hooks/use-user-profile";
@@ -35,6 +36,7 @@ interface PersonalInfoCardProps {
  */
 export function PersonalInfoCard({ name, email, emailVerified, memberSince, onSaveName }: PersonalInfoCardProps) {
     const { profile, avatarUrl, status, setAvatarPreset, uploadAvatar, resetAvatar } = useUserProfile();
+    const gate = useSkeletonGate(status === "pending");
     const initials = useInitials();
     const avatar = profile?.avatar ?? { kind: "default" as const };
     const [editing, setEditing] = useState(false);
@@ -152,8 +154,8 @@ export function PersonalInfoCard({ name, email, emailVerified, memberSince, onSa
                 </div>
             </div>
 
-            {status === "pending" ? (
-                <Skeleton className="h-11 w-full rounded-xl" />
+            {status === "pending" || gate === "skeleton" ? (
+                gate === "skeleton" ? <Skeleton className="h-11 w-full rounded-xl" /> : <div aria-hidden="true" className="invisible h-11" />
             ) : avatar.kind === "default" ? (
                 <div className="flex flex-col gap-3 rounded-xl border border-dashed border-[#8f8d84] p-3.5">
                     <div className="flex flex-col gap-0.5">
