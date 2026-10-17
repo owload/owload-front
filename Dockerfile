@@ -10,7 +10,7 @@ FROM nginx:1.31-alpine
 
 LABEL org.opencontainers.image.title="owload-frontend" \
       org.opencontainers.image.description="The web client of Owload, an encrypted virtual drive" \
-      org.opencontainers.image.source="https://github.com/owload/owload-front"
+      org.opencontainers.image.source="https://github.com/owload/owload-frontend"
 
 RUN apk add --no-cache openssl
 COPY nginx_conf/default.conf /etc/nginx/conf.d/default.conf

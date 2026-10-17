@@ -16,4 +16,4 @@ export const FAQ_ITEMS = [
 ];
 
 /** The client does the encryption, so the public repository to inspect is the client's (the server only stores ciphertext). */
-export const SOURCE_CODE_URL = "https://github.com/owload/owload-front";
+export const SOURCE_CODE_URL = "https://github.com/owload/owload-frontend";

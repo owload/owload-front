@@ -64,7 +64,7 @@ export function clearKeycloakActionResult() {
   keycloakActionResult = undefined;
 }
 
-// The detail of the backend's 401 for a session that the user signed out from another device (owload-back, app/api/deps.py).
+// The detail of the backend's 401 for a session that the user signed out from another device (owload-backend, app/api/deps.py).
 const SESSION_REVOKED_DETAIL = "Session was signed out";
 
 function setAxiosInterceptor(getToken: () => string, refreshFn?: () => Promise<void>, onSessionRevoked?: () => void) {

@@ -6,7 +6,7 @@ const GREY = "#e9e8e3";
 
 /**
  * The preset pictures of the profile after the "Profile picture presets" board: flat shapes in yellow, black and grey,
- * drawn as SVG (nothing is loaded from the network). The ids are the ones the backend accepts (owload-back,
+ * drawn as SVG (nothing is loaded from the network). The ids are the ones the backend accepts (owload-backend,
  * app/schemas/user.py). The initials of the user's name are the default and are not a preset: they are what is shown while
  * nothing is chosen.
  */
